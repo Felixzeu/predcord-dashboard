@@ -1,208 +1,219 @@
-const express = require('express');
-const session = require('express-session');
-const bcrypt = require('bcryptjs');
-const path = require('path');
-const fs = require('fs');
-const { spawn } = require('child_process');
-require('dotenv').config();
+let currentGuild = null;
+let currentCommands = {};
+let editingName = null;
 
-// Avvia il bot (registra global.PredCord)
-require('./index.js');
+// ==================== TOAST ====================
+function showToast(message, type = 'success') {
+    const existing = document.querySelector('.toast');
+    if (existing) existing.remove();
+    const toast = document.createElement('div');
+    toast.className = `toast ${type}`;
+    toast.innerHTML = `<span>${type === 'success' ? '✅' : '❌'}</span> ${message}`;
+    document.body.appendChild(toast);
+    setTimeout(() => toast.remove(), 3500);
+}
 
-// Aspetta che il bot sia ready
-function waitForBot(timeout = 60000) {
-    return new Promise((resolve, reject) => {
-        const start = Date.now();
-        const check = () => {
-            if (global.PredCord && global.PredCord.client && global.PredCord.client.isReady()) {
-                resolve();
-            } else if (Date.now() - start > timeout) {
-                reject(new Error('Timeout in attesa del bot'));
-            } else {
-                setTimeout(check, 1000);
-            }
-        };
-        check();
+// ==================== INIT ====================
+async function init() {
+    try {
+        const me = await fetch('/api/me');
+        if (!me.ok) { window.location.href = '/login'; return; }
+        await loadGuilds();
+        setupEvents();
+    } catch (e) {
+        console.error('Init error:', e);
+        window.location.href = '/login';
+    }
+}
+
+async function loadGuilds() {
+    try {
+        const res = await fetch('/api/guilds');
+        const guilds = await res.json();
+        const select = document.getElementById('guildSelect');
+        select.innerHTML = '';
+
+        if (!Array.isArray(guilds) || guilds.length === 0) {
+            select.innerHTML = '<option value="">Nessun server</option>';
+            document.getElementById('commandsList').innerHTML =
+                '<div class="empty-state"><h3>Nessun server trovato</h3><p>Invita il bot in un server</p></div>';
+            return;
+        }
+
+        guilds.forEach(g => {
+            const opt = document.createElement('option');
+            opt.value = g.id;
+            opt.textContent = `${g.name} • ${g.memberCount} membri`;
+            select.appendChild(opt);
+        });
+
+        currentGuild = guilds[0].id;
+        await loadCommands();
+    } catch (e) {
+        console.error('loadGuilds error:', e);
+        document.getElementById('commandsList').innerHTML =
+            '<div class="empty-state"><h3>Errore caricamento</h3><p>' + e.message + '</p></div>';
+    }
+}
+
+async function loadCommands() {
+    if (!currentGuild) return;
+    const list = document.getElementById('commandsList');
+    list.innerHTML = '<div class="loading">Caricamento</div>';
+    try {
+        const res = await fetch(`/api/commands/${currentGuild}`);
+        currentCommands = await res.json();
+        renderCommands();
+    } catch (e) {
+        currentCommands = {};
+        renderCommands();
+    }
+}
+
+function renderCommands() {
+    const list = document.getElementById('commandsList');
+    const entries = Object.entries(currentCommands);
+
+    if (entries.length === 0) {
+        list.innerHTML = `<div class="empty-state">
+            <h3>Nessun comando custom</h3>
+            <p>Clicca "+ Nuovo Comando" per crearne uno</p>
+        </div>`;
+        return;
+    }
+
+    list.innerHTML = entries.map(([name, cmd]) => `
+        <div class="command-card">
+            <div class="command-info">
+                <h4>*${name}<span class="command-badge ${cmd.permission}">${cmd.permission}</span></h4>
+                <p>${cmd.type === 'embed' ? '📦 Embed' : '💬 Testo'} • ${truncate(cmd.response || '', 70)}</p>
+            </div>
+            <div class="command-actions">
+                <button class="btn-edit" data-name="${name}">✏️ Modifica</button>
+                <button class="btn-delete" data-name="${name}">🗑️</button>
+            </div>
+        </div>
+    `).join('');
+
+    list.querySelectorAll('.btn-edit').forEach(b => b.onclick = () => openModal(b.dataset.name));
+    list.querySelectorAll('.btn-delete').forEach(b => b.onclick = () => deleteCommand(b.dataset.name));
+}
+
+function truncate(str, n) {
+    if (!str) return '';
+    return str.length > n ? str.slice(0, n) + '...' : str;
+}
+
+// ==================== MODAL ====================
+function openModal(name = null) {
+    editingName = name;
+    const modal = document.getElementById('modal');
+    const title = document.getElementById('modalTitle');
+    const form = document.getElementById('cmdForm');
+    form.reset();
+
+    if (name && currentCommands[name]) {
+        const cmd = currentCommands[name];
+        title.textContent = 'Modifica Comando';
+        document.getElementById('cmdName').value = name;
+        document.getElementById('cmdName').disabled = true;
+        document.getElementById('cmdType').value = cmd.type || 'text';
+        document.getElementById('cmdTitle').value = cmd.title || '';
+        document.getElementById('cmdResponse').value = cmd.response || '';
+        document.getElementById('cmdColor').value = '#' + (cmd.color || 0xE67E22).toString(16).padStart(6, '0');
+        document.getElementById('cmdPermission').value = cmd.permission || 'everyone';
+        document.getElementById('cmdDelete').checked = cmd.deleteCommand !== false;
+    } else {
+        title.textContent = 'Nuovo Comando';
+        document.getElementById('cmdName').disabled = false;
+        document.getElementById('cmdColor').value = '#E67E22';
+    }
+
+    modal.classList.remove('hidden');
+    setTimeout(() => document.getElementById('cmdName').focus(), 100);
+}
+
+function closeModal() {
+    document.getElementById('modal').classList.add('hidden');
+    editingName = null;
+}
+
+async function saveCommand(e) {
+    e.preventDefault();
+    const name = document.getElementById('cmdName').value.trim().toLowerCase();
+    const colorHex = document.getElementById('cmdColor').value;
+    const btn = e.target.querySelector('button[type="submit"]');
+    const originalText = btn.innerHTML;
+    btn.innerHTML = 'Salvataggio...';
+    btn.disabled = true;
+
+    const data = {
+        type: document.getElementById('cmdType').value,
+        title: document.getElementById('cmdTitle').value,
+        response: document.getElementById('cmdResponse').value,
+        color: parseInt(colorHex.replace('#', ''), 16),
+        permission: document.getElementById('cmdPermission').value,
+        deleteCommand: document.getElementById('cmdDelete').checked
+    };
+
+    try {
+        const res = await fetch(`/api/commands/${currentGuild}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name, data })
+        });
+
+        if (res.ok) {
+            closeModal();
+            await loadCommands();
+            showToast(`Comando *${name} salvato`);
+        } else {
+            const err = await res.json();
+            showToast(err.error || 'Errore', 'error');
+        }
+    } catch (err) {
+        showToast('Errore di connessione', 'error');
+    } finally {
+        btn.innerHTML = originalText;
+        btn.disabled = false;
+    }
+}
+
+async function deleteCommand(name) {
+    if (!confirm(`Eliminare il comando *${name}?`)) return;
+    try {
+        const res = await fetch(`/api/commands/${currentGuild}/${name}`, { method: 'DELETE' });
+        if (res.ok) {
+            await loadCommands();
+            showToast(`Comando *${name} eliminato`);
+        }
+    } catch (e) {
+        showToast('Errore: ' + e.message, 'error');
+    }
+}
+
+function setupEvents() {
+    document.getElementById('guildSelect').onchange = (e) => {
+        currentGuild = e.target.value;
+        loadCommands();
+    };
+    document.getElementById('refreshBtn').onclick = () => {
+        loadCommands();
+        showToast('Lista aggiornata');
+    };
+    document.getElementById('newCmdBtn').onclick = () => openModal();
+    document.getElementById('cancelBtn').onclick = closeModal;
+    document.getElementById('cmdForm').onsubmit = saveCommand;
+    document.getElementById('logoutBtn').onclick = async () => {
+        await fetch('/api/logout', { method: 'POST' });
+        window.location.href = '/login';
+    };
+    document.getElementById('modal').onclick = (e) => {
+        if (e.target.id === 'modal') closeModal();
+    };
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') closeModal();
     });
 }
 
-const ADMIN_USERNAME = process.env.DASH_USER || 'admin';
-const ADMIN_PASSWORD = process.env.DASH_PASS || 'predcord2024';
-const ADMIN_PASSWORD_HASH = bcrypt.hashSync(ADMIN_PASSWORD, 10);
-
-const app = express();
-const PORT = process.env.DASH_PORT || 3000;
-const DASHBOARD_DIR = path.join(__dirname, 'dashboard');
-
-app.use(express.json({ limit: '1mb' }));
-app.use(express.urlencoded({ extended: true }));
-app.use(session({
-    secret: process.env.SESSION_SECRET || 'predcord-secret-change-me',
-    resave: false,
-    saveUninitialized: false,
-    cookie: { maxAge: 1000 * 60 * 60 * 8 }
-}));
-
-// ==================== FILE STATICI (CSS, JS) — PUBBLICI ====================
-// Serviti SENZA autenticazione, altrimenti il browser non carica CSS/JS
-app.use('/style.css', express.static(path.join(DASHBOARD_DIR, 'style.css')));
-app.use('/app.js', express.static(path.join(DASHBOARD_DIR, 'app.js')));
-
-// ==================== AUTH ====================
-function requireAuth(req, res, next) {
-    if (req.session.user) return next();
-    if (req.path.startsWith('/api/')) return res.status(401).json({ error: 'Non autenticato' });
-    res.redirect('/login');
-}
-
-app.get('/login', (req, res) => {
-    if (req.session.user) return res.redirect('/');
-    res.sendFile(path.join(DASHBOARD_DIR, 'login.html'));
-});
-
-app.post('/api/login', async (req, res) => {
-    const { username, password } = req.body;
-    if (username !== ADMIN_USERNAME) return res.status(401).json({ error: 'Credenziali errate' });
-    const ok = await bcrypt.compare(password, ADMIN_PASSWORD_HASH);
-    if (!ok) return res.status(401).json({ error: 'Credenziali errate' });
-    req.session.user = { username };
-    res.json({ success: true });
-});
-
-app.post('/api/logout', (req, res) => {
-    req.session.destroy(() => res.json({ success: true }));
-});
-
-app.get('/api/me', requireAuth, (req, res) => {
-    res.json({ user: req.session.user });
-});
-
-// ==================== API GUILDS ====================
-app.get('/api/guilds', requireAuth, (req, res) => {
-    try {
-        const { client } = global.PredCord;
-        const guilds = client.guilds.cache.map(g => ({
-            id: g.id,
-            name: g.name,
-            icon: g.iconURL({ dynamic: true, size: 128 }),
-            memberCount: g.memberCount
-        }));
-        res.json(guilds);
-    } catch (e) {
-        res.status(500).json({ error: e.message });
-    }
-});
-
-// ==================== API CUSTOM COMMANDS ====================
-app.get('/api/commands/:guildId', requireAuth, (req, res) => {
-    try {
-        const { loadCustomCommands } = global.PredCord;
-        const all = loadCustomCommands();
-        res.json(all[req.params.guildId] || {});
-    } catch (e) {
-        res.status(500).json({ error: e.message });
-    }
-});
-
-app.post('/api/commands/:guildId', requireAuth, (req, res) => {
-    try {
-        const { loadCustomCommands, saveCustomCommands } = global.PredCord;
-        const { guildId } = req.params;
-        const { name, data } = req.body;
-
-        if (!name || !/^[a-z0-9_-]{1,32}$/i.test(name)) {
-            return res.status(400).json({ error: 'Nome comando non valido' });
-        }
-
-        const all = loadCustomCommands();
-        if (!all[guildId]) all[guildId] = {};
-
-        const lowerName = name.toLowerCase();
-        const existing = all[guildId][lowerName];
-
-        all[guildId][lowerName] = {
-            name: lowerName,
-            type: data.type || 'text',
-            title: data.title || '',
-            response: data.response || '',
-            color: typeof data.color === 'number' ? data.color : 0xE67E22,
-            permission: data.permission || 'everyone',
-            deleteCommand: data.deleteCommand !== false,
-            createdAt: existing?.createdAt || new Date().toISOString(),
-            updatedAt: new Date().toISOString()
-        };
-
-        saveCustomCommands(all);
-        res.json({ success: true, command: all[guildId][lowerName] });
-    } catch (e) {
-        res.status(500).json({ error: e.message });
-    }
-});
-
-app.delete('/api/commands/:guildId/:name', requireAuth, (req, res) => {
-    try {
-        const { loadCustomCommands, saveCustomCommands } = global.PredCord;
-        const { guildId, name } = req.params;
-        const all = loadCustomCommands();
-
-        if (all[guildId] && all[guildId][name]) {
-            delete all[guildId][name];
-            saveCustomCommands(all);
-            return res.json({ success: true });
-        }
-        res.status(404).json({ error: 'Comando non trovato' });
-    } catch (e) {
-        res.status(500).json({ error: e.message });
-    }
-});
-
-// ==================== PAGINA PRINCIPALE ====================
-app.get('/', requireAuth, (req, res) => {
-    res.sendFile(path.join(DASHBOARD_DIR, 'index.html'));
-});
-
-// ==================== AVVIO ====================
-waitForBot().then(() => {
-    app.listen(PORT, () => {
-        console.log(`\n╔════════════════════════════════════════════╗`);
-        console.log(`║  🌐 Dashboard PredCord attiva              ║`);
-        console.log(`║  👉 http://localhost:${PORT}                  ║`);
-        console.log(`║  👤 User: ${ADMIN_USERNAME}                          ║`);
-        console.log(`║  🔑 Pass: ${ADMIN_PASSWORD}                          ║`);
-        console.log(`╚════════════════════════════════════════════╝\n`);
-
-        // Avvia Cloudflare Quick Tunnel
-        console.log('[TUNNEL] Avvio Cloudflare Quick Tunnel...');
-        console.log('[TUNNEL] Attendi 20-60 secondi per l\'URL pubblico...\n');
-
-        const cloudflaredPath = path.join(__dirname, 'cloudflared.exe');
-        const hasLocalExe = fs.existsSync(cloudflaredPath);
-
-        const spawnArgs = hasLocalExe
-            ? [cloudflaredPath, ['tunnel', '--url', `http://localhost:${PORT}`], { stdio: ['ignore', 'pipe', 'pipe'] }]
-            : ['npx.cmd', ['-y', 'cloudflared', 'tunnel', '--url', `http://localhost:${PORT}`], { stdio: ['ignore', 'pipe', 'pipe'], shell: true }];
-
-        let urlFound = false;
-        function handleOutput(data) {
-            const text = data.toString();
-            process.stdout.write(text);
-            const match = text.match(/https:\/\/[a-z0-9-]+\.trycloudflare\.com/);
-            if (match && !urlFound) {
-                urlFound = true;
-                console.log(`\n╔════════════════════════════════════════════╗`);
-                console.log(`║  🌍 URL PUBBLICO DASHBOARD:                ║`);
-                console.log(`║  👉 ${match[0]}   ║`);
-                console.log(`╚════════════════════════════════════════════╝\n`);
-            }
-        }
-
-        const tunnel = spawn(spawnArgs[0], spawnArgs[1], spawnArgs[2]);
-        tunnel.stdout.on('data', handleOutput);
-        tunnel.stderr.on('data', handleOutput);
-        tunnel.on('error', (err) => console.error('[TUNNEL] Errore:', err.message));
-        tunnel.on('exit', (code) => console.log(`[TUNNEL] Terminato (codice ${code})`));
-    });
-}).catch((err) => {
-    console.error('❌ Errore avvio dashboard:', err.message);
-    process.exit(1);
-});
+init();
