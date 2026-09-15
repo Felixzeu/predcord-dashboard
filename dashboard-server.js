@@ -32,13 +32,16 @@ const DASHBOARD_DIR = path.join(__dirname, 'dashboard');
 
 app.use(express.json({ limit: '1mb' }));
 app.use(express.urlencoded({ extended: true }));
+app.set('trust proxy', 1);
+
 app.use(session({
     secret: process.env.SESSION_SECRET || 'predcord-secret',
     resave: false,
     saveUninitialized: false,
     cookie: {
         maxAge: 1000 * 60 * 60 * 8,
-        secure: true,
+        secure: false,
+        httpOnly: true,
         sameSite: 'lax'
     }
 }));
