@@ -189,7 +189,44 @@ function updateTypeUI() {
         document.getElementById('cmdName').disabled = false;
         document.getElementById('cmdColor').value = '#E67E22';
     }
+               updateTypeUI();
     modal.classList.remove('hidden');
+    setTimeout(() => document.getElementById('cmdName').focus(), 100);
+}
+
+function updateTypeUI() {
+    const typeEl = document.getElementById('cmdType');
+    const hint = document.getElementById('responseHint');
+    const label = document.getElementById('labelResponse');
+    const response = document.getElementById('cmdResponse');
+    const deleteCheck = document.getElementById('cmdDelete');
+
+    if (!typeEl || !hint) return;
+    const type = typeEl.value;
+
+    const hints = {
+        text: '💬 Il bot risponde con questo testo. Variabili: {user} {username} {server} {membercount} {args}',
+        embed: '📦 Il bot risponde con un embed. Variabili: {user} {username} {server} {membercount} {args}',
+        ban: '🔨 Uso: `*comando @utente motivo`. Il motivo in Risposta è opzionale (di default).',
+        kick: '👢 Uso: `*comando @utente motivo`. Il motivo in Risposta è opzionale (di default).',
+        mute: '🔇 Uso: `*comando @utente minuti motivo`. Il motivo in Risposta è opzionale (di default).',
+        warn: '⚠️ Uso: `*comando @utente motivo`. Il motivo in Risposta è opzionale (di default).',
+        purge: '🗑️ Uso: `*comando numero`. Elimina N messaggi (1-100). Il campo Risposta non serve.'
+    };
+
+    hint.textContent = hints[type] || '';
+
+    if (['ban', 'kick', 'mute', 'warn', 'purge'].includes(type)) {
+        label.textContent = 'Motivo (opzionale)';
+        response.placeholder = 'Motivo di default (opzionale)';
+        response.required = false;
+        if (deleteCheck) deleteCheck.checked = true;
+    } else {
+        label.textContent = 'Risposta';
+        response.placeholder = 'Variabili: {user} {username} {server} {membercount} {args}';
+        response.required = true;
+    }
+}
 }
 
 function closeModal() {
