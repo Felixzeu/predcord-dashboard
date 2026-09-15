@@ -1,1 +1,53 @@
-
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Login • PredCord Dashboard</title>
+<link rel="stylesheet" href="/style.css">
+</head>
+<body class="login-page">
+<div class="login-box">
+    <div class="login-logo">🛡️</div>
+    <h1><span>PredCord</span> Dashboard</h1>
+    <p>Accedi al pannello di controllo</p>
+    <form id="loginForm">
+        <input type="text" id="username" placeholder="👤 Username" required autocomplete="username">
+        <input type="password" id="password" placeholder="🔒 Password" required autocomplete="current-password">
+        <button type="submit" class="btn-primary">Accedi →</button>
+        <p id="loginError" class="error hidden"></p>
+    </form>
+</div>
+<script>
+document.getElementById('loginForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const username = document.getElementById('username').value;
+    const password = document.getElementById('password').value;
+    const err = document.getElementById('loginError');
+    const btn = e.target.querySelector('button');
+    err.classList.add('hidden');
+    btn.textContent = 'Accesso in corso...';
+    btn.disabled = true;
+    try {
+        const res = await fetch('/api/login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username, password })
+        });
+        if (res.ok) { window.location.href = '/'; }
+        else {
+            err.textContent = '❌ Credenziali errate';
+            err.classList.remove('hidden');
+            btn.textContent = 'Accedi →';
+            btn.disabled = false;
+        }
+    } catch {
+        err.textContent = '❌ Errore di connessione';
+        err.classList.remove('hidden');
+        btn.textContent = 'Accedi →';
+        btn.disabled = false;
+    }
+});
+</script>
+</body>
+</html>
