@@ -166,7 +166,7 @@ function updateTypeUI() {
         response.required = true;
     }
 }
-
+function openModal(name = null) {
     editingName = name;
     const modal = document.getElementById('modal');
     const title = document.getElementById('modalTitle');
@@ -189,12 +189,11 @@ function updateTypeUI() {
         document.getElementById('cmdName').disabled = false;
         document.getElementById('cmdColor').value = '#E67E22';
     }
-               updateTypeUI();
-    modal.classList.remove('hidden');
-    setTimeout(() => document.getElementById('cmdName').focus(), 100);
-}
-
-function updateTypeUI() {
+     updateTypeUI();
+      modal.classList.remove('hidden');
+     setTimeout(() => document.getElementById('cmdName').focus(), 100);
+  }
+  function updateTypeUI() {
     const typeEl = document.getElementById('cmdType');
     const hint = document.getElementById('responseHint');
     const label = document.getElementById('labelResponse');
