@@ -226,7 +226,6 @@ function openModal(name = null) {
         response.required = true;
     }
 }
-}
 
 function closeModal() {
     document.getElementById('modal').classList.add('hidden');
