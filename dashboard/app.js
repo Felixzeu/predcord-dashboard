@@ -105,6 +105,34 @@ function truncate(str, n) {
     return str.length > n ? str.slice(0, n) + '...' : str;
 }
 
+function openModal(name = null) {
+    editingName = name;
+    const modal = document.getElementById('modal');
+    const title = document.getElementById('modalTitle');
+    const form = document.getElementById('cmdForm');
+    form.reset();
+
+    if (name && currentCommands[name]) {
+        const cmd = currentCommands[name];
+        title.textContent = 'Modifica Comando';
+        document.getElementById('cmdName').value = name;
+        document.getElementById('cmdName').disabled = true;
+        document.getElementById('cmdType').value = cmd.type || 'text';
+        document.getElementById('cmdTitle').value = cmd.title || '';
+        document.getElementById('cmdResponse').value = cmd.response || '';
+        document.getElementById('cmdColor').value = '#' + (cmd.color || 0xE67E22).toString(16).padStart(6, '0');
+        document.getElementById('cmdPermission').value = cmd.permission || 'everyone';
+        document.getElementById('cmdDelete').checked = cmd.deleteCommand !== false;
+    } else {
+        title.textContent = 'Nuovo Comando';
+        document.getElementById('cmdName').disabled = false;
+        document.getElementById('cmdColor').value = '#E67E22';
+    }
+    updateTypeUI();
+    modal.classList.remove('hidden');
+    setTimeout(() => document.getElementById('cmdName').focus(), 100);
+}
+
 function updateTypeUI() {
     const typeEl = document.getElementById('cmdType');
     const hint = document.getElementById('responseHint');
