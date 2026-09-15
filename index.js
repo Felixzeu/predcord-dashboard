@@ -415,6 +415,85 @@ async function saveModLog(guild, action, target, moderator, reason, duration = n
     }
 }
 
+function formatModerationHistory(userId, guildId, username) {
+    const logs = [];
+
+    if (userModLogs && typeof userModLogs.forEach === 'function') {
+        userModLogs.forEach((userLogs) => {
+            if (Array.isArray(userLogs)) {
+                for (const log of userLogs) {
+                    if (log.guildId === guildId && log.targetId === userId) {
+                        logs.push(log);
+                    }
+                }
+            }
+        });
+    }
+
+    if (logs.length === 0) {
+        return `✅ Nessuna sanzione registrata per **${username}**.`;
+    }
+
+    logs.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+    const typeEmoji = {
+        'User banned': '🔨',
+        'User kicked': '👢',
+        'User muted': '🔇',
+        'User warned': '⚠️',
+        'User unbanned': '✅',
+        'User unmuted': '🔊',
+        'Messages purged': '🧹',
+        'User banned (auto)': '🤖🔨',
+        'User kicked (auto)': '🤖👢',
+        'User muted (auto)': '🤖🔇'
+    };
+
+    const typeLabel = (action) => {
+        const a = (action || '').toLowerCase();
+        if (a.includes('unban')) return 'Unban';
+        if (a.includes('ban')) return 'Ban';
+        if (a.includes('kick')) return 'Kick';
+        if (a.includes('unmute')) return 'Unmute';
+        if (a.includes('mute')) return 'Mute';
+        if (a.includes('warn')) return 'Warn';
+        if (a.includes('purge')) return 'Purge';
+        return action;
+    };
+
+    const formatDateIT = (iso) => {
+        const d = new Date(iso);
+        const giorno = String(d.getDate()).padStart(2, '0');
+        const mesi = ['gennaio','febbraio','marzo','aprile','maggio','giugno','luglio','agosto','settembre','ottobre','novembre','dicembre'];
+        const mese = mesi[d.getMonth()];
+        const anno = d.getFullYear();
+        const ore = String(d.getHours()).padStart(2, '0');
+        const min = String(d.getMinutes()).padStart(2, '0');
+        return `${giorno} ${mese} ${anno} ${ore}:${min}`;
+    };
+
+    let output = `**Modlogs for ${username}**\n`;
+
+    for (const log of logs.slice(0, 10)) {
+        const emoji = typeEmoji[log.action] || '📌';
+        const tipo = typeLabel(log.action);
+        const durata = log.duration ? ` (${log.duration})` : '';
+
+        output += `\n**Case ${log.id}**\n`;
+        output += `${emoji} Type: ${tipo}${durata}\n`;
+        output += `Moderator: ${log.moderatorTag} (${log.moderatorId})\n`;
+        output += `Reason: ${log.reason} - ${formatDateIT(log.date)}\n`;
+    }
+
+    if (logs.length > 10) {
+        output += `\n*...e altre ${logs.length - 10} sanzioni*`;
+    }
+
+    output += `\n**Totale: ${logs.length} sanzioni**`;
+
+    return output;
+}
+
 function formatFullDate(date) {
     const timestamp = Math.floor(date.getTime() / 1000);
     return `<t:${timestamp}:F>`;
@@ -732,7 +811,8 @@ client.once('ready', async () => {
         removeWarning,
         clearWarnings,
         saveModLog,
-        saveData
+        saveData,
+        formatModerationHistory
     };
     console.log('[DASHBOARD] API global.PredCord esposte');
 });
@@ -1452,7 +1532,11 @@ client.on('messageCreate', async (message) => {
                         .replace(/{user}/g, user.toString())
                         .replace(/{username}/g, user.username)
                         .replace(/{server}/g, message.guild.name)
-                        .replace(/{membercount}/g, message.guild.memberCount);
+                        .replace(/{membercount}/g, message.guild.memberCount)
+                        .replace(/{md}/g, formatModerationHistory(user.id, message.guild.id, user.username));
+                } else {
+                    reason = reason
+                        .replace(/{md}/g, formatModerationHistory(user.id, message.guild.id, user.username));
                 }
                 if (!member || !member.bannable) {
                     const embed = new EmbedBuilder().setDescription('Non posso bannare questo utente.').setColor(COLORS.ERROR).setThumbnail(THUMBNAIL_URL);
@@ -1497,7 +1581,11 @@ client.on('messageCreate', async (message) => {
                         .replace(/{user}/g, user.toString())
                         .replace(/{username}/g, user.username)
                         .replace(/{server}/g, message.guild.name)
-                        .replace(/{membercount}/g, message.guild.memberCount);
+                        .replace(/{membercount}/g, message.guild.memberCount)
+                        .replace(/{md}/g, formatModerationHistory(user.id, message.guild.id, user.username));
+                } else {
+                    reason = reason
+                        .replace(/{md}/g, formatModerationHistory(user.id, message.guild.id, user.username));
                 }
                 if (!member || !member.kickable) {
                     const embed = new EmbedBuilder().setDescription('Non posso kickare questo utente.').setColor(COLORS.ERROR).setThumbnail(THUMBNAIL_URL);
@@ -1549,7 +1637,11 @@ client.on('messageCreate', async (message) => {
                         .replace(/{user}/g, user.toString())
                         .replace(/{username}/g, user.username)
                         .replace(/{server}/g, message.guild.name)
-                        .replace(/{membercount}/g, message.guild.memberCount);
+                        .replace(/{membercount}/g, message.guild.memberCount)
+                        .replace(/{md}/g, formatModerationHistory(user.id, message.guild.id, user.username));
+                } else {
+                    reason = reason
+                        .replace(/{md}/g, formatModerationHistory(user.id, message.guild.id, user.username));
                 }
                 if (!member || !member.moderatable) {
                     const embed = new EmbedBuilder().setDescription('Non posso mutare questo utente.').setColor(COLORS.ERROR).setThumbnail(THUMBNAIL_URL);
@@ -1594,7 +1686,11 @@ client.on('messageCreate', async (message) => {
                         .replace(/{user}/g, user.toString())
                         .replace(/{username}/g, user.username)
                         .replace(/{server}/g, message.guild.name)
-                        .replace(/{membercount}/g, message.guild.memberCount);
+                        .replace(/{membercount}/g, message.guild.memberCount)
+                        .replace(/{md}/g, formatModerationHistory(user.id, message.guild.id, user.username));
+                } else {
+                    reason = reason
+                        .replace(/{md}/g, formatModerationHistory(user.id, message.guild.id, user.username));
                 }
                 try {
                     const warningId = await addWarning(message.guild, user, message.author, reason);
@@ -1637,12 +1733,23 @@ client.on('messageCreate', async (message) => {
                 return;
             }
 
+            const targetInput = args[0];
+            let mdTarget = message.mentions.users.first();
+            if (!mdTarget && targetInput && /^\d+$/.test(targetInput)) {
+                try {
+                    const fetched = await message.guild.members.fetch(targetInput);
+                    mdTarget = fetched.user;
+                } catch { mdTarget = null; }
+            }
+            if (!mdTarget) mdTarget = message.author;
+
             let replyText = cmdData.response || '';
             replyText = replyText.replace(/{user}/g, message.author.toString());
             replyText = replyText.replace(/{username}/g, message.author.username);
             replyText = replyText.replace(/{server}/g, message.guild.name);
             replyText = replyText.replace(/{membercount}/g, message.guild.memberCount);
             replyText = replyText.replace(/{args}/g, args.join(' '));
+            replyText = replyText.replace(/{md}/g, formatModerationHistory(mdTarget.id, message.guild.id, mdTarget.username));
 
             if (cmdType === 'embed') {
                 const embed = new EmbedBuilder()
