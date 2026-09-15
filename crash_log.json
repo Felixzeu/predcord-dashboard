@@ -1,0 +1,17 @@
+[
+  {
+    "timestamp": "2026-09-15T14:41:41.582Z",
+    "type": "LOGIN_ERROR",
+    "message": "Unexpected server response: 503",
+    "stack": "Error: Unexpected server response: 503\n    at ClientRequest.<anonymous> (/home/container/node_modules/ws/lib/websocket.js:930:7)\n    at ClientRequest.emit (node:events:513:28)\n    at HTTPParser.parserOnIncomingClient (node:_http_client:693:27)\n    at HTTPParser.parserOnHeadersComplete (node:_http_common:119:17)\n    at TLSSocket.socketOnData (node:_http_client:535:22)\n    at TLSSocket.emit (node:events:513:28)\n    at addChunk (node:internal/streams/readable:324:12)\n    at readableAddChunk (node:internal/streams/readable:297:9)\n    at Readable.push (node:internal/streams/readable:234:10)\n    at TLSWrap.onStreamRead (node:internal/stream_base_commons:190:23)",
+    "context": {},
+    "memory": {
+      "rss": 85782528,
+      "heapTotal": 36032512,
+      "heapUsed": 17975104,
+      "external": 2839299,
+      "arrayBuffers": 141346
+    },
+    "uptime": 8.379741219
+  }
+]

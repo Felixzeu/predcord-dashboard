@@ -1,0 +1,111 @@
+{
+  "channel": [
+    {
+      "id": 1,
+      "action": "PURGE",
+      "targetId": "channel",
+      "targetTag": "#staff-chat",
+      "moderatorId": "825654941238034462",
+      "moderatorTag": "porcholenku",
+      "reason": "48 messages deleted",
+      "duration": null,
+      "guildId": "1491740088521195620",
+      "guildName": "PredCord Scrims",
+      "date": "2026-05-31T15:05:15.798Z",
+      "dateFormatted": "<t:1780239915:F>",
+      "hammerTime": "<t:1780239915:R>"
+    },
+    {
+      "id": 2,
+      "action": "PURGE",
+      "targetId": "channel",
+      "targetTag": "#generale",
+      "moderatorId": "825654941238034462",
+      "moderatorTag": "porcholenku",
+      "reason": "14 messages deleted",
+      "duration": null,
+      "guildId": "1491740088521195620",
+      "guildName": "PredCord Scrims",
+      "date": "2026-06-01T15:00:30.387Z",
+      "dateFormatted": "<t:1780326030:F>",
+      "hammerTime": "<t:1780326030:R>"
+    },
+    {
+      "id": 3,
+      "action": "PURGE",
+      "targetId": "channel",
+      "targetTag": "#admin-commands",
+      "moderatorId": "825654941238034462",
+      "moderatorTag": "porcholenku",
+      "reason": "0 messages deleted",
+      "duration": null,
+      "guildId": "1491740088521195620",
+      "guildName": "PredCord Scrims",
+      "date": "2026-06-01T15:08:11.990Z",
+      "dateFormatted": "<t:1780326491:F>",
+      "hammerTime": "<t:1780326491:R>"
+    },
+    {
+      "id": 4,
+      "action": "Messages purged",
+      "targetId": "channel",
+      "targetTag": "#staff-chat",
+      "moderatorId": "825654941238034462",
+      "moderatorTag": "porcholenku",
+      "reason": "69 messages deleted",
+      "duration": null,
+      "guildId": "1491740088521195620",
+      "guildName": "PredCord Scrims",
+      "date": "2026-06-01T23:09:39.248Z",
+      "dateFormatted": "<t:1780355379:F>",
+      "hammerTime": "<t:1780355379:R>"
+    },
+    {
+      "id": 5,
+      "action": "Messages purged",
+      "targetId": "channel",
+      "targetTag": "#staff-chat",
+      "moderatorId": "825654941238034462",
+      "moderatorTag": "porcholenku",
+      "reason": "5 messages deleted",
+      "duration": null,
+      "guildId": "1491740088521195620",
+      "guildName": "PredCord Scrims",
+      "date": "2026-06-01T23:10:11.950Z",
+      "dateFormatted": "<t:1780355411:F>",
+      "hammerTime": "<t:1780355411:R>"
+    }
+  ],
+  "825654941238034462": [
+    {
+      "id": 1,
+      "action": "WARN",
+      "targetId": "825654941238034462",
+      "targetTag": "porcholenku",
+      "moderatorId": "825654941238034462",
+      "moderatorTag": "porcholenku",
+      "reason": "prot",
+      "duration": null,
+      "guildId": "1491740088521195620",
+      "guildName": "PredCord Scrims",
+      "date": "2026-06-01T18:13:47.587Z",
+      "dateFormatted": "<t:1780337627:F>",
+      "hammerTime": "<t:1780337627:R>"
+    },
+    {
+      "id": 2,
+      "action": "User warned",
+      "targetId": "825654941238034462",
+      "targetTag": "porcholenku",
+      "moderatorId": "825654941238034462",
+      "moderatorTag": "porcholenku",
+      "reason": "prot",
+      "duration": null,
+      "guildId": "1491740088521195620",
+      "guildName": "PredCord Scrims",
+      "date": "2026-06-01T18:21:50.750Z",
+      "dateFormatted": "<t:1780338110:F>",
+      "hammerTime": "<t:1780338110:R>"
+    }
+  ]
+}

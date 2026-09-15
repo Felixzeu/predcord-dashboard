@@ -1,0 +1,26 @@
+{
+  "1491740088521195620": {
+    "gas": {
+      "name": "gas",
+      "type": "embed",
+      "title": "GAS",
+      "response": "GAS",
+      "color": 15105570,
+      "permission": "admin",
+      "deleteCommand": true,
+      "createdAt": "2026-09-15T21:38:07.899Z",
+      "updatedAt": "2026-09-15T21:38:07.899Z"
+    },
+    "duce": {
+      "name": "duce",
+      "type": "embed",
+      "title": "amo i trans",
+      "response": "gay",
+      "color": 9899122,
+      "permission": "staff",
+      "deleteCommand": true,
+      "createdAt": "2026-09-15T21:41:07.264Z",
+      "updatedAt": "2026-09-15T21:41:07.264Z"
+    }
+  }
+}

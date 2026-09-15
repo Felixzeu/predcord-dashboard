@@ -1,0 +1,27 @@
+{
+  "name": "predcord",
+  "version": "1.0.0",
+  "description": "PredCord Discord Bot + Web Dashboard",
+  "main": "dashboard-server.js",
+  "scripts": {
+    "start": "node dashboard-server.js",
+    "bot": "node index.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "discord",
+    "bot",
+    "dashboard"
+  ],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "bcrypt": "^5.1.1",
+    "bcryptjs": "^3.0.3",
+    "discord.js": "^14.27.0",
+    "dotenv": "^17.4.2",
+    "express": "^4.22.3",
+    "express-session": "^1.19.0"
+  }
+}
