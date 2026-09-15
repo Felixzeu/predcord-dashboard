@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PredCord Dashboard</title>
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<header>
+    <div class="logo"><span>PredCord</span> Dashboard</div>
+    <button id="logoutBtn" class="btn-logout">Logout</button>
+</header>
+
+<main>
+    <aside>
+        <h3>Seleziona Server</h3>
+        <select id="guildSelect"></select>
+        <button id="refreshBtn" class="btn-secondary">🔄 Aggiorna lista</button>
+    </aside>
+
+    <section class="content">
+        <div class="panel-header">
+            <h2>Comandi Custom</h2>
+            <button id="newCmdBtn" class="btn-primary">+ Nuovo Comando</button>
+        </div>
+        <div id="commandsList" class="commands-list">
+            <div class="loading">Caricamento</div>
+        </div>
+    </section>
+</main>
+
+<div id="modal" class="modal hidden">
+    <div class="modal-content">
+        <h2 id="modalTitle">Nuovo Comando</h2>
+        <form id="cmdForm">
+            <label>Nome comando (senza *)</label>
+            <input type="text" id="cmdName" placeholder="es: regole" required pattern="[a-zA-Z0-9_-]{1,32}">
+
+            <label>Tipo risposta</label>
+            <select id="cmdType">
+                <option value="text">💬 Testo semplice</option>
+                <option value="embed">📦 Embed</option>
+            </select>
+
+            <label>Titolo (solo embed)</label>
+            <input type="text" id="cmdTitle" placeholder="es: Regole del Server">
+
+            <label>Risposta</label>
+            <textarea id="cmdResponse" rows="6" placeholder="Variabili: {user} {username} {server} {membercount} {args}" required></textarea>
+
+            <label>Colore Embed</label>
+            <input type="color" id="cmdColor" value="#E67E22">
+
+            <label>Permessi richiesti</label>
+            <select id="cmdPermission">
+                <option value="everyone">🌍 Tutti</option>
+                <option value="staff">👥 Staff</option>
+                <option value="mod">🛡️ Moderatori</option>
+                <option value="admin">👑 Admin</option>
+            </select>
+
+            <label class="checkbox-label">
+                <input type="checkbox" id="cmdDelete" checked>
+                🗑️ Elimina automaticamente il messaggio del comando
+            </label>
+
+            <div class="modal-actions">
+                <button type="button" id="cancelBtn" class="btn-secondary">Annulla</button>
+                <button type="submit" class="btn-primary">💾 Salva Comando</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script src="/app.js"></script>
+</body>
+</html>
