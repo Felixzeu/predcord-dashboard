@@ -78,7 +78,6 @@ app.get('/api/me', requireAuth, (req, res) => {
     res.json({ user: req.session.user });
 });
 
-// ==================== GUILDS ====================
 app.get('/api/guilds', requireAuth, (req, res) => {
     try {
         const { client } = global.PredCord;
@@ -94,7 +93,6 @@ app.get('/api/guilds', requireAuth, (req, res) => {
     }
 });
 
-// ==================== COMANDI CUSTOM ====================
 app.get('/api/commands/:guildId', requireAuth, (req, res) => {
     try {
         const { loadCustomCommands } = global.PredCord;
@@ -157,47 +155,56 @@ app.delete('/api/commands/:guildId/:name', requireAuth, (req, res) => {
     }
 });
 
-// ==================== MEMBRI ====================
 app.get('/api/members/:guildId', requireAuth, async (req, res) => {
     try {
         const { client } = global.PredCord;
         const guild = client.guilds.cache.get(req.params.guildId);
         if (!guild) return res.status(404).json({ error: 'Server non trovato' });
 
-        await guild.members.fetch();
-        const members = guild.members.cache
+        let members = guild.members.cache;
+        if (members.size <= 1) {
+            try {
+                members = await guild.members.fetch();
+            } catch (fetchErr) {
+                console.error('Fetch members fallito:', fetchErr.message);
+            }
+        }
+
+        const list = members
             .filter(m => !m.user.bot)
             .map(m => ({
                 id: m.user.id,
                 username: m.user.username,
                 displayName: m.displayName,
+                tag: m.user.tag,
                 avatar: m.user.displayAvatarURL({ dynamic: true, size: 64 }),
-                joinedAt: m.joinedAt
+                joinedAt: m.joinedAt,
+                roles: m.roles.cache.filter(r => r.id !== guild.id).map(r => r.name)
             }))
             .slice(0, 200);
 
-        res.json(members);
+        res.json(list);
     } catch (e) {
+        console.error('Members error:', e);
         res.status(500).json({ error: e.message });
     }
 });
 
-// ==================== MODLOGS ====================
 app.get('/api/modlogs/:guildId', requireAuth, (req, res) => {
     try {
-        const modlogsFile = path.join(__dirname, 'modlogs.json');
-        let logs = [];
+        const { userModLogs } = global.PredCord;
+        const logs = [];
 
-        if (fs.existsSync(modlogsFile)) {
-            try {
-                const all = JSON.parse(fs.readFileSync(modlogsFile, 'utf8'));
-                for (const userId in all) {
-                    const userLogs = all[userId];
-                    if (Array.isArray(userLogs)) {
-                        logs.push(...userLogs.filter(l => l.guildId === req.params.guildId));
+        if (userModLogs && typeof userModLogs.forEach === 'function') {
+            userModLogs.forEach((userLogs) => {
+                if (Array.isArray(userLogs)) {
+                    for (const log of userLogs) {
+                        if (log.guildId === req.params.guildId) {
+                            logs.push(log);
+                        }
                     }
                 }
-            } catch {}
+            });
         }
 
         logs.sort((a, b) => new Date(b.date) - new Date(a.date));
@@ -207,10 +214,19 @@ app.get('/api/modlogs/:guildId', requireAuth, (req, res) => {
     }
 });
 
-// ==================== AZIONI MODERAZIONE ====================
+app.get('/api/warnings/:guildId/:userId', requireAuth, async (req, res) => {
+    try {
+        const { getUserWarnings } = global.PredCord;
+        const userWarnings = await getUserWarnings(req.params.userId);
+        res.json(userWarnings);
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
 app.post('/api/moderation/:guildId', requireAuth, async (req, res) => {
     try {
-        const { client } = global.PredCord;
+        const { client, saveModLog, addWarning } = global.PredCord;
         const guild = client.guilds.cache.get(req.params.guildId);
         if (!guild) return res.status(404).json({ error: 'Server non trovato' });
 
@@ -226,71 +242,46 @@ app.post('/api/moderation/:guildId', requireAuth, async (req, res) => {
 
         const moderator = client.user;
         const cleanReason = reason || 'Azione dalla dashboard';
+        let actionLabel = '';
+        let durationText = null;
 
-        try {
-            if (action === 'warn') {
-                const warnFile = path.join(__dirname, 'warnings.json');
-                let warnings = {};
-                if (fs.existsSync(warnFile)) {
-                    try { warnings = JSON.parse(fs.readFileSync(warnFile, 'utf8')); } catch {}
-                }
-                if (!warnings[userId]) warnings[userId] = [];
-                warnings[userId].push({
-                    id: warnings[userId].length + 1,
-                    moderatorId: moderator.id,
-                    moderatorTag: moderator.tag,
-                    reason: cleanReason,
-                    date: new Date().toISOString(),
-                    dateFormatted: `<t:${Math.floor(Date.now() / 1000)}:F>`
-                });
-                fs.writeFileSync(warnFile, JSON.stringify(warnings, null, 2));
-            } else if (action === 'mute') {
-                const mins = Math.max(1, Math.min(40320, parseInt(duration) || 60));
-                await member.timeout(mins * 60 * 1000, cleanReason);
-            } else if (action === 'kick') {
-                if (!member.kickable) return res.status(400).json({ error: 'Non posso kickare questo utente' });
-                await member.kick(cleanReason);
-            } else if (action === 'ban') {
-                if (!member.bannable) return res.status(400).json({ error: 'Non posso bannare questo utente' });
-                await member.ban({ reason: cleanReason });
-            } else {
-                return res.status(400).json({ error: 'Azione non valida' });
+        if (action === 'warn') {
+            await addWarning(guild, member.user, moderator, cleanReason);
+            actionLabel = 'User warned';
+        } else if (action === 'mute') {
+            const mins = Math.max(1, Math.min(40320, parseInt(duration) || 60));
+            if (!member.moderatable) return res.status(400).json({ error: 'Non posso mutare questo utente' });
+            await member.timeout(mins * 60 * 1000, cleanReason);
+            actionLabel = 'User muted';
+            durationText = `${mins} minutes`;
+        } else if (action === 'kick') {
+            if (!member.kickable) return res.status(400).json({ error: 'Non posso kickare questo utente' });
+            await member.kick(cleanReason);
+            actionLabel = 'User kicked';
+        } else if (action === 'ban') {
+            if (!member.bannable) return res.status(400).json({ error: 'Non posso bannare questo utente' });
+            await member.ban({ reason: cleanReason });
+            actionLabel = 'User banned';
+        } else if (action === 'unban') {
+            try {
+                await guild.members.unban(userId, cleanReason);
+                actionLabel = 'User unbanned';
+            } catch (err) {
+                return res.status(400).json({ error: 'Utente non bannato o ID non valido' });
             }
-
-            // Salva modlog
-            const modlogsFile = path.join(__dirname, 'modlogs.json');
-            let modlogs = {};
-            if (fs.existsSync(modlogsFile)) {
-                try { modlogs = JSON.parse(fs.readFileSync(modlogsFile, 'utf8')); } catch {}
-            }
-            if (!modlogs[userId]) modlogs[userId] = [];
-            modlogs[userId].push({
-                id: modlogs[userId].length + 1,
-                action: action.charAt(0).toUpperCase() + action.slice(1),
-                targetId: userId,
-                targetTag: member.user.tag,
-                moderatorId: moderator.id,
-                moderatorTag: moderator.tag,
-                reason: cleanReason,
-                duration: action === 'mute' ? `${duration} minuti` : null,
-                guildId: guild.id,
-                guildName: guild.name,
-                date: new Date().toISOString(),
-                dateFormatted: `<t:${Math.floor(Date.now() / 1000)}:F>`,
-                type: action
-            });
-            fs.writeFileSync(modlogsFile, JSON.stringify(modlogs, null, 2));
-
-            res.json({ success: true, username: member.user.tag });
-        } catch (err) {
-            res.status(500).json({ error: err.message });
+        } else {
+            return res.status(400).json({ error: 'Azione non valida' });
         }
+
+        await saveModLog(guild, actionLabel, member.user, moderator, cleanReason, durationText);
+
+        res.json({ success: true, username: member.user.tag });
     } catch (e) {
+        console.error('Moderation error:', e);
         res.status(500).json({ error: e.message });
     }
 });
 
-// ==================== PAGINA PRINCIPALE ====================
 app.get('/', requireAuth, (req, res) => {
     res.sendFile(path.join(DASHBOARD_DIR, 'index.html'));
 });
