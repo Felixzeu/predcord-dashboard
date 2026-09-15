@@ -82,8 +82,9 @@
             <label>Titolo (solo embed)</label>
             <input type="text" id="cmdTitle" placeholder="es: Regole del Server">
 
-            <label>Risposta</label>
-            <textarea id="cmdResponse" rows="6" placeholder="Variabili: {user} {username} {server} {membercount} {args}" required></textarea>
+                        <label id="labelResponse">Risposta</label>
+            <textarea id="cmdResponse" rows="6" placeholder="Variabili: {user} {username} {server} {membercount} {args}"></textarea>
+            <p id="responseHint" style="color: var(--text-dim); font-size: 12px; margin-top: 8px; line-height: 1.5;"></p>
 
             <label>Colore Embed</label>
             <input type="color" id="cmdColor" value="#E67E22">
