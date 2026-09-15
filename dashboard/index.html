@@ -17,19 +17,53 @@
         <h3>Seleziona Server</h3>
         <select id="guildSelect"></select>
         <button id="refreshBtn" class="btn-secondary">🔄 Aggiorna lista</button>
+
+        <h3 style="margin-top:24px;">Sezioni</h3>
+        <nav class="nav-tabs">
+            <button class="nav-tab active" data-tab="commands">⚡ Comandi Custom</button>
+            <button class="nav-tab" data-tab="moderation">🛡️ Moderazione</button>
+        </nav>
     </aside>
 
     <section class="content">
-        <div class="panel-header">
-            <h2>Comandi Custom</h2>
-            <button id="newCmdBtn" class="btn-primary">+ Nuovo Comando</button>
+        <!-- ============ COMANDI CUSTOM ============ -->
+        <div id="tab-commands" class="tab-content">
+            <div class="panel-header">
+                <h2>Comandi Custom</h2>
+                <button id="newCmdBtn" class="btn-primary">+ Nuovo Comando</button>
+            </div>
+            <div id="commandsList" class="commands-list">
+                <div class="loading">Caricamento</div>
+            </div>
         </div>
-        <div id="commandsList" class="commands-list">
-            <div class="loading">Caricamento</div>
+
+        <!-- ============ MODERAZIONE ============ -->
+        <div id="tab-moderation" class="tab-content hidden">
+            <div class="panel-header">
+                <h2>Moderazione</h2>
+                <input type="text" id="memberSearch" placeholder="🔍 Cerca membro..." class="search-input">
+            </div>
+
+            <div class="mod-grid">
+                <div class="mod-panel">
+                    <h3>👥 Membri</h3>
+                    <div id="membersList" class="members-list">
+                        <div class="loading">Caricamento</div>
+                    </div>
+                </div>
+
+                <div class="mod-panel">
+                    <h3>📋 Storico Moderazione</h3>
+                    <div id="modlogsList" class="modlogs-list">
+                        <div class="loading">Caricamento</div>
+                    </div>
+                </div>
+            </div>
         </div>
     </section>
 </main>
 
+<!-- ============ MODAL COMANDO ============ -->
 <div id="modal" class="modal hidden">
     <div class="modal-content">
         <h2 id="modalTitle">Nuovo Comando</h2>
@@ -68,6 +102,31 @@
             <div class="modal-actions">
                 <button type="button" id="cancelBtn" class="btn-secondary">Annulla</button>
                 <button type="submit" class="btn-primary">💾 Salva Comando</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- ============ MODAL AZIONE MOD ============ -->
+<div id="modModal" class="modal hidden">
+    <div class="modal-content">
+        <h2 id="modModalTitle">Azione Moderazione</h2>
+        <form id="modForm">
+            <input type="hidden" id="modAction">
+            <input type="hidden" id="modUserId">
+
+            <label>Utente</label>
+            <input type="text" id="modUserDisplay" disabled>
+
+            <label id="modDurationLabel" class="hidden">Durata (minuti)</label>
+            <input type="number" id="modDuration" min="1" max="40320" value="60" class="hidden">
+
+            <label>Motivo</label>
+            <textarea id="modReason" rows="3" placeholder="Motivo dell'azione..."></textarea>
+
+            <div class="modal-actions">
+                <button type="button" id="modCancelBtn" class="btn-secondary">Annulla</button>
+                <button type="submit" class="btn-primary" id="modSubmitBtn">Conferma</button>
             </div>
         </form>
     </div>
