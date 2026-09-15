@@ -3,7 +3,6 @@ const fs = require('fs');
 const path = require('path');
 require('dotenv').config();
 
-// ==================== ANTI-CRASH SYSTEM ====================
 const CRASH_LOG_FILE = './crash_log.json';
 const MAX_CRASH_LOGS = 100;
 
@@ -71,7 +70,6 @@ function safeReadJSON(filePath, fallback = {}) {
 
 console.log('[ANTI-CRASH] Sistema di protezione attivato');
 
-// ==================== CLIENT ====================
 const client = new Client({
     intents: [
         GatewayIntentBits.Guilds,
@@ -84,7 +82,6 @@ const client = new Client({
     ]
 });
 
-// ==================== FILE CONFIGURAZIONE ====================
 const SERVER_CONFIG_FILE = './server_config.json';
 const MODLOGS_FILE = './modlogs.json';
 const TRANSCRIPTS_DIR = './transcripts/';
@@ -99,7 +96,6 @@ if (!fs.existsSync(TRANSCRIPTS_DIR)) {
     fs.mkdirSync(TRANSCRIPTS_DIR, { recursive: true });
 }
 
-// ==================== CUSTOM COMMANDS SYSTEM ====================
 function loadCustomCommands() {
     return safeReadJSON(CUSTOM_COMMANDS_FILE, {});
 }
@@ -108,7 +104,6 @@ function saveCustomCommands(data) {
     return safeWriteJSON(CUSTOM_COMMANDS_FILE, data);
 }
 
-// ==================== LOGO E COLORI ====================
 const THUMBNAIL_URL = "https://media.discordapp.net/attachments/1365770639398408303/1494756290935656498/image.png";
 const FOOTER_IMAGE_URL = "https://cdn.discordapp.com/attachments/1400266716763918519/1511055836448034958/CB02C8D3-57C6-4DDC-B1DC-F1ECD3844516.png";
 
@@ -122,7 +117,6 @@ const COLORS = {
     REPORT: 0xE67E22
 };
 
-// ==================== LINK SOCIAL ====================
 const SOCIAL_LINKS = {
     twitch: "https://www.twitch.tv/predagefn",
     youtube: "https://www.youtube.com/@predagefn",
@@ -132,7 +126,6 @@ const SOCIAL_LINKS = {
     discord: "https://discord.gg/UW7SsywQp6"
 };
 
-// ==================== EMOJI DEL BOT ====================
 const EMOJIS = {
     twitch:    '<:twitch:1549474965793935571>',
     discord:   '<:discord:1549474921816531045>',
@@ -142,7 +135,6 @@ const EMOJIS = {
     instagram: '<:insta:1549468767916916806>'
 };
 
-// ==================== CONFIGURAZIONE GUILD ====================
 function getGuildConfig(guildId) {
     if (!serverConfigs[guildId]) {
         serverConfigs[guildId] = {
@@ -183,7 +175,6 @@ function saveServerConfigs() {
     safeWriteJSON(SERVER_CONFIG_FILE, serverConfigs);
 }
 
-// ==================== SISTEMA PERMESSI ====================
 function isAdminSafe(member) {
     try {
         if (!member) return false;
@@ -240,7 +231,6 @@ function canUseBaseCommands(member) {
     return isAdminSafe(member) || isModeratorSafe(member);
 }
 
-// ==================== HELPER UTENTI ====================
 async function getUserFromInput(guild, input) {
     if (!input) return null;
     let userId = null;
@@ -259,7 +249,6 @@ async function getUserFromInput(guild, input) {
     }
 }
 
-// ==================== DM ====================
 async function sendActionDM(user, action, reason, moderator, duration = null) {
     try {
         const moderatorTag = moderator?.tag || moderator?.user?.tag || 'Auto-Mod';
@@ -283,7 +272,6 @@ async function sendActionDM(user, action, reason, moderator, duration = null) {
     }
 }
 
-// ==================== WARNINGS ====================
 function loadWarnings() {
     const saved = safeReadJSON(WARNINGS_FILE, {});
     warnings.clear();
@@ -364,7 +352,6 @@ async function getUserWarnings(userId) {
     return warnings.get(userId) || [];
 }
 
-// ==================== MOD LOGS ====================
 async function saveModLog(guild, action, target, moderator, reason, duration = null) {
     try {
         let userLogs;
@@ -448,7 +435,6 @@ function isValidUrl(string) {
     }
 }
 
-// ==================== JOIN/LEAVE LOG ====================
 async function sendJoinLog(member) {
     try {
         const config = getGuildConfig(member.guild.id);
@@ -535,7 +521,6 @@ async function sendSocialEmbed(channel) {
     }
 }
 
-// ==================== TICKET ====================
 async function showTicketTypeMenu(interaction) {
     const row = new ActionRowBuilder().addComponents(
         new StringSelectMenuBuilder()
@@ -704,7 +689,6 @@ async function generateTicketTranscript(channel, closer) {
     }
 }
 
-// ==================== DATA LOADING ====================
 function loadData() {
     const saved = safeReadJSON(MODLOGS_FILE, {});
     userModLogs.clear();
@@ -720,7 +704,6 @@ function saveData() {
     saveWarnings();
 }
 
-// ==================== READY ====================
 client.once('ready', async () => {
     console.log(`Bot PredCord connesso come ${client.user.tag}`);
     loadServerConfigs();
@@ -730,7 +713,6 @@ client.once('ready', async () => {
     const totalCmds = Object.values(customCmds).reduce((acc, g) => acc + Object.keys(g).length, 0);
     console.log(`[CUSTOM] Comandi custom caricati: ${totalCmds} in ${Object.keys(customCmds).length} server`);
 
-    // Esponi per il server dashboard
     global.PredCord = {
         client,
         getGuildConfig,
@@ -747,7 +729,6 @@ client.once('ready', async () => {
     console.log('[DASHBOARD] API global.PredCord esposte');
 });
 
-// ==================== GUILD MEMBER ====================
 client.on('guildMemberAdd', async (member) => {
     try {
         await sendWelcomeDM(member);
@@ -765,7 +746,6 @@ client.on('guildMemberRemove', async (member) => {
     }
 });
 
-// ==================== MESSAGE LOGS ====================
 client.on(Events.MessageDelete, async (message) => {
     try {
         if (!message.guild) return;
@@ -812,7 +792,6 @@ client.on(Events.MessageUpdate, async (oldMessage, newMessage) => {
     }
 });
 
-// ==================== COMANDI ====================
 client.on('messageCreate', async (message) => {
     try {
         if (message.author.bot) return;
@@ -822,7 +801,6 @@ client.on('messageCreate', async (message) => {
         const command = args.shift().toLowerCase();
         const hasModPermsCheck = hasModPerms(message.member);
 
-        // HELP
         if (command === 'help') {
             if (!canUseBaseCommands(message.member)) {
                 await message.delete().catch(() => {});
@@ -845,7 +823,6 @@ client.on('messageCreate', async (message) => {
             return;
         }
 
-        // AVATAR
         if (command === 'av') {
             if (!canUseBaseCommands(message.member)) {
                 await message.delete().catch(() => {});
@@ -862,7 +839,6 @@ client.on('messageCreate', async (message) => {
             return;
         }
 
-        // WHOIS
         if (command === 'w') {
             if (!canUseBaseCommands(message.member)) {
                 await message.delete().catch(() => {});
@@ -901,7 +877,6 @@ client.on('messageCreate', async (message) => {
             return;
         }
 
-        // SERVER
         if (command === 'server') {
             if (!canUseBaseCommands(message.member)) {
                 await message.delete().catch(() => {});
@@ -925,7 +900,6 @@ client.on('messageCreate', async (message) => {
             return;
         }
 
-        // SOCIAL
         if (command === 'social') {
             if (!canUseBaseCommands(message.member)) {
                 await message.delete().catch(() => {});
@@ -936,7 +910,6 @@ client.on('messageCreate', async (message) => {
             return;
         }
 
-        // WARN
         if (command === 'warn') {
             if (!hasModPermsCheck) { await message.delete().catch(() => {}); return; }
             const input = args[0];
@@ -972,7 +945,6 @@ client.on('messageCreate', async (message) => {
             return;
         }
 
-        // WARNINGS
         if (command === 'warnings') {
             if (!hasModPermsCheck) { await message.delete().catch(() => {}); return; }
             const input = args[0];
@@ -1006,7 +978,6 @@ client.on('messageCreate', async (message) => {
             return;
         }
 
-        // DELWARN
         if (command === 'delwarn') {
             if (!hasModPermsCheck) { await message.delete().catch(() => {}); return; }
             const input = args[0];
@@ -1037,7 +1008,6 @@ client.on('messageCreate', async (message) => {
             return;
         }
 
-        // CLEARWARNS
         if (command === 'clearwarns') {
             if (!hasModPermsCheck) { await message.delete().catch(() => {}); return; }
             const input = args[0];
@@ -1062,7 +1032,6 @@ client.on('messageCreate', async (message) => {
             return;
         }
 
-        // SETUP
         if (message.content === '*setup') {
             if (!canUseSetupCommand(message.member)) return;
             const config = getGuildConfig(message.guild.id);
@@ -1162,7 +1131,6 @@ client.on('messageCreate', async (message) => {
             return;
         }
 
-        // SENDTICKET
         if (command === 'sendticket') {
             if (!canUseSetupCommand(message.member)) return;
             const config = getGuildConfig(message.guild.id);
@@ -1191,7 +1159,6 @@ client.on('messageCreate', async (message) => {
             return;
         }
 
-        // TICKETS
         if (command === 'tickets') {
             if (!hasStaffPermission(message.member)) return;
             const embed = new EmbedBuilder().setTitle('Ticket Statistics').setDescription('Feature coming soon!').setColor(COLORS.INFO).setThumbnail(THUMBNAIL_URL);
@@ -1200,7 +1167,6 @@ client.on('messageCreate', async (message) => {
             return;
         }
 
-        // BAN
         if (command === 'ban') {
             if (!hasModPermsCheck) { await message.delete().catch(() => {}); return; }
             const input = args[0];
@@ -1240,7 +1206,6 @@ client.on('messageCreate', async (message) => {
             return;
         }
 
-        // UNBAN
         if (command === 'unban') {
             if (!hasModPermsCheck) { await message.delete().catch(() => {}); return; }
             const userId = args[0];
@@ -1271,7 +1236,6 @@ client.on('messageCreate', async (message) => {
             return;
         }
 
-        // KICK
         if (command === 'kick') {
             if (!hasModPermsCheck) { await message.delete().catch(() => {}); return; }
             const input = args[0];
@@ -1311,7 +1275,6 @@ client.on('messageCreate', async (message) => {
             return;
         }
 
-        // MUTE
         if (command === 'mute') {
             if (!hasModPermsCheck) { await message.delete().catch(() => {}); return; }
             const input = args[0];
@@ -1373,7 +1336,6 @@ client.on('messageCreate', async (message) => {
             return;
         }
 
-        // UNMUTE
         if (command === 'unmute') {
             if (!hasModPermsCheck) { await message.delete().catch(() => {}); return; }
             const input = args[0];
@@ -1412,7 +1374,6 @@ client.on('messageCreate', async (message) => {
             return;
         }
 
-        // PURGE
         if (command === 'purge') {
             if (!hasModPermsCheck) { await message.delete().catch(() => {}); return; }
             const amount = parseInt(args[0]);
@@ -1439,7 +1400,6 @@ client.on('messageCreate', async (message) => {
             return;
         }
 
-               // ==================== COMANDI CUSTOM ====================
         const customCmds = loadCustomCommands();
         const guildCustoms = customCmds[message.guild.id] || {};
         if (guildCustoms[command]) {
@@ -1460,7 +1420,6 @@ client.on('messageCreate', async (message) => {
 
             const cmdType = cmdData.type || 'text';
 
-            // ==================== BAN ====================
             if (cmdType === 'ban') {
                 if (!hasModPerms(message.member)) { await message.delete().catch(() => {}); return; }
                 const input = args[0];
@@ -1499,7 +1458,6 @@ client.on('messageCreate', async (message) => {
                 return;
             }
 
-            // ==================== KICK ====================
             if (cmdType === 'kick') {
                 if (!hasModPerms(message.member)) { await message.delete().catch(() => {}); return; }
                 const input = args[0];
@@ -1538,7 +1496,6 @@ client.on('messageCreate', async (message) => {
                 return;
             }
 
-            // ==================== MUTE ====================
             if (cmdType === 'mute') {
                 if (!hasModPerms(message.member)) { await message.delete().catch(() => {}); return; }
                 const input = args[0];
@@ -1585,7 +1542,6 @@ client.on('messageCreate', async (message) => {
                 return;
             }
 
-            // ==================== WARN ====================
             if (cmdType === 'warn') {
                 if (!hasModPerms(message.member)) { await message.delete().catch(() => {}); return; }
                 const input = args[0];
@@ -1620,7 +1576,6 @@ client.on('messageCreate', async (message) => {
                 return;
             }
 
-            // ==================== PURGE ====================
             if (cmdType === 'purge') {
                 if (!hasModPerms(message.member)) { await message.delete().catch(() => {}); return; }
                 const amount = parseInt(args[0]);
@@ -1646,7 +1601,6 @@ client.on('messageCreate', async (message) => {
                 return;
             }
 
-            // ==================== TESTO / EMBED ====================
             let replyText = cmdData.response || '';
             replyText = replyText.replace(/{user}/g, message.author.toString());
             replyText = replyText.replace(/{username}/g, message.author.username);
@@ -1673,7 +1627,6 @@ client.on('messageCreate', async (message) => {
     }
 });
 
-// ==================== INTERACTIONS ====================
 client.on('interactionCreate', async (interaction) => {
     try {
         if (interaction.isStringSelectMenu() && interaction.customId === 'ticket_type_menu') {
@@ -1765,7 +1718,6 @@ client.on('interactionCreate', async (interaction) => {
     }
 });
 
-// ==================== AUTO-SAVE ====================
 setInterval(() => {
     try { saveData(); } catch (e) { logCrash('AUTO_SAVE', e); }
 }, 300000);
@@ -1773,7 +1725,6 @@ setInterval(() => {
 process.on('SIGINT', () => { try { saveData(); } catch {} process.exit(); });
 process.on('SIGTERM', () => { try { saveData(); } catch {} process.exit(); });
 
-// ==================== STARTUP ====================
 loadData();
 
 if (!process.env.DISCORD_TOKEN) {
