@@ -724,7 +724,15 @@ client.once('ready', async () => {
         hasModPerms,
         COLORS,
         THUMBNAIL_URL,
-        EmbedBuilder
+        EmbedBuilder,
+        userModLogs,
+        warnings,
+        getUserWarnings,
+        addWarning,
+        removeWarning,
+        clearWarnings,
+        saveModLog,
+        saveData
     };
     console.log('[DASHBOARD] API global.PredCord esposte');
 });
@@ -1438,7 +1446,14 @@ client.on('messageCreate', async (message) => {
                 }
                 const user = result.user;
                 const member = result.member;
-                const reason = args.slice(1).join(' ') || cmdData.response || 'Nessun motivo';
+                let reason = args.slice(1).join(' ');
+                if (!reason) {
+                    reason = (cmdData.response || 'Nessun motivo')
+                        .replace(/{user}/g, user.toString())
+                        .replace(/{username}/g, user.username)
+                        .replace(/{server}/g, message.guild.name)
+                        .replace(/{membercount}/g, message.guild.memberCount);
+                }
                 if (!member || !member.bannable) {
                     const embed = new EmbedBuilder().setDescription('Non posso bannare questo utente.').setColor(COLORS.ERROR).setThumbnail(THUMBNAIL_URL);
                     await message.channel.send({ embeds: [embed] });
@@ -1476,7 +1491,14 @@ client.on('messageCreate', async (message) => {
                 }
                 const user = result.user;
                 const member = result.member;
-                const reason = args.slice(1).join(' ') || cmdData.response || 'Nessun motivo';
+                let reason = args.slice(1).join(' ');
+                if (!reason) {
+                    reason = (cmdData.response || 'Nessun motivo')
+                        .replace(/{user}/g, user.toString())
+                        .replace(/{username}/g, user.username)
+                        .replace(/{server}/g, message.guild.name)
+                        .replace(/{membercount}/g, message.guild.memberCount);
+                }
                 if (!member || !member.kickable) {
                     const embed = new EmbedBuilder().setDescription('Non posso kickare questo utente.').setColor(COLORS.ERROR).setThumbnail(THUMBNAIL_URL);
                     await message.channel.send({ embeds: [embed] });
@@ -1521,7 +1543,14 @@ client.on('messageCreate', async (message) => {
                     await message.delete().catch(() => {});
                     return;
                 }
-                const reason = args.slice(2).join(' ') || cmdData.response || 'Nessun motivo';
+                let reason = args.slice(2).join(' ');
+                if (!reason) {
+                    reason = (cmdData.response || 'Nessun motivo')
+                        .replace(/{user}/g, user.toString())
+                        .replace(/{username}/g, user.username)
+                        .replace(/{server}/g, message.guild.name)
+                        .replace(/{membercount}/g, message.guild.memberCount);
+                }
                 if (!member || !member.moderatable) {
                     const embed = new EmbedBuilder().setDescription('Non posso mutare questo utente.').setColor(COLORS.ERROR).setThumbnail(THUMBNAIL_URL);
                     await message.channel.send({ embeds: [embed] });
@@ -1559,7 +1588,14 @@ client.on('messageCreate', async (message) => {
                     return;
                 }
                 const user = result.user;
-                const reason = args.slice(1).join(' ') || cmdData.response || 'Nessun motivo';
+                let reason = args.slice(1).join(' ');
+                if (!reason) {
+                    reason = (cmdData.response || 'Nessun motivo')
+                        .replace(/{user}/g, user.toString())
+                        .replace(/{username}/g, user.username)
+                        .replace(/{server}/g, message.guild.name)
+                        .replace(/{membercount}/g, message.guild.memberCount);
+                }
                 try {
                     const warningId = await addWarning(message.guild, user, message.author, reason);
                     await sendActionDM(user, 'warned', reason, { tag: message.author.tag, guild: message.guild });
