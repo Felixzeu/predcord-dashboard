@@ -1439,13 +1439,12 @@ client.on('messageCreate', async (message) => {
             return;
         }
 
-        // ==================== COMANDI CUSTOM ====================
+               // ==================== COMANDI CUSTOM ====================
         const customCmds = loadCustomCommands();
         const guildCustoms = customCmds[message.guild.id] || {};
         if (guildCustoms[command]) {
             const cmdData = guildCustoms[command];
 
-            // Controllo permessi
             if (cmdData.permission === 'admin' && !isAdminSafe(message.member)) {
                 await message.delete().catch(() => {});
                 return;
@@ -1459,7 +1458,195 @@ client.on('messageCreate', async (message) => {
                 return;
             }
 
-            // Sostituisci variabili
+            const cmdType = cmdData.type || 'text';
+
+            // ==================== BAN ====================
+            if (cmdType === 'ban') {
+                if (!hasModPerms(message.member)) { await message.delete().catch(() => {}); return; }
+                const input = args[0];
+                if (!input) {
+                    const embed = new EmbedBuilder().setDescription(`Uso: \`*${command} @utente motivo\``).setColor(COLORS.ERROR).setThumbnail(THUMBNAIL_URL);
+                    await message.channel.send({ embeds: [embed] });
+                    await message.delete().catch(() => {});
+                    return;
+                }
+                const result = await getUserFromInput(message.guild, input);
+                if (!result || !result.user) {
+                    const embed = new EmbedBuilder().setDescription('Utente non trovato.').setColor(COLORS.ERROR).setThumbnail(THUMBNAIL_URL);
+                    await message.channel.send({ embeds: [embed] });
+                    await message.delete().catch(() => {});
+                    return;
+                }
+                const user = result.user;
+                const member = result.member;
+                const reason = args.slice(1).join(' ') || cmdData.response || 'Nessun motivo';
+                if (!member || !member.bannable) {
+                    const embed = new EmbedBuilder().setDescription('Non posso bannare questo utente.').setColor(COLORS.ERROR).setThumbnail(THUMBNAIL_URL);
+                    await message.channel.send({ embeds: [embed] });
+                    await message.delete().catch(() => {});
+                    return;
+                }
+                try {
+                    await member.ban({ reason });
+                    await sendActionDM(user, 'banned', reason, { tag: message.author.tag, guild: message.guild });
+                    const embed = new EmbedBuilder().setTitle('User banned').setDescription(`${user.toString()} è stato bannato`).setColor(COLORS.ERROR).setThumbnail(THUMBNAIL_URL).addFields({ name: 'Motivo', value: reason });
+                    await message.channel.send({ embeds: [embed] });
+                    await saveModLog(message.guild, 'User banned', user, message.author, reason);
+                } catch (err) {
+                    await message.channel.send({ embeds: [new EmbedBuilder().setDescription('Errore durante il ban.').setColor(COLORS.ERROR)] });
+                }
+                await message.delete().catch(() => {});
+                return;
+            }
+
+            // ==================== KICK ====================
+            if (cmdType === 'kick') {
+                if (!hasModPerms(message.member)) { await message.delete().catch(() => {}); return; }
+                const input = args[0];
+                if (!input) {
+                    const embed = new EmbedBuilder().setDescription(`Uso: \`*${command} @utente motivo\``).setColor(COLORS.ERROR).setThumbnail(THUMBNAIL_URL);
+                    await message.channel.send({ embeds: [embed] });
+                    await message.delete().catch(() => {});
+                    return;
+                }
+                const result = await getUserFromInput(message.guild, input);
+                if (!result || !result.user) {
+                    const embed = new EmbedBuilder().setDescription('Utente non trovato.').setColor(COLORS.ERROR).setThumbnail(THUMBNAIL_URL);
+                    await message.channel.send({ embeds: [embed] });
+                    await message.delete().catch(() => {});
+                    return;
+                }
+                const user = result.user;
+                const member = result.member;
+                const reason = args.slice(1).join(' ') || cmdData.response || 'Nessun motivo';
+                if (!member || !member.kickable) {
+                    const embed = new EmbedBuilder().setDescription('Non posso kickare questo utente.').setColor(COLORS.ERROR).setThumbnail(THUMBNAIL_URL);
+                    await message.channel.send({ embeds: [embed] });
+                    await message.delete().catch(() => {});
+                    return;
+                }
+                try {
+                    await member.kick(reason);
+                    await sendActionDM(user, 'kicked', reason, { tag: message.author.tag, guild: message.guild });
+                    const embed = new EmbedBuilder().setTitle('User kicked').setDescription(`${user.toString()} è stato kickato`).setColor(COLORS.WARNING).setThumbnail(THUMBNAIL_URL).addFields({ name: 'Motivo', value: reason });
+                    await message.channel.send({ embeds: [embed] });
+                    await saveModLog(message.guild, 'User kicked', user, message.author, reason);
+                } catch (err) {
+                    await message.channel.send({ embeds: [new EmbedBuilder().setDescription('Errore durante il kick.').setColor(COLORS.ERROR)] });
+                }
+                await message.delete().catch(() => {});
+                return;
+            }
+
+            // ==================== MUTE ====================
+            if (cmdType === 'mute') {
+                if (!hasModPerms(message.member)) { await message.delete().catch(() => {}); return; }
+                const input = args[0];
+                if (!input) {
+                    const embed = new EmbedBuilder().setDescription(`Uso: \`*${command} @utente minuti motivo\``).setColor(COLORS.ERROR).setThumbnail(THUMBNAIL_URL);
+                    await message.channel.send({ embeds: [embed] });
+                    await message.delete().catch(() => {});
+                    return;
+                }
+                const result = await getUserFromInput(message.guild, input);
+                if (!result || !result.user) {
+                    const embed = new EmbedBuilder().setDescription('Utente non trovato.').setColor(COLORS.ERROR).setThumbnail(THUMBNAIL_URL);
+                    await message.channel.send({ embeds: [embed] });
+                    await message.delete().catch(() => {});
+                    return;
+                }
+                const user = result.user;
+                const member = result.member;
+                const duration = parseInt(args[1]);
+                if (isNaN(duration) || duration < 1 || duration > 40320) {
+                    const embed = new EmbedBuilder().setDescription(`Uso: \`*${command} @utente minuti motivo\`\nDurata: 1-40320 minuti`).setColor(COLORS.ERROR).setThumbnail(THUMBNAIL_URL);
+                    await message.channel.send({ embeds: [embed] });
+                    await message.delete().catch(() => {});
+                    return;
+                }
+                const reason = args.slice(2).join(' ') || cmdData.response || 'Nessun motivo';
+                if (!member || !member.moderatable) {
+                    const embed = new EmbedBuilder().setDescription('Non posso mutare questo utente.').setColor(COLORS.ERROR).setThumbnail(THUMBNAIL_URL);
+                    await message.channel.send({ embeds: [embed] });
+                    await message.delete().catch(() => {});
+                    return;
+                }
+                try {
+                    await member.timeout(duration * 60 * 1000, reason);
+                    const durationText = `${duration} minut${duration !== 1 ? 'i' : 'o'}`;
+                    await sendActionDM(user, 'muted', reason, { tag: message.author.tag, guild: message.guild }, durationText);
+                    const embed = new EmbedBuilder().setTitle('User muted').setDescription(`${user.toString()} è stato mutato per ${durationText}`).setColor(COLORS.WARNING).setThumbnail(THUMBNAIL_URL).addFields({ name: 'Motivo', value: reason });
+                    await message.channel.send({ embeds: [embed] });
+                    await saveModLog(message.guild, 'User muted', user, message.author, reason, durationText);
+                } catch (err) {
+                    await message.channel.send({ embeds: [new EmbedBuilder().setDescription('Errore durante il mute.').setColor(COLORS.ERROR)] });
+                }
+                await message.delete().catch(() => {});
+                return;
+            }
+
+            // ==================== WARN ====================
+            if (cmdType === 'warn') {
+                if (!hasModPerms(message.member)) { await message.delete().catch(() => {}); return; }
+                const input = args[0];
+                if (!input) {
+                    const embed = new EmbedBuilder().setDescription(`Uso: \`*${command} @utente motivo\``).setColor(COLORS.ERROR).setThumbnail(THUMBNAIL_URL);
+                    await message.channel.send({ embeds: [embed] });
+                    await message.delete().catch(() => {});
+                    return;
+                }
+                const result = await getUserFromInput(message.guild, input);
+                if (!result || !result.user) {
+                    const embed = new EmbedBuilder().setDescription('Utente non trovato.').setColor(COLORS.ERROR).setThumbnail(THUMBNAIL_URL);
+                    await message.channel.send({ embeds: [embed] });
+                    await message.delete().catch(() => {});
+                    return;
+                }
+                const user = result.user;
+                const reason = args.slice(1).join(' ') || cmdData.response || 'Nessun motivo';
+                try {
+                    const warningId = await addWarning(message.guild, user, message.author, reason);
+                    await sendActionDM(user, 'warned', reason, { tag: message.author.tag, guild: message.guild });
+                    const embed = new EmbedBuilder().setTitle('User warned').setDescription(`${user.toString()} ha ricevuto un warn`).setColor(COLORS.WARNING).setThumbnail(THUMBNAIL_URL).addFields(
+                        { name: 'Motivo', value: reason, inline: false },
+                        { name: 'Warning ID', value: `#${warningId}`, inline: true }
+                    );
+                    await message.channel.send({ embeds: [embed] });
+                    await saveModLog(message.guild, 'User warned', user, message.author, reason);
+                } catch (err) {
+                    await message.channel.send({ embeds: [new EmbedBuilder().setDescription('Errore durante il warn.').setColor(COLORS.ERROR)] });
+                }
+                await message.delete().catch(() => {});
+                return;
+            }
+
+            // ==================== PURGE ====================
+            if (cmdType === 'purge') {
+                if (!hasModPerms(message.member)) { await message.delete().catch(() => {}); return; }
+                const amount = parseInt(args[0]);
+                if (isNaN(amount) || amount < 1 || amount > 100) {
+                    const embed = new EmbedBuilder().setDescription(`Uso: \`*${command} numero\` (1-100)`).setColor(COLORS.ERROR).setThumbnail(THUMBNAIL_URL);
+                    await message.channel.send({ embeds: [embed] });
+                    await message.delete().catch(() => {});
+                    return;
+                }
+                try {
+                    await message.delete().catch(() => {});
+                    const messages = await message.channel.messages.fetch({ limit: amount });
+                    const filtered = messages.filter(msg => Date.now() - msg.createdTimestamp < 1209600000);
+                    const deleted = await message.channel.bulkDelete(filtered, true);
+                    const embed = new EmbedBuilder().setTitle('Messages purged').setDescription(`Eliminati ${deleted.size} messaggi.`).setColor(COLORS.SUCCESS).setThumbnail(THUMBNAIL_URL);
+                    const reply = await message.channel.send({ embeds: [embed] });
+                    setTimeout(() => reply.delete().catch(() => {}), 3000);
+                    await saveModLog(message.guild, 'Messages purged', { id: 'channel', tag: `#${message.channel.name}` }, message.author, `${deleted.size} messages deleted`);
+                } catch (err) {
+                    const embed = new EmbedBuilder().setDescription('Errore durante il purge.').setColor(COLORS.ERROR).setThumbnail(THUMBNAIL_URL);
+                    await message.channel.send({ embeds: [embed] });
+                }
+                return;
+            }
+
+            // ==================== TESTO / EMBED ====================
             let replyText = cmdData.response || '';
             replyText = replyText.replace(/{user}/g, message.author.toString());
             replyText = replyText.replace(/{username}/g, message.author.username);
@@ -1467,7 +1654,7 @@ client.on('messageCreate', async (message) => {
             replyText = replyText.replace(/{membercount}/g, message.guild.memberCount);
             replyText = replyText.replace(/{args}/g, args.join(' '));
 
-            if (cmdData.type === 'embed') {
+            if (cmdType === 'embed') {
                 const embed = new EmbedBuilder()
                     .setDescription(replyText)
                     .setColor(cmdData.color || COLORS.INFO)
@@ -1478,7 +1665,6 @@ client.on('messageCreate', async (message) => {
                 await message.channel.send(replyText).catch(() => {});
             }
 
-            // Auto-delete del comando dell'utente
             if (cmdData.deleteCommand) await message.delete().catch(() => {});
             return;
         }
