@@ -27,7 +27,6 @@ html, body {
     overflow-x: hidden;
 }
 
-/* ==================== SFONDO ANIMATO ==================== */
 body::before {
     content: '';
     position: fixed;
@@ -389,16 +388,44 @@ aside select {
 }
 
 aside select:hover { border-color: var(--border-hover); }
-
 aside select:focus {
     outline: none;
     border-color: var(--primary);
     box-shadow: 0 0 0 4px rgba(230, 126, 34, 0.1);
 }
+aside select option { background: #1a1a22; color: var(--text); }
 
-aside select option {
-    background: #1a1a22;
+/* ==================== NAV TABS ==================== */
+.nav-tabs {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.nav-tab {
+    background: rgba(255, 255, 255, 0.03);
+    color: var(--text-dim);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    padding: 12px 16px;
+    border-radius: 10px;
+    cursor: pointer;
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    text-align: left;
+    transition: all 0.2s ease;
+}
+
+.nav-tab:hover {
+    background: rgba(255, 255, 255, 0.06);
     color: var(--text);
+}
+
+.nav-tab.active {
+    background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+    color: white;
+    border-color: var(--primary);
+    box-shadow: 0 4px 15px rgba(230, 126, 34, 0.4);
 }
 
 /* ==================== CONTENT ==================== */
@@ -413,6 +440,8 @@ aside select option {
     box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
 }
 
+.tab-content { animation: fadeIn 0.3s ease; }
+
 .panel-header {
     display: flex;
     justify-content: space-between;
@@ -420,6 +449,8 @@ aside select option {
     margin-bottom: 24px;
     padding-bottom: 20px;
     border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    gap: 16px;
+    flex-wrap: wrap;
 }
 
 .panel-header h2 {
@@ -438,6 +469,8 @@ aside select option {
     filter: drop-shadow(0 0 12px rgba(230, 126, 34, 0.6));
 }
 
+#tab-moderation .panel-header h2::before { content: '🛡️'; }
+
 #newCmdBtn {
     width: auto;
     padding: 12px 22px;
@@ -445,6 +478,26 @@ aside select option {
     display: flex;
     align-items: center;
     gap: 6px;
+}
+
+/* ==================== SEARCH INPUT ==================== */
+.search-input {
+    background: var(--bg-input);
+    border: 1.5px solid rgba(255, 255, 255, 0.06);
+    border-radius: 12px;
+    padding: 10px 16px;
+    color: var(--text);
+    font-family: inherit;
+    font-size: 13px;
+    width: 240px;
+    transition: all 0.2s ease;
+}
+
+.search-input::placeholder { color: var(--text-dim); }
+.search-input:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 4px rgba(230, 126, 34, 0.1);
 }
 
 /* ==================== COMMANDS LIST ==================== */
@@ -569,6 +622,165 @@ aside select option {
     box-shadow: 0 6px 20px rgba(239, 68, 68, 0.4);
 }
 
+/* ==================== MOD GRID ==================== */
+.mod-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+}
+
+.mod-panel {
+    background: rgba(15, 15, 20, 0.6);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 14px;
+    padding: 18px;
+    max-height: 600px;
+    overflow-y: auto;
+}
+
+.mod-panel h3 {
+    color: var(--primary);
+    margin-bottom: 14px;
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    font-weight: 700;
+    position: sticky;
+    top: 0;
+    background: rgba(15, 15, 20, 0.95);
+    padding: 8px 0;
+    z-index: 2;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+/* ==================== MEMBERS LIST ==================== */
+.members-list, .modlogs-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.member-card, .modlog-card {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px;
+    background: rgba(255, 255, 255, 0.02);
+    border-radius: 10px;
+    border: 1px solid rgba(255, 255, 255, 0.04);
+    transition: all 0.2s ease;
+}
+
+.member-card:hover {
+    background: rgba(255, 255, 255, 0.05);
+    border-color: var(--border-hover);
+}
+
+.member-avatar {
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    border: 2px solid var(--primary);
+    flex-shrink: 0;
+    background: #1a1a22;
+}
+
+.member-info { flex: 1; min-width: 0; }
+
+.member-info h5 {
+    color: var(--text);
+    font-size: 13px;
+    font-weight: 700;
+    margin-bottom: 2px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.member-info p {
+    color: var(--text-dim);
+    font-size: 11px;
+    font-family: 'JetBrains Mono', monospace;
+}
+
+.member-actions {
+    display: flex;
+    gap: 4px;
+    flex-shrink: 0;
+}
+
+.mod-btn {
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    color: var(--text);
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+}
+
+.mod-btn:hover { transform: translateY(-2px); }
+.mod-btn.warn:hover { background: rgba(245, 158, 11, 0.3); border-color: #f59e0b; }
+.mod-btn.mute:hover { background: rgba(230, 126, 34, 0.3); border-color: var(--primary); }
+.mod-btn.kick:hover { background: rgba(239, 68, 68, 0.3); border-color: #ef4444; }
+.mod-btn.ban:hover { background: rgba(220, 38, 38, 0.5); border-color: #dc2626; }
+
+/* ==================== MODLOG CARD ==================== */
+.modlog-card {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+    padding: 12px 14px;
+}
+
+.modlog-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+}
+
+.modlog-badge {
+    padding: 3px 8px;
+    border-radius: 6px;
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.modlog-badge.warn { background: rgba(245, 158, 11, 0.2); color: #fbbf24; }
+.modlog-badge.mute { background: rgba(230, 126, 34, 0.2); color: #ffa754; }
+.modlog-badge.kick { background: rgba(239, 68, 68, 0.2); color: #f87171; }
+.modlog-badge.ban { background: rgba(220, 38, 38, 0.3); color: #ff5555; }
+
+.modlog-target {
+    color: var(--text);
+    font-size: 13px;
+    font-weight: 600;
+    font-family: 'JetBrains Mono', monospace;
+}
+
+.modlog-reason {
+    color: var(--text-dim);
+    font-size: 12px;
+    width: 100%;
+    line-height: 1.4;
+}
+
+.modlog-meta {
+    color: #666;
+    font-size: 11px;
+    font-family: 'JetBrains Mono', monospace;
+    line-height: 1.5;
+}
+
 /* ==================== EMPTY STATE ==================== */
 .empty-state {
     text-align: center;
@@ -663,6 +875,8 @@ aside select option {
     font-size: 24px;
 }
 
+#modModalTitle::before { content: '🛡️'; }
+
 .modal-content label {
     display: block;
     margin-bottom: 8px;
@@ -675,6 +889,7 @@ aside select option {
 }
 
 .modal-content input[type="text"],
+.modal-content input[type="number"],
 .modal-content textarea,
 .modal-content select {
     width: 100%;
@@ -688,7 +903,7 @@ aside select option {
     transition: all 0.2s ease;
 }
 
-.modal-content input[type="text"]:focus,
+.modal-content input:focus,
 .modal-content textarea:focus,
 .modal-content select:focus {
     outline: none;
@@ -721,7 +936,7 @@ aside select option {
 }
 
 .modal-content input:disabled {
-    opacity: 0.4;
+    opacity: 0.5;
     cursor: not-allowed;
 }
 
@@ -779,18 +994,6 @@ aside select option {
     font-size: 14px;
 }
 
-/* ==================== RESPONSIVE ==================== */
-@media (max-width: 900px) {
-    main { grid-template-columns: 1fr; padding: 16px; }
-    aside { position: static; }
-    header { padding: 14px 20px; }
-    .logo { font-size: 16px; }
-    .panel-header { flex-direction: column; align-items: flex-start; gap: 14px; }
-    .command-card { flex-direction: column; align-items: stretch; }
-    .command-actions { justify-content: flex-end; }
-    .modal-content { padding: 24px; }
-}
-
 /* ==================== LOADING ==================== */
 .loading {
     display: flex;
@@ -798,12 +1001,13 @@ aside select option {
     justify-content: center;
     padding: 60px;
     color: var(--text-dim);
+    font-size: 14px;
 }
 
 .loading::after {
     content: '';
-    width: 30px;
-    height: 30px;
+    width: 24px;
+    height: 24px;
     margin-left: 12px;
     border: 3px solid rgba(230, 126, 34, 0.2);
     border-top-color: var(--primary);
@@ -835,6 +1039,7 @@ aside select option {
     z-index: 2000;
     animation: toastIn 0.4s cubic-bezier(0.16, 1, 0.3, 1);
     max-width: 400px;
+    color: var(--text);
 }
 
 .toast.success { border-left: 3px solid var(--success); }
@@ -843,4 +1048,18 @@ aside select option {
 @keyframes toastIn {
     from { opacity: 0; transform: translateX(100px); }
     to { opacity: 1; transform: translateX(0); }
+}
+
+/* ==================== RESPONSIVE ==================== */
+@media (max-width: 900px) {
+    main { grid-template-columns: 1fr; padding: 16px; }
+    aside { position: static; }
+    header { padding: 14px 20px; }
+    .logo { font-size: 16px; }
+    .panel-header { flex-direction: column; align-items: flex-start; }
+    .command-card { flex-direction: column; align-items: stretch; }
+    .command-actions { justify-content: flex-end; }
+    .modal-content { padding: 24px; }
+    .mod-grid { grid-template-columns: 1fr; }
+    .search-input { width: 100%; }
 }
