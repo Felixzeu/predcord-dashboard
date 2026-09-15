@@ -68,10 +68,15 @@
             <label>Nome comando (senza *)</label>
             <input type="text" id="cmdName" placeholder="es: regole" required pattern="[a-zA-Z0-9_-]{1,32}">
 
-            <label>Tipo risposta</label>
+                        <label>Tipo comando</label>
             <select id="cmdType">
                 <option value="text">💬 Testo semplice</option>
                 <option value="embed">📦 Embed</option>
+                <option value="ban">🔨 Ban</option>
+                <option value="kick">👢 Kick</option>
+                <option value="mute">🔇 Mute</option>
+                <option value="warn">⚠️ Warn</option>
+                <option value="purge">🗑️ Purge</option>
             </select>
 
             <label>Titolo (solo embed)</label>
