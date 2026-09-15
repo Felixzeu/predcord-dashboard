@@ -1,6 +1,8 @@
 let currentGuild = null;
 let currentCommands = {};
 let editingName = null;
+let currentMembers = [];
+let currentModlogs = [];
 
 // ==================== TOAST ====================
 function showToast(message, type = 'success') {
@@ -51,11 +53,10 @@ async function loadGuilds() {
         await loadCommands();
     } catch (e) {
         console.error('loadGuilds error:', e);
-        document.getElementById('commandsList').innerHTML =
-            '<div class="empty-state"><h3>Errore caricamento</h3><p>' + e.message + '</p></div>';
     }
 }
 
+// ==================== COMANDI CUSTOM ====================
 async function loadCommands() {
     if (!currentGuild) return;
     const list = document.getElementById('commandsList');
@@ -104,7 +105,6 @@ function truncate(str, n) {
     return str.length > n ? str.slice(0, n) + '...' : str;
 }
 
-// ==================== MODAL ====================
 function openModal(name = null) {
     editingName = name;
     const modal = document.getElementById('modal');
@@ -128,9 +128,7 @@ function openModal(name = null) {
         document.getElementById('cmdName').disabled = false;
         document.getElementById('cmdColor').value = '#E67E22';
     }
-
     modal.classList.remove('hidden');
-    setTimeout(() => document.getElementById('cmdName').focus(), 100);
 }
 
 function closeModal() {
@@ -162,7 +160,6 @@ async function saveCommand(e) {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ name, data })
         });
-
         if (res.ok) {
             closeModal();
             await loadCommands();
@@ -192,27 +189,212 @@ async function deleteCommand(name) {
     }
 }
 
+// ==================== MODERAZIONE ====================
+async function loadMembers() {
+    if (!currentGuild) return;
+    const list = document.getElementById('membersList');
+    list.innerHTML = '<div class="loading">Caricamento</div>';
+    try {
+        const res = await fetch(`/api/members/${currentGuild}`);
+        if (!res.ok) throw new Error('Errore caricamento');
+        currentMembers = await res.json();
+        renderMembers(currentMembers);
+    } catch (e) {
+        list.innerHTML = `<div class="empty-state"><h3>Errore</h3><p>${e.message}</p></div>`;
+    }
+}
+
+function renderMembers(members) {
+    const list = document.getElementById('membersList');
+    if (!members || members.length === 0) {
+        list.innerHTML = '<div class="empty-state"><h3>Nessun membro</h3></div>';
+        return;
+    }
+    list.innerHTML = members.map(m => `
+        <div class="member-card">
+            <img class="member-avatar" src="${m.avatar}" alt="${m.username}" onerror="this.style.display='none'">
+            <div class="member-info">
+                <h5>${m.username}</h5>
+                <p>${m.id}</p>
+            </div>
+            <div class="member-actions">
+                <button class="mod-btn warn" data-action="warn" data-id="${m.id}" data-name="${m.username}" title="Warn">⚠️</button>
+                <button class="mod-btn mute" data-action="mute" data-id="${m.id}" data-name="${m.username}" title="Mute">🔇</button>
+                <button class="mod-btn kick" data-action="kick" data-id="${m.id}" data-name="${m.username}" title="Kick">👢</button>
+                <button class="mod-btn ban" data-action="ban" data-id="${m.id}" data-name="${m.username}" title="Ban">🔨</button>
+            </div>
+        </div>
+    `).join('');
+
+    list.querySelectorAll('.mod-btn').forEach(b => {
+        b.onclick = () => openModModal(b.dataset.action, b.dataset.id, b.dataset.name);
+    });
+}
+
+async function loadModlogs() {
+    if (!currentGuild) return;
+    const list = document.getElementById('modlogsList');
+    list.innerHTML = '<div class="loading">Caricamento</div>';
+    try {
+        const res = await fetch(`/api/modlogs/${currentGuild}`);
+        if (!res.ok) throw new Error('Errore caricamento');
+        currentModlogs = await res.json();
+        renderModlogs(currentModlogs);
+    } catch (e) {
+        list.innerHTML = `<div class="empty-state"><h3>Errore</h3><p>${e.message}</p></div>`;
+    }
+}
+
+function renderModlogs(logs) {
+    const list = document.getElementById('modlogsList');
+    if (!logs || logs.length === 0) {
+        list.innerHTML = '<div class="empty-state"><h3>Nessuna azione</h3><p>Nessuna moderazione registrata</p></div>';
+        return;
+    }
+    list.innerHTML = logs.map(log => `
+        <div class="modlog-card">
+            <div class="modlog-header">
+                <span class="modlog-badge ${(log.type || 'warn').toLowerCase()}">${log.type || log.action || 'N/A'}</span>
+                <span class="modlog-target">${log.targetTag || log.targetId}</span>
+            </div>
+            <div class="modlog-reason">📝 ${log.reason || 'Nessun motivo'}</div>
+            <div class="modlog-meta">
+                👮 ${log.moderatorTag || 'Sistema'} • 🕐 ${log.dateFormatted || log.date || ''}
+                ${log.duration ? ` • ⏱️ ${log.duration}` : ''}
+            </div>
+        </div>
+    `).join('');
+}
+
+function openModModal(action, userId, username) {
+    document.getElementById('modAction').value = action;
+    document.getElementById('modUserId').value = userId;
+    document.getElementById('modUserDisplay').value = `${username} (${userId})`;
+
+    const titles = {
+        warn: '⚠️ Warn Utente',
+        mute: '🔇 Mute Utente',
+        kick: '👢 Kick Utente',
+        ban: '🔨 Ban Utente'
+    };
+    document.getElementById('modModalTitle').textContent = titles[action] || 'Azione';
+
+    const durationLabel = document.getElementById('modDurationLabel');
+    const durationInput = document.getElementById('modDuration');
+    if (action === 'mute') {
+        durationLabel.classList.remove('hidden');
+        durationInput.classList.remove('hidden');
+    } else {
+        durationLabel.classList.add('hidden');
+        durationInput.classList.add('hidden');
+    }
+
+    document.getElementById('modReason').value = '';
+    document.getElementById('modModal').classList.remove('hidden');
+}
+
+function closeModModal() {
+    document.getElementById('modModal').classList.add('hidden');
+}
+
+async function submitModAction(e) {
+    e.preventDefault();
+    const action = document.getElementById('modAction').value;
+    const userId = document.getElementById('modUserId').value;
+    const reason = document.getElementById('modReason').value || 'Nessun motivo';
+    const duration = document.getElementById('modDuration').value;
+    const btn = document.getElementById('modSubmitBtn');
+
+    btn.disabled = true;
+    btn.textContent = 'Esecuzione...';
+
+    try {
+        const res = await fetch(`/api/moderation/${currentGuild}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action, userId, reason, duration })
+        });
+
+        const data = await res.json();
+        if (res.ok && data.success) {
+            showToast(`✅ ${action} eseguito su ${data.username || userId}`);
+            closeModModal();
+            await loadModlogs();
+        } else {
+            showToast(data.error || 'Errore', 'error');
+        }
+    } catch (err) {
+        showToast('Errore di connessione', 'error');
+    } finally {
+        btn.disabled = false;
+        btn.textContent = 'Conferma';
+    }
+}
+
+// ==================== EVENTS ====================
 function setupEvents() {
     document.getElementById('guildSelect').onchange = (e) => {
         currentGuild = e.target.value;
         loadCommands();
+        if (!document.getElementById('tab-moderation').classList.contains('hidden')) {
+            loadMembers();
+            loadModlogs();
+        }
     };
+
     document.getElementById('refreshBtn').onclick = () => {
         loadCommands();
-        showToast('Lista aggiornata');
+        if (!document.getElementById('tab-moderation').classList.contains('hidden')) {
+            loadMembers();
+            loadModlogs();
+        }
+        showToast('Aggiornato');
     };
+
+    document.querySelectorAll('.nav-tab').forEach(tab => {
+        tab.onclick = () => {
+            document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+            tab.classList.add('active');
+            const target = tab.dataset.tab;
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.add('hidden'));
+            document.getElementById(`tab-${target}`).classList.remove('hidden');
+            if (target === 'moderation') {
+                loadMembers();
+                loadModlogs();
+            } else {
+                loadCommands();
+            }
+        };
+    });
+
+    document.getElementById('memberSearch').oninput = (e) => {
+        const q = e.target.value.toLowerCase();
+        const filtered = currentMembers.filter(m =>
+            m.username.toLowerCase().includes(q) || m.id.includes(q)
+        );
+        renderMembers(filtered);
+    };
+
     document.getElementById('newCmdBtn').onclick = () => openModal();
     document.getElementById('cancelBtn').onclick = closeModal;
     document.getElementById('cmdForm').onsubmit = saveCommand;
+
+    document.getElementById('modCancelBtn').onclick = closeModModal;
+    document.getElementById('modForm').onsubmit = submitModAction;
+
     document.getElementById('logoutBtn').onclick = async () => {
         await fetch('/api/logout', { method: 'POST' });
         window.location.href = '/login';
     };
+
     document.getElementById('modal').onclick = (e) => {
         if (e.target.id === 'modal') closeModal();
     };
+    document.getElementById('modModal').onclick = (e) => {
+        if (e.target.id === 'modModal') closeModModal();
+    };
     document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape') closeModal();
+        if (e.key === 'Escape') { closeModal(); closeModModal(); }
     });
 }
 
