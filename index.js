@@ -251,21 +251,22 @@ async function getUserFromInput(guild, input) {
 
 async function sendActionDM(user, action, reason, moderator, duration = null) {
     try {
-        const moderatorTag = moderator?.tag || moderator?.user?.tag || 'Auto-Mod';
         const guildName = moderator?.guild?.name || 'Server';
         const actionText = { 'warned': 'avvertito', 'banned': 'bannato', 'kicked': 'kickato', 'muted': 'mutato' };
-        let description = `Sei stato ${actionText[action] || action} nel server ${guildName}.`;
-        if (duration) description = `Sei stato mutato per ${duration} nel server ${guildName}.`;
+        const actionEmoji = { 'warned': '⚠️', 'banned': '🔨', 'kicked': '👢', 'muted': '🔇' };
+        const emoji = actionEmoji[action] || '📌';
+        let description = `${emoji} Sei stato **${actionText[action] || action}** nel server **${guildName}**.`;
+        if (duration) description = `${emoji} Sei stato **mutato** per **${duration}** nel server **${guildName}**.`;
+
+        const timestamp = Math.floor(Date.now() / 1000);
         const embed = new EmbedBuilder()
-            .setTitle('Azione eseguita su di te')
             .setDescription(description)
             .setColor(COLORS.WARNING)
-            .setThumbnail(THUMBNAIL_URL)
             .addFields(
                 { name: 'Motivo', value: reason || 'Non specificato', inline: false },
-                { name: 'Moderatore', value: moderatorTag, inline: true },
-                { name: 'Server', value: guildName, inline: true }
+                { name: 'Data', value: `<t:${timestamp}:R>`, inline: false }
             );
+        if (duration) embed.addFields({ name: 'Durata', value: duration, inline: false });
         await user.send({ embeds: [embed] }).catch(() => console.log(`DM failed: ${user?.tag || user?.id}`));
     } catch (error) {
         logCrash('DM_ERROR', error, { userId: user?.id, action });
@@ -461,35 +462,23 @@ function formatModerationHistory(userId, guildId, username) {
         return action;
     };
 
-    const formatDateIT = (iso) => {
-        const d = new Date(iso);
-        const giorno = String(d.getDate()).padStart(2, '0');
-        const mesi = ['gennaio','febbraio','marzo','aprile','maggio','giugno','luglio','agosto','settembre','ottobre','novembre','dicembre'];
-        const mese = mesi[d.getMonth()];
-        const anno = d.getFullYear();
-        const ore = String(d.getHours()).padStart(2, '0');
-        const min = String(d.getMinutes()).padStart(2, '0');
-        return `${giorno} ${mese} ${anno} ${ore}:${min}`;
-    };
-
     let output = `**Modlogs for ${username}**\n`;
 
     for (const log of logs.slice(0, 10)) {
         const emoji = typeEmoji[log.action] || '📌';
         const tipo = typeLabel(log.action);
         const durata = log.duration ? ` (${log.duration})` : '';
+        const timestamp = Math.floor(new Date(log.date).getTime() / 1000);
 
         output += `\n**Case ${log.id}**\n`;
-        output += `${emoji} Type: ${tipo}${durata}\n`;
-        output += `Moderator: ${log.moderatorTag} (${log.moderatorId})\n`;
-        output += `Reason: ${log.reason} - ${formatDateIT(log.date)}\n`;
+        output += `${emoji} Type: **${tipo}**${durata}\n`;
+        output += `Moderator: **${log.moderatorTag} (${log.moderatorId})**\n`;
+        output += `Reason: **${log.reason}** - <t:${timestamp}:R>\n`;
     }
 
     if (logs.length > 10) {
         output += `\n*...e altre ${logs.length - 10} sanzioni*`;
     }
-
-    output += `\n**Totale: ${logs.length} sanzioni**`;
 
     return output;
 }
@@ -1507,6 +1496,7 @@ client.on('messageCreate', async (message) => {
             }
 
             const cmdType = cmdData.type || 'text';
+            const cmdThumbnail = cmdData.thumbnail && isValidUrl(cmdData.thumbnail) ? cmdData.thumbnail : null;
 
             if (cmdType === 'ban') {
                 if (!hasModPerms(message.member)) { await message.delete().catch(() => {}); return; }
@@ -1547,7 +1537,9 @@ client.on('messageCreate', async (message) => {
                 try {
                     await member.ban({ reason });
                     await sendActionDM(user, 'banned', reason, { tag: message.author.tag, guild: message.guild });
-                    const embed = new EmbedBuilder().setTitle('User banned').setDescription(`${user.toString()} è stato bannato`).setColor(COLORS.ERROR).setThumbnail(THUMBNAIL_URL).addFields({ name: 'Motivo', value: reason });
+                    const embed = new EmbedBuilder().setTitle('User banned').setDescription(`${user.toString()} è stato bannato`).setColor(COLORS.ERROR);
+                    if (cmdThumbnail) embed.setThumbnail(cmdThumbnail);
+                    embed.addFields({ name: 'Motivo', value: reason });
                     await message.channel.send({ embeds: [embed] });
                     await saveModLog(message.guild, 'User banned', user, message.author, reason);
                 } catch (err) {
@@ -1596,7 +1588,9 @@ client.on('messageCreate', async (message) => {
                 try {
                     await member.kick(reason);
                     await sendActionDM(user, 'kicked', reason, { tag: message.author.tag, guild: message.guild });
-                    const embed = new EmbedBuilder().setTitle('User kicked').setDescription(`${user.toString()} è stato kickato`).setColor(COLORS.WARNING).setThumbnail(THUMBNAIL_URL).addFields({ name: 'Motivo', value: reason });
+                    const embed = new EmbedBuilder().setTitle('User kicked').setDescription(`${user.toString()} è stato kickato`).setColor(COLORS.WARNING);
+                    if (cmdThumbnail) embed.setThumbnail(cmdThumbnail);
+                    embed.addFields({ name: 'Motivo', value: reason });
                     await message.channel.send({ embeds: [embed] });
                     await saveModLog(message.guild, 'User kicked', user, message.author, reason);
                 } catch (err) {
@@ -1653,7 +1647,9 @@ client.on('messageCreate', async (message) => {
                     await member.timeout(duration * 60 * 1000, reason);
                     const durationText = `${duration} minut${duration !== 1 ? 'i' : 'o'}`;
                     await sendActionDM(user, 'muted', reason, { tag: message.author.tag, guild: message.guild }, durationText);
-                    const embed = new EmbedBuilder().setTitle('User muted').setDescription(`${user.toString()} è stato mutato per ${durationText}`).setColor(COLORS.WARNING).setThumbnail(THUMBNAIL_URL).addFields({ name: 'Motivo', value: reason });
+                    const embed = new EmbedBuilder().setTitle('User muted').setDescription(`${user.toString()} è stato mutato per ${durationText}`).setColor(COLORS.WARNING);
+                    if (cmdThumbnail) embed.setThumbnail(cmdThumbnail);
+                    embed.addFields({ name: 'Motivo', value: reason });
                     await message.channel.send({ embeds: [embed] });
                     await saveModLog(message.guild, 'User muted', user, message.author, reason, durationText);
                 } catch (err) {
@@ -1695,7 +1691,9 @@ client.on('messageCreate', async (message) => {
                 try {
                     const warningId = await addWarning(message.guild, user, message.author, reason);
                     await sendActionDM(user, 'warned', reason, { tag: message.author.tag, guild: message.guild });
-                    const embed = new EmbedBuilder().setTitle('User warned').setDescription(`${user.toString()} ha ricevuto un warn`).setColor(COLORS.WARNING).setThumbnail(THUMBNAIL_URL).addFields(
+                    const embed = new EmbedBuilder().setTitle('User warned').setDescription(`${user.toString()} ha ricevuto un warn`).setColor(COLORS.WARNING);
+                    if (cmdThumbnail) embed.setThumbnail(cmdThumbnail);
+                    embed.addFields(
                         { name: 'Motivo', value: reason, inline: false },
                         { name: 'Warning ID', value: `#${warningId}`, inline: true }
                     );
@@ -1722,7 +1720,8 @@ client.on('messageCreate', async (message) => {
                     const messages = await message.channel.messages.fetch({ limit: amount });
                     const filtered = messages.filter(msg => Date.now() - msg.createdTimestamp < 1209600000);
                     const deleted = await message.channel.bulkDelete(filtered, true);
-                    const embed = new EmbedBuilder().setTitle('Messages purged').setDescription(`Eliminati ${deleted.size} messaggi.`).setColor(COLORS.SUCCESS).setThumbnail(THUMBNAIL_URL);
+                    const embed = new EmbedBuilder().setTitle('Messages purged').setDescription(`Eliminati ${deleted.size} messaggi.`).setColor(COLORS.SUCCESS);
+                    if (cmdThumbnail) embed.setThumbnail(cmdThumbnail);
                     const reply = await message.channel.send({ embeds: [embed] });
                     setTimeout(() => reply.delete().catch(() => {}), 3000);
                     await saveModLog(message.guild, 'Messages purged', { id: 'channel', tag: `#${message.channel.name}` }, message.author, `${deleted.size} messages deleted`);
@@ -1754,9 +1753,9 @@ client.on('messageCreate', async (message) => {
             if (cmdType === 'embed') {
                 const embed = new EmbedBuilder()
                     .setDescription(replyText)
-                    .setColor(cmdData.color || COLORS.INFO)
-                    .setThumbnail(THUMBNAIL_URL);
+                    .setColor(cmdData.color || COLORS.INFO);
                 if (cmdData.title) embed.setTitle(cmdData.title);
+                if (cmdThumbnail) embed.setThumbnail(cmdThumbnail);
                 await message.channel.send({ embeds: [embed] }).catch(() => {});
             } else {
                 await message.channel.send(replyText).catch(() => {});
