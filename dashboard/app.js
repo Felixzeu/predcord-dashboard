@@ -153,10 +153,6 @@ async function init() {
     }
 }
 
-/* ============================================================
-   USER MENU / AVATAR
-   ============================================================ */
-
 function setupUserMenu() {
     const btn = document.getElementById('userAvatarBtn');
     const dropdown = document.getElementById('userDropdown');
@@ -187,18 +183,20 @@ async function loadUserMenu() {
     try {
         const res = await fetch('/api/me', { credentials: 'same-origin' });
         if (!res.ok) throw new Error('Errore caricamento utente');
-        const me = await res.json();
+        const raw = await res.json();
 
-        // Costruisci URL avatar
+        const me = raw.user || raw;
+
         let avatarUrl = defaultAvatar;
 
-        if (me.avatar && typeof me.avatar === 'string' && me.avatar.startsWith('http')) {
-            avatarUrl = me.avatar;
-        } else if (me.avatar && me.id) {
-            const ext = me.avatar.startsWith('a_') ? 'gif' : 'png';
-            avatarUrl = `https://cdn.discordapp.com/avatars/${me.id}/${me.avatar}.${ext}?size=128`;
+        if (me.avatar) {
+            if (typeof me.avatar === 'string' && me.avatar.startsWith('http')) {
+                avatarUrl = me.avatar;
+            } else if (me.id) {
+                const ext = me.avatar.startsWith('a_') ? 'gif' : 'png';
+                avatarUrl = `https://cdn.discordapp.com/avatars/${me.id}/${me.avatar}.${ext}?size=128`;
+            }
         } else if (me.id) {
-            // Avatar default Discord basato sull'ID
             try {
                 const index = Number(BigInt(me.id) >> 22n) % 6;
                 avatarUrl = `https://cdn.discordapp.com/embed/avatars/${index}.png`;
@@ -216,7 +214,6 @@ async function loadUserMenu() {
             ddAvatar.onerror = () => { ddAvatar.src = defaultAvatar; };
         }
 
-        // Nomi
         const displayName = me.displayName || me.global_name || me.username || 'Utente';
         const username = me.username || '';
 
@@ -234,16 +231,20 @@ async function loadUserMenu() {
             }
         }
 
-        // Ruoli
         if (ddRoles) {
             const roles = Array.isArray(me.roles) ? me.roles : [];
 
             if (roles.length === 0) {
-                // Mostra almeno il ruolo dashboard
+                const effectiveRole = raw.role || me.role;
                 let roleBadge = 'Nessun ruolo';
-                if (me.isAdmin) roleBadge = 'Admin';
-                else if (me.role === 'owner') roleBadge = 'Owner';
-                else if (me.role === 'moderator') roleBadge = 'Moderator';
+
+                if (effectiveRole === 'owner') {
+                    roleBadge = 'Owner';
+                } else if (raw.isAdmin || me.isAdmin) {
+                    roleBadge = 'Admin';
+                } else if (effectiveRole === 'moderator') {
+                    roleBadge = 'Moderator';
+                }
 
                 ddRoles.innerHTML = `<span class="user-role-badge">${roleBadge}</span>`;
             } else {
@@ -262,10 +263,6 @@ async function loadUserMenu() {
         if (ddRoles) ddRoles.innerHTML = '<span class="loading-text">Errore</span>';
     }
 }
-
-/* ============================================================
-   FINE USER MENU
-   ============================================================ */
 
 async function loadMyPermissions() {
     try {
