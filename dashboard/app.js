@@ -53,7 +53,7 @@ function showAccessDenied() {
     }, 2000);
 }
 
-function showFormToast(message = 'Compila tutti i campi') {
+function showFormToast(message = 'Fill in all fields') {
     const toast = document.getElementById('formToast');
     if (!toast) return;
     const textEl = toast.querySelector('.form-toast-text');
@@ -127,6 +127,23 @@ function showConfirmDialog(title, message, onConfirm) {
     modal.classList.remove('hidden');
 }
 
+function brightenColor(hex, percent = 45) {
+    if (!hex || typeof hex !== 'string') return null;
+    let c = hex.replace('#', '');
+    if (c.length === 3) c = c.split('').map(x => x + x).join('');
+    if (c.length !== 6) return null;
+
+    let r = parseInt(c.substring(0, 2), 16);
+    let g = parseInt(c.substring(2, 4), 16);
+    let b = parseInt(c.substring(4, 6), 16);
+
+    r = Math.min(255, Math.round(r + (255 - r) * (percent / 100)));
+    g = Math.min(255, Math.round(g + (255 - g) * (percent / 100)));
+    b = Math.min(255, Math.round(b + (255 - b) * (percent / 100)));
+
+    return '#' + [r, g, b].map(x => x.toString(16).padStart(2, '0')).join('');
+}
+
 async function init() {
     try {
         const me = await fetch('/api/me', { credentials: 'same-origin' });
@@ -149,7 +166,7 @@ async function init() {
         updatePreview();
         updatePermissionsTabVisibility();
     } catch (e) {
-        console.error('[INIT] Errore:', e);
+        console.error('[INIT] Error:', e);
     }
 }
 
@@ -182,7 +199,7 @@ async function loadUserMenu() {
 
     try {
         const meRes = await fetch('/api/me', { credentials: 'same-origin' });
-        if (!meRes.ok) throw new Error('Errore caricamento utente');
+        if (!meRes.ok) throw new Error('Failed to load user');
         const meRaw = await meRes.json();
         const me = meRaw.user || meRaw;
 
@@ -212,7 +229,7 @@ async function loadUserMenu() {
             ddAvatar.onerror = () => { ddAvatar.src = defaultAvatar; };
         }
 
-        let displayName = me.displayName || me.global_name || me.username || 'Utente';
+        let displayName = me.displayName || me.global_name || me.username || 'User';
         const username = me.username || '';
 
         if (ddDisplayName) ddDisplayName.textContent = displayName;
@@ -261,9 +278,12 @@ async function loadUserMenu() {
                         ddRoles.innerHTML = '<span class="loading-text">No roles</span>';
                     } else {
                         ddRoles.innerHTML = roles.map(r => {
-                            const color = r.color;
-                            const hasColor = typeof color === 'string' && color !== '#000000' && color !== '#000';
-                            const style = hasColor ? `style="color:${color}; border-color:${color}33;"` : '';
+                            const rawColor = r.color;
+                            const hasColor = typeof rawColor === 'string' && rawColor !== '#000000' && rawColor !== '#000';
+                            const bright = hasColor ? brightenColor(rawColor, 50) : null;
+                            const style = bright
+                                ? `style="color:${bright}; border-color:${bright}66; background:${bright}22; box-shadow:0 0 8px ${bright}55, inset 0 0 8px ${bright}22;"`
+                                : '';
                             return `<span class="user-role-badge" ${style}>${escapeHtml(r.name)}</span>`;
                         }).join('');
                     }
@@ -273,23 +293,23 @@ async function loadUserMenu() {
             }
         } catch (err) {
             console.error('[ME-FULL]', err);
-            if (ddRoles) ddRoles.innerHTML = '<span class="loading-text">Errore</span>';
+            if (ddRoles) ddRoles.innerHTML = '<span class="loading-text">Error</span>';
         }
     } catch (e) {
-        console.error('[USER-MENU] Errore:', e);
-        if (ddDisplayName) ddDisplayName.textContent = 'Utente';
+        console.error('[USER-MENU] Error:', e);
+        if (ddDisplayName) ddDisplayName.textContent = 'User';
         if (ddUsername) ddUsername.textContent = '—';
-        if (ddRoles) ddRoles.innerHTML = '<span class="loading-text">Errore</span>';
+        if (ddRoles) ddRoles.innerHTML = '<span class="loading-text">Error</span>';
     }
 }
 
 async function loadMyPermissions() {
     try {
         const res = await fetch('/api/my-permissions');
-        if (!res.ok) throw new Error('Errore caricamento permessi utente');
+        if (!res.ok) throw new Error('Failed to load user permissions');
         myPermissions = await res.json();
     } catch (e) {
-        console.error('[MY-PERMISSIONS] Errore:', e);
+        console.error('[MY-PERMISSIONS] Error:', e);
         myPermissions = { createRoles: false, editRoles: false, deleteRoles: false, viewLogsRoles: false, managePermissions: false };
     }
 }
@@ -323,7 +343,7 @@ async function loadGuilds() {
 
         if (!Array.isArray(guilds) || guilds.length === 0) {
             document.getElementById('commandsList').innerHTML =
-                '<div class="empty-state"><h3>Nessun server trovato</h3><p>Invita il bot in un server</p></div>';
+                '<div class="empty-state"><h3>No server found</h3><p>Invite the bot to a server</p></div>';
             return;
         }
 
@@ -333,7 +353,7 @@ async function loadGuilds() {
     } catch (e) {
         console.error('[INIT] loadGuilds error:', e);
         document.getElementById('commandsList').innerHTML =
-            `<div class="empty-state"><h3>Errore</h3><p>${e.message}</p></div>`;
+            `<div class="empty-state"><h3>Error</h3><p>${e.message}</p></div>`;
     }
 }
 
@@ -341,7 +361,7 @@ async function loadPermissions() {
     if (!currentGuild) return;
     try {
         const res = await fetch(`/api/permissions/${currentGuild}`);
-        if (!res.ok) throw new Error('Errore caricamento permessi');
+        if (!res.ok) throw new Error('Failed to load permissions');
         dashboardPermissions = await res.json();
     } catch (e) {
         console.error('[PERMISSIONS] loadPermissions error:', e);
@@ -357,11 +377,11 @@ function userHasDashboardPermission(permKey) {
 async function loadCommands() {
     if (!currentGuild) {
         document.getElementById('commandsList').innerHTML =
-            '<div class="empty-state"><h3>Nessun server selezionato</h3></div>';
+            '<div class="empty-state"><h3>No server selected</h3></div>';
         return;
     }
     const list = document.getElementById('commandsList');
-    list.innerHTML = '<div class="loading">Caricamento</div>';
+    list.innerHTML = '<div class="loading">Loading</div>';
     try {
         const res = await fetch(`/api/commands/${currentGuild}`);
         if (!res.ok) throw new Error(`GET /api/commands → status ${res.status}`);
@@ -369,7 +389,7 @@ async function loadCommands() {
         renderCommands();
     } catch (e) {
         console.error('[INIT] loadCommands error:', e);
-        list.innerHTML = `<div class="empty-state"><h3>Errore</h3><p>${e.message}</p></div>`;
+        list.innerHTML = `<div class="empty-state"><h3>Error</h3><p>${e.message}</p></div>`;
     }
 }
 
@@ -379,16 +399,16 @@ function renderCommands() {
 
     if (entries.length === 0) {
         list.innerHTML = `<div class="empty-state">
-            <h3>Nessun comando custom</h3>
-            <p>Clicca "+ Nuovo Comando" per crearne uno</p>
+            <h3>No custom commands</h3>
+            <p>Click "+ New Command" to create one</p>
         </div>`;
         return;
     }
 
     list.innerHTML = entries.map(([name, cmd]) => {
-        let badge = '<span class="command-badge none">Nessun ruolo</span>';
+        let badge = '<span class="command-badge none">No roles</span>';
         if (Array.isArray(cmd.allowedRoles) && cmd.allowedRoles.length > 0) {
-            badge = `<span class="command-badge roles">${cmd.allowedRoles.length} ruol${cmd.allowedRoles.length === 1 ? 'o' : 'i'}</span>`;
+            badge = `<span class="command-badge roles">${cmd.allowedRoles.length} role${cmd.allowedRoles.length === 1 ? '' : 's'}</span>`;
         }
 
         const baseBadge = cmd.isBase
@@ -406,8 +426,8 @@ function renderCommands() {
                 <p>${escapeHtml(typeLabel)} - ${escapeHtml(truncate(cmd.response || '', 70))}</p>
             </div>
             <div class="command-actions">
-                <button class="btn-edit" data-name="${escapeAttr(name)}">Modifica</button>
-                <button class="btn-delete" data-name="${escapeAttr(name)}">Elimina</button>
+                <button class="btn-edit" data-name="${escapeAttr(name)}">Edit</button>
+                <button class="btn-delete" data-name="${escapeAttr(name)}">Delete</button>
             </div>
         </div>`;
     }).join('');
@@ -468,7 +488,7 @@ function openModal(name = null) {
 
     if (name && currentCommands[name]) {
         const cmd = currentCommands[name];
-        title.textContent = 'Modifica Comando';
+        title.textContent = 'Edit Command';
         document.getElementById('cmdName').value = name;
         document.getElementById('cmdName').disabled = true;
         document.getElementById('cmdPrefix').value = cmd.prefix || '*';
@@ -486,7 +506,7 @@ function openModal(name = null) {
             baseToggle.checked = !!cmd.isBase;
         }
     } else {
-        title.textContent = 'Nuovo Comando';
+        title.textContent = 'New Command';
         document.getElementById('cmdName').disabled = false;
         document.getElementById('cmdPrefix').value = '*';
         document.getElementById('cmdColor').value = '#E67E22';
@@ -505,7 +525,7 @@ function openModal(name = null) {
 
     rolesLoaded = false;
     currentRoles = [];
-    document.getElementById('rolesList').innerHTML = '<p class="loading-text">Apri per caricare i ruoli...</p>';
+    document.getElementById('rolesList').innerHTML = '<p class="loading-text">Open to load roles...</p>';
     closePermissionsBox();
     closeMoreOptions();
 
@@ -569,13 +589,13 @@ function updateTypeUI() {
     const labelResponse = document.getElementById('labelResponse');
 
     const hints = {
-        text: 'Il bot risponde con questo testo. Variabili: {user} {username} {server} {membercount} {args} {md} | Argomenti posizionali: $1 $2 $3 ...',
-        embed: 'Il bot risponde con un embed. Variabili: {user} {username} {server} {membercount} {args} {md} | Argomenti posizionali: $1 $2 $3 ...',
-        ban: 'Uso: {prefix}comando @utente motivo. Il motivo in Risposta e opzionale (di default). Supporta $1 $2 $3 ...',
-        kick: 'Uso: {prefix}comando @utente motivo. Il motivo in Risposta e opzionale (di default). Supporta $1 $2 $3 ...',
-        mute: 'Uso: {prefix}comando @utente motivo. Il motivo in Risposta e opzionale (di default). Supporta $1 $2 $3 ...',
-        warn: 'Uso: {prefix}comando @utente motivo. Il motivo in Risposta e opzionale (di default). Supporta $1 $2 $3 ...',
-        purge: 'Uso: {prefix}comando [numero] - Elimina N messaggi nel canale corrente (1-100).'
+        text: 'The bot replies with this text. Variables: {user} {username} {server} {membercount} {args} {md} | Positional args: $1 $2 $3 ...',
+        embed: 'The bot replies with an embed. Variables: {user} {username} {server} {membercount} {args} {md} | Positional args: $1 $2 $3 ...',
+        ban: 'Usage: {prefix}command @user reason. The reason in Response is optional (uses default). Supports $1 $2 $3 ...',
+        kick: 'Usage: {prefix}command @user reason. The reason in Response is optional (uses default). Supports $1 $2 $3 ...',
+        mute: 'Usage: {prefix}command @user reason. The reason in Response is optional (uses default). Supports $1 $2 $3 ...',
+        warn: 'Usage: {prefix}command @user reason. The reason in Response is optional (uses default). Supports $1 $2 $3 ...',
+        purge: 'Usage: {prefix}command [number] - Deletes N messages in the current channel (1-100).'
     };
 
     const currentPrefix = document.getElementById('cmdPrefix').value || '*';
@@ -614,27 +634,27 @@ function updateTypeUI() {
 
     if (isBan) {
         durationInput.removeAttribute('max');
-        durationInput.placeholder = 'es: 7 (lascia vuoto per ban permanente)';
-        durationLabelText.textContent = 'Duration (giorni)';
-        durationHint.textContent = 'Lascia vuoto per ban permanente. Se compili, il bot sbannerà automaticamente dopo N giorni.';
+        durationInput.placeholder = 'e.g. 7 (leave empty for permanent ban)';
+        durationLabelText.textContent = 'Duration (days)';
+        durationHint.textContent = 'Leave empty for permanent ban. If filled, the bot will auto-unban after N days.';
     } else if (isMute) {
         durationInput.max = 28;
-        durationInput.placeholder = 'es: 7 (lascia vuoto per 28 giorni, massimo)';
-        durationLabelText.textContent = 'Duration (giorni)';
-        durationHint.textContent = 'Massimo 28 giorni. Se lasci vuoto, il mute durerà 28 giorni.';
+        durationInput.placeholder = 'e.g. 7 (leave empty for 28 days, max)';
+        durationLabelText.textContent = 'Duration (days)';
+        durationHint.textContent = 'Maximum 28 days. If empty, mute will last 28 days.';
     }
 
     if (isPurge) {
         response.required = false;
         response.value = '';
     } else if (isModAction) {
-        responseLabel.textContent = 'Motivo (opzionale)';
-        response.placeholder = 'Motivo di default (opzionale)';
+        responseLabel.textContent = 'Reason (optional)';
+        response.placeholder = 'Default reason (optional)';
         response.required = false;
         if (deleteCheck) deleteCheck.checked = true;
     } else {
-        responseLabel.textContent = 'Risposta';
-        response.placeholder = 'Variabili: {user} {username} {server} {membercount} {args} {md}';
+        responseLabel.textContent = 'Response';
+        response.placeholder = 'Variables: {user} {username} {server} {membercount} {args} {md}';
         response.required = true;
     }
 
@@ -686,7 +706,7 @@ function updatePreview() {
         .replace(/{username}/g, 'Mario')
         .replace(/{server}/g, 'PredCord')
         .replace(/{membercount}/g, '42')
-        .replace(/{args}/g, 'esempio argomenti')
+        .replace(/{args}/g, 'example args')
         .replace(/{md}/g, '[modlogs placeholder]')
         .replace(/\$(\d+)/g, (match, num) => `[arg${num}]`);
 
@@ -701,7 +721,7 @@ function updatePreview() {
         if (response.trim()) {
             html += `<div class="discord-embed-desc">${escapeHtml(text)}</div>`;
         } else {
-            html += `<div class="discord-embed-desc preview-empty">Compila il campo Risposta per vedere il testo.</div>`;
+            html += `<div class="discord-embed-desc preview-empty">Fill in the Response field to see the text.</div>`;
         }
         if (image) {
             html += `<img class="discord-embed-image" src="${escapeAttr(image)}" alt="" onerror="this.style.display='none'">`;
@@ -712,7 +732,7 @@ function updatePreview() {
     }
 
     if (!response.trim()) {
-        preview.innerHTML = '<p class="preview-empty">Compila il campo Risposta per vedere l\'anteprima.</p>';
+        preview.innerHTML = '<p class="preview-empty">Fill in the Response field to see the preview.</p>';
         return;
     }
 
@@ -754,16 +774,16 @@ function togglePermissions() {
 async function loadRoles() {
     if (!currentGuild) return;
     const list = document.getElementById('rolesList');
-    list.innerHTML = '<p class="loading-text">Caricamento ruoli...</p>';
+    list.innerHTML = '<p class="loading-text">Loading roles...</p>';
 
     try {
         const res = await fetch(`/api/roles/${currentGuild}`);
-        if (!res.ok) throw new Error('Errore caricamento ruoli');
+        if (!res.ok) throw new Error('Failed to load roles');
         currentRoles = await res.json();
         rolesLoaded = true;
         renderRoles();
     } catch (e) {
-        list.innerHTML = `<p class="loading-text">Errore: ${e.message}</p>`;
+        list.innerHTML = `<p class="loading-text">Error: ${e.message}</p>`;
     }
 }
 
@@ -771,7 +791,7 @@ function renderRoles() {
     const list = document.getElementById('rolesList');
 
     if (!currentRoles || currentRoles.length === 0) {
-        list.innerHTML = '<p class="loading-text">Nessun ruolo disponibile.</p>';
+        list.innerHTML = '<p class="loading-text">No roles available.</p>';
         return;
     }
 
@@ -830,14 +850,14 @@ async function saveCommand(e) {
     }
 
     if (invalid) {
-        showFormToast('Compila tutti i campi');
+        showFormToast('Fill in all fields');
         return;
     }
 
     const colorHex = document.getElementById('cmdColor').value;
     const btn = e.target.querySelector('button[type="submit"]');
     const originalText = btn.innerHTML;
-    btn.innerHTML = 'Salvataggio...';
+    btn.innerHTML = 'Saving...';
     btn.disabled = true;
 
     let prefix = document.getElementById('cmdPrefix').value.trim();
@@ -885,17 +905,17 @@ async function saveCommand(e) {
 
             closeModal();
             await loadCommands();
-            showToast(`Comando ${prefix}${name} salvato`);
+            showToast(`Command ${prefix}${name} saved`);
         } else {
             const err = await res.json();
             if (res.status === 403) {
                 showAccessDenied();
             } else {
-                showToast(err.error || 'Errore', 'error');
+                showToast(err.error || 'Error', 'error');
             }
         }
     } catch (err) {
-        showToast('Errore di connessione', 'error');
+        showToast('Connection error', 'error');
     } finally {
         btn.innerHTML = originalText;
         btn.disabled = false;
@@ -910,27 +930,27 @@ async function deleteCommand(name) {
 
     const cmd = currentCommands[name];
     if (cmd && cmd.isBase) {
-        showToast('Questo comando è Base: rimuovi prima il flag Base per eliminarlo', 'error');
+        showToast('This command is Base: remove the Base flag first to delete it', 'error');
         return;
     }
 
     showConfirmDialog(
-        'Conferma eliminazione',
-        `Vuoi eliminare il comando *${name}? Questa azione è irreversibile.`,
+        'Confirm deletion',
+        `Do you want to delete the command *${name}? This action is irreversible.`,
         async () => {
             try {
                 const res = await fetch(`/api/commands/${currentGuild}/${name}`, { method: 'DELETE' });
                 if (res.ok) {
                     await loadCommands();
-                    showToast(`Comando eliminato`);
+                    showToast(`Command deleted`);
                 } else if (res.status === 403) {
                     showAccessDenied();
                 } else {
                     const err = await res.json().catch(() => ({}));
-                    showToast(err.error || 'Errore durante l\'eliminazione', 'error');
+                    showToast(err.error || 'Error while deleting', 'error');
                 }
             } catch (e) {
-                showToast('Errore: ' + e.message, 'error');
+                showToast('Error: ' + e.message, 'error');
             }
         }
     );
@@ -939,35 +959,40 @@ async function deleteCommand(name) {
 async function loadModlogs() {
     if (!currentGuild) return;
     const list = document.getElementById('modlogsList');
-    list.innerHTML = '<div class="loading">Caricamento</div>';
+    list.innerHTML = '<div class="loading">Loading</div>';
     try {
-        const res = await fetch(`/api/modlogs/${currentGuild}`);
-        if (!res.ok) throw new Error('Errore caricamento');
+        const res = await fetch(`/api/dashboard-logs/${currentGuild}`);
+        if (!res.ok) throw new Error('Failed to load');
         currentModlogs = await res.json();
         renderModlogs(currentModlogs);
     } catch (e) {
-        list.innerHTML = `<div class="empty-state"><h3>Errore</h3><p>${e.message}</p></div>`;
+        list.innerHTML = `<div class="empty-state"><h3>Error</h3><p>${e.message}</p></div>`;
     }
 }
 
 function renderModlogs(logs) {
     const list = document.getElementById('modlogsList');
     if (!logs || logs.length === 0) {
-        list.innerHTML = '<div class="empty-state"><h3>Nessuna azione</h3><p>Nessuna moderazione registrata</p></div>';
+        list.innerHTML = '<div class="empty-state"><h3>No actions</h3><p>No logs recorded</p></div>';
         return;
     }
     list.innerHTML = logs.map(log => {
-        const type = (log.type || log.action || 'warn').toLowerCase();
+        const type = (log.type || 'generic').toLowerCase();
+        const action = log.action || log.type || 'N/A';
+        const target = log.targetTag || log.targetId || log.userTag || 'System';
+        const reason = log.reason || log.details || 'No details';
+        const date = log.dateFormatted || (log.timestamp ? new Date(log.timestamp).toLocaleString('en-US') : '');
+        const mod = log.moderatorTag || log.userTag || 'Bot';
+
         return `
         <div class="modlog-card">
             <div class="modlog-header">
-                <span class="modlog-badge ${escapeAttr(type)}">${escapeHtml(log.type || log.action || 'N/A')}</span>
-                <span class="modlog-target">${escapeHtml(log.targetTag || log.targetId)}</span>
+                <span class="modlog-badge ${escapeAttr(type)}">${escapeHtml(action)}</span>
+                <span class="modlog-target">${escapeHtml(target)}</span>
             </div>
-            <div class="modlog-reason">${escapeHtml(log.reason || 'Nessun motivo')}</div>
+            <div class="modlog-reason">${escapeHtml(reason)}</div>
             <div class="modlog-meta">
-                ${escapeHtml(log.moderatorTag || 'Sistema')} - ${escapeHtml(log.dateFormatted || log.date || '')}
-                ${log.duration ? ` - ${escapeHtml(log.duration)}` : ''}
+                ${escapeHtml(mod)} — ${escapeHtml(date)}
             </div>
         </div>`;
     }).join('');
@@ -987,11 +1012,11 @@ async function loadPermissionsSection() {
     const viewLogsList = document.getElementById('viewLogsRolesList');
     const projectedList = document.getElementById('projectedRolesList');
 
-    if (createList) createList.innerHTML = '<p class="loading-text">Caricamento...</p>';
-    if (editList) editList.innerHTML = '<p class="loading-text">Caricamento...</p>';
-    if (deleteList) deleteList.innerHTML = '<p class="loading-text">Caricamento...</p>';
-    if (viewLogsList) viewLogsList.innerHTML = '<p class="loading-text">Caricamento...</p>';
-    if (projectedList) projectedList.innerHTML = '<p class="loading-text">Caricamento...</p>';
+    if (createList) createList.innerHTML = '<p class="loading-text">Loading...</p>';
+    if (editList) editList.innerHTML = '<p class="loading-text">Loading...</p>';
+    if (deleteList) deleteList.innerHTML = '<p class="loading-text">Loading...</p>';
+    if (viewLogsList) viewLogsList.innerHTML = '<p class="loading-text">Loading...</p>';
+    if (projectedList) projectedList.innerHTML = '<p class="loading-text">Loading...</p>';
 
     try {
         const [rolesRes, permsRes] = await Promise.all([
@@ -999,7 +1024,7 @@ async function loadPermissionsSection() {
             fetch(`/api/permissions/${currentGuild}`)
         ]);
 
-        if (!rolesRes.ok || !permsRes.ok) throw new Error('Errore caricamento');
+        if (!rolesRes.ok || !permsRes.ok) throw new Error('Failed to load');
 
         const roles = await rolesRes.json();
         const perms = await permsRes.json();
@@ -1025,7 +1050,7 @@ async function loadPermissionsSection() {
         renderSpecialUsers('ownerUsersList', dashboardPermissions.ownerUsers, 'owner');
 
     } catch (e) {
-        if (createList) createList.innerHTML = `<p class="loading-text">Errore: ${e.message}</p>`;
+        if (createList) createList.innerHTML = `<p class="loading-text">Error: ${e.message}</p>`;
     }
 }
 
@@ -1034,7 +1059,7 @@ function renderPermissionsList(containerId, roles, selected) {
     if (!list) return;
 
     if (!roles || roles.length === 0) {
-        list.innerHTML = '<p class="loading-text">Nessun ruolo.</p>';
+        list.innerHTML = '<p class="loading-text">No roles.</p>';
         return;
     }
 
@@ -1056,7 +1081,7 @@ async function renderSpecialUsers(containerId, userIds, type) {
     if (!list) return;
 
     if (!userIds || userIds.length === 0) {
-        list.innerHTML = '<p class="loading-text">Nessun utente.</p>';
+        list.innerHTML = '<p class="loading-text">No users.</p>';
         return;
     }
 
@@ -1085,7 +1110,7 @@ async function renderSpecialUsers(containerId, userIds, type) {
                 <div class="special-user-name">${escapeHtml(username)}</div>
                 <div class="special-user-id">${escapeHtml(userId)}</div>
             </div>
-            <button type="button" class="special-user-remove" data-user-id="${escapeAttr(userId)}" data-type="${escapeAttr(type)}" title="Rimuovi">&times;</button>
+            <button type="button" class="special-user-remove" data-user-id="${escapeAttr(userId)}" data-type="${escapeAttr(type)}" title="Remove">&times;</button>
         `;
 
         list.appendChild(item);
@@ -1117,27 +1142,27 @@ async function addSpecialUser(type) {
     const userId = input.value.trim();
 
     if (!/^\d+$/.test(userId)) {
-        showToast('ID Discord non valido (solo numeri)', 'error');
+        showToast('Invalid Discord ID (numbers only)', 'error');
         return;
     }
 
     if (type === 'admin') {
         if (dashboardPermissions.adminUsers.includes(userId)) {
-            showToast('Utente già presente nella lista Admin', 'error');
+            showToast('User already in Admin list', 'error');
             return;
         }
         if (dashboardPermissions.ownerUsers.includes(userId)) {
-            showToast('Utente già presente nella lista Owner', 'error');
+            showToast('User already in Owner list', 'error');
             return;
         }
         dashboardPermissions.adminUsers.push(userId);
     } else if (type === 'owner') {
         if (dashboardPermissions.ownerUsers.includes(userId)) {
-            showToast('Utente già presente nella lista Owner', 'error');
+            showToast('User already in Owner list', 'error');
             return;
         }
         if (dashboardPermissions.adminUsers.includes(userId)) {
-            showToast('Utente già presente nella lista Admin', 'error');
+            showToast('User already in Admin list', 'error');
             return;
         }
         dashboardPermissions.ownerUsers.push(userId);
@@ -1148,7 +1173,7 @@ async function addSpecialUser(type) {
     const containerId = type === 'admin' ? 'adminUsersList' : 'ownerUsersList';
     await renderSpecialUsers(containerId, type === 'admin' ? dashboardPermissions.adminUsers : dashboardPermissions.ownerUsers, type);
 
-    showToast('Utente aggiunto (ricorda di salvare)');
+    showToast('User added (remember to save)');
 }
 
 async function savePermissions() {
@@ -1159,7 +1184,7 @@ async function savePermissions() {
 
     const btn = document.getElementById('savePermissionsBtn');
     const originalText = btn.innerHTML;
-    btn.innerHTML = 'Salvataggio...';
+    btn.innerHTML = 'Saving...';
     btn.disabled = true;
 
     const getChecked = (containerId) => {
@@ -1188,15 +1213,15 @@ async function savePermissions() {
 
         if (res.ok) {
             dashboardPermissions = { ...dashboardPermissions, ...payload };
-            showToast('Permessi salvati');
+            showToast('Permissions saved');
         } else if (res.status === 403) {
             showAccessDenied();
         } else {
             const err = await res.json();
-            showToast(err.error || 'Errore', 'error');
+            showToast(err.error || 'Error', 'error');
         }
     } catch (err) {
-        showToast('Errore di connessione', 'error');
+        showToast('Connection error', 'error');
     } finally {
         btn.innerHTML = originalText;
         btn.disabled = false;
@@ -1208,7 +1233,7 @@ function renderSingleSelectList(containerId, items, selectedId, configKey) {
     if (!list) return;
 
     if (!items || items.length === 0) {
-        list.innerHTML = '<p class="loading-text">Nessun elemento.</p>';
+        list.innerHTML = '<p class="loading-text">No items.</p>';
         return;
     }
 
@@ -1258,7 +1283,7 @@ async function loadConfigSection() {
     const containers = ['cfgJoinLeaveList', 'cfgModLogList', 'cfgMessageLogList', 'cfgTranscriptsList', 'cfgStaffRoleList', 'cfgAdminRoleList'];
     containers.forEach(id => {
         const el = document.getElementById(id);
-        if (el) el.innerHTML = '<p class="loading-text">Caricamento...</p>';
+        if (el) el.innerHTML = '<p class="loading-text">Loading...</p>';
     });
 
     try {
@@ -1268,7 +1293,7 @@ async function loadConfigSection() {
             fetch(`/api/guildconfig/${currentGuild}`)
         ]);
 
-        if (!channelsRes.ok || !rolesRes.ok || !configRes.ok) throw new Error('Errore caricamento');
+        if (!channelsRes.ok || !rolesRes.ok || !configRes.ok) throw new Error('Failed to load');
 
         const channels = await channelsRes.json();
         const roles = await rolesRes.json();
@@ -1291,7 +1316,7 @@ async function loadConfigSection() {
         console.error('[CONFIG] loadConfigSection error:', e);
         containers.forEach(id => {
             const el = document.getElementById(id);
-            if (el) el.innerHTML = `<p class="loading-text">Errore: ${e.message}</p>`;
+            if (el) el.innerHTML = `<p class="loading-text">Error: ${e.message}</p>`;
         });
     }
 }
@@ -1357,7 +1382,7 @@ async function saveConfig() {
 
     const btn = document.getElementById('saveConfigBtn');
     const originalText = btn.innerHTML;
-    btn.innerHTML = 'Salvataggio...';
+    btn.innerHTML = 'Saving...';
     btn.disabled = true;
 
     const payload = {
@@ -1377,15 +1402,15 @@ async function saveConfig() {
         });
 
         if (res.ok) {
-            showToast('Configurazione salvata');
+            showToast('Configuration saved');
         } else if (res.status === 403) {
             showAccessDenied();
         } else {
             const err = await res.json();
-            showToast(err.error || 'Errore', 'error');
+            showToast(err.error || 'Error', 'error');
         }
     } catch (err) {
-        showToast('Errore di connessione', 'error');
+        showToast('Connection error', 'error');
     } finally {
         btn.innerHTML = originalText;
         btn.disabled = false;
@@ -1517,27 +1542,47 @@ function setupEvents() {
 
     document.querySelectorAll('.nav-tab').forEach(tab => {
         tab.onclick = () => {
+            const currentActive = document.querySelector('.tab-content:not(.hidden)');
+            const target = tab.dataset.tab;
+            const targetContent = document.getElementById(`tab-${target}`);
+            if (!targetContent) return;
+
             document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
             tab.classList.add('active');
-            const target = tab.dataset.tab;
-            document.querySelectorAll('.tab-content').forEach(c => c.classList.add('hidden'));
-            const targetContent = document.getElementById(`tab-${target}`);
-            if (targetContent) targetContent.classList.remove('hidden');
 
-            if (target === 'moderation' || target === 'logs') {
-                if (!userHasDashboardPermission('viewLogsRoles')) {
-                    showAccessDenied();
-                    return;
+            const loadTarget = () => {
+                document.querySelectorAll('.tab-content').forEach(c => {
+                    c.classList.add('hidden');
+                    c.classList.remove('fade-in');
+                });
+                targetContent.classList.remove('hidden');
+                targetContent.classList.add('fade-in');
+
+                if (target === 'logs') {
+                    if (!userHasDashboardPermission('viewLogsRoles')) {
+                        showAccessDenied();
+                        return;
+                    }
+                    loadModlogs();
+                } else if (target === 'permissions') {
+                    loadPermissionsSection();
+                } else if (target === 'config') {
+                    loadConfigSection();
+                } else if (target === 'tickets') {
+                    loadTicketsSection();
+                } else if (target === 'commands') {
+                    loadCommands();
                 }
-                loadModlogs();
-            } else if (target === 'permissions') {
-                loadPermissionsSection();
-            } else if (target === 'config') {
-                loadConfigSection();
-            } else if (target === 'tickets') {
-                loadTicketsSection();
-            } else if (target === 'commands') {
-                loadCommands();
+            };
+
+            if (currentActive && currentActive !== targetContent) {
+                currentActive.classList.add('fade-out');
+                setTimeout(() => {
+                    currentActive.classList.remove('fade-out');
+                    loadTarget();
+                }, 220);
+            } else {
+                loadTarget();
             }
         };
     });
