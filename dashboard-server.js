@@ -649,6 +649,17 @@ app.post('/api/commands/:guildId', requireAuth, async (req, res) => {
             if (!isNaN(d) && d > 0) duration = d;
         }
 
+        let extraEmbeds = [];
+        if (Array.isArray(data.extraEmbeds)) {
+            extraEmbeds = data.extraEmbeds.slice(0, 9).map(e => ({
+                title: typeof e.title === 'string' ? e.title : '',
+                response: typeof e.response === 'string' ? e.response : '',
+                color: typeof e.color === 'number' ? e.color : 0x7289DA,
+                thumbnail: e.thumbnail || null,
+                image: e.image || null
+            }));
+        }
+
         await db.saveCustomCommandDB(guildId, lowerName, {
             prefix: prefix,
             type: data.type || 'text',
@@ -658,6 +669,7 @@ app.post('/api/commands/:guildId', requireAuth, async (req, res) => {
             deleteCommand: data.deleteCommand !== false,
             thumbnail: data.thumbnail || null,
             image: data.image || null,
+            extraEmbeds: extraEmbeds,
             allowedRoles: allowedRoles,
             duration: duration,
             isBase: existing?.isBase || false,
