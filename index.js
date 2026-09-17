@@ -1,4 +1,4 @@
-const { Client, GatewayIntentBits, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, ChannelType, PermissionsBitField, Events, ModalBuilder, TextInputBuilder, TextInputStyle, StringSelectMenuBuilder, SlashCommandBuilder, REST, Routes } = require('discord.js');
+const { Client, GatewayIntentBits, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, ChannelType, PermissionsBitField, Events, ModalBuilder, LabelBuilder, TextInputBuilder, TextInputStyle, UserSelectMenuBuilder, StringSelectMenuBuilder, StringSelectMenuOptionBuilder, SlashCommandBuilder, REST, Routes } = require('discord.js');
 const fs = require('fs');
 const path = require('path');
 const db = require('./db');
@@ -49,7 +49,7 @@ setInterval(() => {
     }
 }, 60000);
 
-console.log('[ANTI-CRASH] Sistema di protezione attivato');
+console.log('[ANTI-CRASH] Protection system activated');
 
 const client = new Client({
     intents: [
@@ -486,15 +486,15 @@ async function sendLeaveLog(member) {
 async function sendWelcomeDM(member) {
     try {
         const welcomeEmbed = new EmbedBuilder()
-            .setTitle('BENVENUTO NELLE PRED CORD')
-            .setDescription(`Ciao ${member.user.toString()}! Benvenuto nel server ufficiale del Predcord!`)
+            .setTitle('WELCOME TO PRED CORD')
+            .setDescription(`Hi ${member.user.toString()}! Welcome to the official Predcord server!`)
             .setColor(COLORS.SUCCESS)
             .setThumbnail(THUMBNAIL_URL)
             .setImage(FOOTER_IMAGE_URL)
             .addFields(
-                { name: 'REGOLE', value: 'Leggi le regole nel canale regole per evitare sanzioni.', inline: false },
-                { name: 'TICKET', value: 'Hai bisogno di aiuto? Apri un ticket nella sezione supporto.', inline: false },
-                { name: 'SEGUICI SUI SOCIAL', value: `${EMOJIS.twitch} [Twitch](${SOCIAL_LINKS.twitch})\n${EMOJIS.youtube} [YouTube](${SOCIAL_LINKS.youtube})\n${EMOJIS.tiktok} [TikTok](${SOCIAL_LINKS.tiktok})\n${EMOJIS.twitter} [Twitter/X](${SOCIAL_LINKS.twitter})\n${EMOJIS.instagram} [Instagram](${SOCIAL_LINKS.instagram})\n${EMOJIS.discord} [Discord Community](${SOCIAL_LINKS.discord})`, inline: false }
+                { name: 'RULES', value: 'Read the rules in the rules channel to avoid sanctions.', inline: false },
+                { name: 'TICKETS', value: 'Need help? Open a ticket in the support section.', inline: false },
+                { name: 'FOLLOW US ON SOCIAL', value: `${EMOJIS.twitch} [Twitch](${SOCIAL_LINKS.twitch})\n${EMOJIS.youtube} [YouTube](${SOCIAL_LINKS.youtube})\n${EMOJIS.tiktok} [TikTok](${SOCIAL_LINKS.tiktok})\n${EMOJIS.twitter} [Twitter/X](${SOCIAL_LINKS.twitter})\n${EMOJIS.instagram} [Instagram](${SOCIAL_LINKS.instagram})\n${EMOJIS.discord} [Discord Community](${SOCIAL_LINKS.discord})`, inline: false }
             );
         await member.send({ embeds: [welcomeEmbed] }).catch(() => console.log(`DM failed: ${member.user.tag}`));
     } catch (error) {
@@ -505,8 +505,8 @@ async function sendWelcomeDM(member) {
 async function sendSocialEmbed(channel) {
     try {
         const socialEmbed = new EmbedBuilder()
-            .setTitle('SEGUICI SUI SOCIAL')
-            .setDescription('Unisciti alla community e seguici su tutti i canali ufficiali per non perderti nulla!')
+            .setTitle('FOLLOW US ON SOCIAL')
+            .setDescription('Join the community and follow us on all official channels to never miss anything!')
             .setColor(COLORS.INFO)
             .setThumbnail(THUMBNAIL_URL)
             .addFields(
@@ -521,145 +521,6 @@ async function sendSocialEmbed(channel) {
     } catch (error) {
         logCrash('SOCIAL_EMBED_ERROR', error);
     }
-}
-
-async function showTicketTypeMenu(interaction) {
-    const row = new ActionRowBuilder().addComponents(
-        new StringSelectMenuBuilder()
-            .setCustomId('ticket_type_menu')
-            .setPlaceholder('Seleziona il tipo di ticket')
-            .addOptions([
-                { label: 'Support', description: 'Per assistenza generale o problemi con il server', value: 'support' },
-                { label: 'Report Player', description: 'Per segnalare un giocatore che viola le regole', value: 'report' }
-            ])
-    );
-    const embed = new EmbedBuilder()
-        .setTitle('Crea un nuovo ticket')
-        .setDescription('Seleziona il tipo di ticket dal menu a tendina qui sotto.')
-        .setColor(COLORS.TICKET)
-        .setThumbnail(THUMBNAIL_URL);
-    await interaction.reply({ embeds: [embed], components: [row], flags: 64 });
-}
-
-async function showTicketDescriptionModal(interaction, ticketType) {
-    if (ticketType === 'support') {
-        const modal = new ModalBuilder().setCustomId('ticket_modal_support').setTitle('Support Ticket');
-        const descriptionInput = new TextInputBuilder()
-            .setCustomId('ticket_description')
-            .setLabel('Descrizione')
-            .setStyle(TextInputStyle.Paragraph)
-            .setPlaceholder('Descrivi il tuo problema in dettaglio...')
-            .setRequired(true)
-            .setMaxLength(1000);
-        modal.addComponents(new ActionRowBuilder().addComponents(descriptionInput));
-        await interaction.showModal(modal);
-    } else if (ticketType === 'report') {
-        const modal = new ModalBuilder().setCustomId('ticket_modal_report').setTitle('Report Player');
-        const playerIdInput = new TextInputBuilder()
-            .setCustomId('player_id')
-            .setLabel('ID / Epic Name del giocatore')
-            .setStyle(TextInputStyle.Short)
-            .setPlaceholder('Es: PlayerName123 o EpicName')
-            .setRequired(true)
-            .setMaxLength(100);
-        const clipLinkInput = new TextInputBuilder()
-            .setCustomId('clip_link')
-            .setLabel('Link della clip')
-            .setStyle(TextInputStyle.Short)
-            .setPlaceholder('https://streamable.com/...')
-            .setRequired(true)
-            .setMaxLength(200);
-        const descriptionInput = new TextInputBuilder()
-            .setCustomId('report_description')
-            .setLabel('Descrizione')
-            .setStyle(TextInputStyle.Paragraph)
-            .setPlaceholder('Descrivi cosa e successo...')
-            .setRequired(true)
-            .setMaxLength(1000);
-        modal.addComponents(
-            new ActionRowBuilder().addComponents(playerIdInput),
-            new ActionRowBuilder().addComponents(clipLinkInput),
-            new ActionRowBuilder().addComponents(descriptionInput)
-        );
-        await interaction.showModal(modal);
-    }
-}
-
-async function createTicket(interaction, ticketType, data) {
-    const typeConfig = {
-        'support': { name: 'Support', categoryKey: 'supportCategoryId', title: 'Support Ticket', color: COLORS.SUCCESS },
-        'report': { name: 'Report', categoryKey: 'reportCategoryId', title: 'Report Player', color: COLORS.REPORT }
-    };
-    const config = typeConfig[ticketType];
-    if (!config) return interaction.reply({ content: 'Tipo di ticket non valido.', flags: 64 });
-    const guildConfig = await getGuildConfig(interaction.guild.id);
-    const staffRoleId = guildConfig.staffRoleId;
-    const categoryId = guildConfig[config.categoryKey];
-    if (!staffRoleId) return interaction.reply({ content: 'Staff role not configured. Please run `*setup` first.', flags: 64 });
-    if (!categoryId) return interaction.reply({ content: `Category for ${config.name} tickets is not configured. Please run \`*setup\` first.`, flags: 64 });
-    const category = interaction.guild.channels.cache.get(categoryId);
-    if (!category) return interaction.reply({ content: 'Category not found. Please contact an administrator.', flags: 64 });
-    let descriptionText = '';
-    if (ticketType === 'support') {
-        descriptionText = data.description || 'Nessuna descrizione fornita';
-    } else {
-        const playerId = data.playerId || 'Non fornito';
-        const clipLink = data.clipLink || 'Non fornito';
-        const reportDesc = data.description || 'Nessuna descrizione';
-        let clipMessage = clipLink;
-        if (!isValidUrl(clipLink) && clipLink !== 'Non fornito') {
-            clipMessage = `${clipLink}\n\nLink non valido. Per favore usa Streamable (https://streamable.com) per caricare la clip e incolla il link qui.`;
-        } else if (clipLink === 'Non fornito') {
-            clipMessage = `${clipLink}\n\nPer favore carica la clip su Streamable (https://streamable.com) e fornisci il link.`;
-        }
-        descriptionText = `**ID / Epic Name:** ${playerId}\n\n**Link Clip:** ${clipMessage}\n\n**Descrizione:** ${reportDesc}`;
-    }
-    const sanitizedUsername = interaction.user.username.toLowerCase().replace(/[^a-z0-9]/g, '');
-    const ticketName = `${ticketType}-${sanitizedUsername}`;
-    const permissionOverwrites = [
-        { id: interaction.guild.id, deny: [PermissionsBitField.Flags.ViewChannel] },
-        { id: interaction.user.id, allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.SendMessages, PermissionsBitField.Flags.ReadMessageHistory] },
-        { id: staffRoleId, allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.SendMessages, PermissionsBitField.Flags.ReadMessageHistory] }
-    ];
-    let ticketChannel;
-    try {
-        ticketChannel = await interaction.guild.channels.create({
-            name: ticketName,
-            type: ChannelType.GuildText,
-            parent: category.id,
-            permissionOverwrites: permissionOverwrites
-        });
-    } catch (error) {
-        try {
-            ticketChannel = await interaction.guild.channels.create({
-                name: `${ticketName}-${Math.floor(Math.random() * 9999)}`,
-                type: ChannelType.GuildText,
-                parent: category.id,
-                permissionOverwrites: permissionOverwrites
-            });
-        } catch (err) {
-            logCrash('TICKET_CREATE_ERROR', err);
-            return interaction.reply({ content: 'Errore durante la creazione del ticket. Contatta un admin.', flags: 64 });
-        }
-    }
-    await ticketChannel.setTopic(interaction.user.id).catch(() => {});
-    let embedDescription = '';
-    if (ticketType === 'support') {
-        embedDescription = `Ticket Type: ${config.name}\n\n**Descrizione:**\n${descriptionText}\n\nCiao ${interaction.user.username}!\n\nUn membro dello staff ti assisterà a breve.\nAttendi pazientemente una risposta.`;
-    } else {
-        embedDescription = `Ticket Type: ${config.name}\n\n${descriptionText}\n\nCiao ${interaction.user.username}!\n\nUn membro dello staff esaminerà la tua segnalazione.\nGrazie per il tuo contributo nel mantenere il server sicuro.`;
-    }
-    const embed = new EmbedBuilder()
-        .setTitle(config.title)
-        .setDescription(embedDescription)
-        .setColor(config.color)
-        .setThumbnail(THUMBNAIL_URL);
-    const row = new ActionRowBuilder().addComponents(
-        new ButtonBuilder().setCustomId('claim_ticket').setLabel('Claim Ticket').setStyle(ButtonStyle.Success),
-        new ButtonBuilder().setCustomId('close_ticket').setLabel('Close Ticket').setStyle(ButtonStyle.Danger)
-    );
-    await ticketChannel.send({ content: `<@&${staffRoleId}> - Nuovo ticket ${config.name} da <@${interaction.user.id}>`, embeds: [embed], components: [row] });
-    await interaction.reply({ content: `Ticket creato: ${ticketChannel}\nTipo: ${config.name}`, flags: 64 });
 }
 
 async function generateTicketTranscript(channel, closer) {
@@ -713,15 +574,15 @@ async function canUsePageCommand(member, guildId) {
 
 client.once('clientReady', async () => {
 
-    console.log(`Bot PredCord connesso come ${client.user.tag}`);
+    console.log(`Bot PredCord connected as ${client.user.tag}`);
 
     const connected = await db.connectDB();
     if (!connected) {
-        console.error('[DB] Impossibile connettersi a MongoDB. Verifica MONGODB_URI nel .env');
+        console.error('[DB] Cannot connect to MongoDB. Check MONGODB_URI in .env');
         process.exit(1);
     }
 
-    console.log('[DB] Database pronto');
+    console.log('[DB] Database ready');
 
     global.PredCord = {
         client,
@@ -745,9 +606,8 @@ client.once('clientReady', async () => {
         getProjectedRolesDB: async (guildId) => await db.getProjectedRolesDB(guildId),
         db
     };
-    console.log('[DASHBOARD] API global.PredCord esposte');
+    console.log('[DASHBOARD] global.PredCord API exposed');
 
-    // Registra lo slash command /panel
     try {
         const commands = [
             new SlashCommandBuilder()
@@ -759,14 +619,25 @@ client.once('clientReady', async () => {
 
         const rest = new REST({ version: '10' }).setToken(process.env.DISCORD_TOKEN);
 
-        console.log('[SLASH] Registrazione comandi globali...');
-        await rest.put(
-            Routes.applicationCommands(client.user.id),
-            { body: commands }
-        );
-        console.log('[SLASH] ✅ Comandi registrati');
+        const GUILD_ID = process.env.MAIN_GUILD_ID;
+
+        if (GUILD_ID) {
+            console.log('[SLASH] Registering commands on guild', GUILD_ID);
+            await rest.put(
+                Routes.applicationGuildCommands(client.user.id, GUILD_ID),
+                { body: commands }
+            );
+            console.log('[SLASH] ✅ Commands registered on guild (immediate)');
+        } else {
+            console.log('[SLASH] MAIN_GUILD_ID not configured, registering globally...');
+            await rest.put(
+                Routes.applicationCommands(client.user.id),
+                { body: commands }
+            );
+            console.log('[SLASH] ✅ Commands registered globally (may take up to 1 hour)');
+        }
     } catch (err) {
-        console.error('[SLASH] ❌ Errore registrazione:', err);
+        console.error('[SLASH] ❌ Registration error:', err);
     }
 });
 
@@ -859,7 +730,7 @@ client.on('messageCreate', async (message) => {
                     if (cooldown) {
                         const remaining = Math.ceil((new Date(cooldown.expiresAt).getTime() - Date.now()) / 1000);
                         const embed = new EmbedBuilder()
-                            .setDescription(`Attendi **${remaining}s** prima di riusare questo comando.`)
+                            .setDescription(`Wait **${remaining}s** before using this command again.`)
                             .setColor(COLORS.WARNING);
                         const msg = await message.channel.send({ embeds: [embed] });
                         setTimeout(() => msg.delete().catch(() => {}), 3000);
@@ -880,7 +751,7 @@ client.on('messageCreate', async (message) => {
             if (cooldown) {
                 const remaining = Math.ceil((new Date(cooldown.expiresAt).getTime() - Date.now()) / 1000);
                 const embed = new EmbedBuilder()
-                    .setDescription(`Attendi **${remaining}s** prima di riusare questo comando.`)
+                    .setDescription(`Wait **${remaining}s** before using this command again.`)
                     .setColor(COLORS.WARNING);
                 const msg = await message.channel.send({ embeds: [embed] });
                 setTimeout(() => msg.delete().catch(() => {}), 3000);
@@ -906,14 +777,14 @@ async function handleNativeCommand(message, command, args) {
         const pageArg = parseInt(args[1]);
 
         if (!input) {
-            const embed = new EmbedBuilder().setDescription('Uso: `*page {userid} {pagina}`').setColor(COLORS.ERROR);
+            const embed = new EmbedBuilder().setDescription('Usage: `*page {userid} {page}`').setColor(COLORS.ERROR);
             await message.channel.send({ embeds: [embed] });
             await message.delete().catch(() => {});
             return;
         }
 
         if (isNaN(pageArg) || pageArg < 1) {
-            const embed = new EmbedBuilder().setDescription('Specifica un numero di pagina valido (>= 1).').setColor(COLORS.ERROR);
+            const embed = new EmbedBuilder().setDescription('Specify a valid page number (>= 1).').setColor(COLORS.ERROR);
             await message.channel.send({ embeds: [embed] });
             await message.delete().catch(() => {});
             return;
@@ -925,7 +796,7 @@ async function handleNativeCommand(message, command, args) {
         else if (/^\d+$/.test(input)) userId = input;
 
         if (!userId) {
-            const embed = new EmbedBuilder().setDescription('ID utente non valido. Usa una mention o un ID.').setColor(COLORS.ERROR);
+            const embed = new EmbedBuilder().setDescription('Invalid user ID. Use a mention or an ID.').setColor(COLORS.ERROR);
             await message.channel.send({ embeds: [embed] });
             await message.delete().catch(() => {});
             return;
@@ -966,7 +837,7 @@ async function handleNativeCommand(message, command, args) {
         }
         const embed = new EmbedBuilder()
             .setTitle('PredCord Commands')
-            .setDescription('Comandi disponibili in base al tuo ruolo:')
+            .setDescription('Commands available based on your role:')
             .setColor(COLORS.INFO)
             .setThumbnail(THUMBNAIL_URL)
             .addFields(
@@ -1691,88 +1562,149 @@ client.on('interactionCreate', async (interaction) => {
         }
 
         if (interaction.isButton() && interaction.customId === 'open_ticket_panel') {
+            const ticketTypeSelect = new StringSelectMenuBuilder()
+                .setCustomId('ticket_type')
+                .setPlaceholder('Choose...')
+                .setMinValues(1)
+                .setMaxValues(1)
+                .addOptions(
+                    new StringSelectMenuOptionBuilder()
+                        .setLabel('Report Player')
+                        .setDescription('Report whos breaking our session rules.')
+                        .setValue('report_player'),
+                    new StringSelectMenuOptionBuilder()
+                        .setLabel('Modmail')
+                        .setDescription('Contact our staff team.')
+                        .setValue('modmail')
+                );
+
+            const ticketTypeLabel = new LabelBuilder()
+                .setLabel('Ticket Type')
+                .setDescription('Choose what type of ticket you want to open.')
+                .setStringSelectMenuComponent(ticketTypeSelect);
+
             const modal = new ModalBuilder()
                 .setCustomId('ticket_panel_modal')
-                .setTitle('Open A Ticket');
+                .setTitle('Open A Ticket')
+                .addLabelComponents(ticketTypeLabel);
 
-            const descriptionInput = new TextInputBuilder()
-                .setCustomId('ticket_panel_description')
-                .setLabel('Describe your issue')
-                .setStyle(TextInputStyle.Paragraph)
-                .setPlaceholder('Write here the details of your request...')
-                .setRequired(true)
-                .setMaxLength(1000);
-
-            modal.addComponents(new ActionRowBuilder().addComponents(descriptionInput));
             await interaction.showModal(modal);
             return;
         }
 
         if (interaction.isModalSubmit() && interaction.customId === 'ticket_panel_modal') {
-            const description = interaction.fields.getTextInputValue('ticket_panel_description');
+            const ticketType = interaction.fields.getStringSelectValues('ticket_type')[0];
 
-            await interaction.reply({ content: 'Your request has been received. Opening a ticket...', flags: 64 });
+            if (ticketType === 'report_player') {
+                const userSelect = new UserSelectMenuBuilder()
+                    .setCustomId('reported_player')
+                    .setPlaceholder('Choose...')
+                    .setMinValues(1)
+                    .setMaxValues(1);
 
-            const guildConfig = await getGuildConfig(interaction.guild.id);
-            const staffRoleId = guildConfig.staffRoleId;
-            const categoryId = guildConfig.supportCategoryId;
+                const playerLabel = new LabelBuilder()
+                    .setLabel('Choose...')
+                    .setDescription('Select the player you want to report.')
+                    .setUserSelectMenuComponent(userSelect);
 
-            if (!staffRoleId || !categoryId) {
-                return interaction.followUp({ content: 'Ticket system is not configured yet. Please contact an administrator.', flags: 64 });
+                const evidenceInput = new TextInputBuilder()
+                    .setCustomId('evidence_link')
+                    .setLabel('Evidence Link')
+                    .setPlaceholder('Paste a link to your evidence...')
+                    .setStyle(TextInputStyle.Short)
+                    .setRequired(true)
+                    .setMaxLength(500);
+
+                const evidenceLabel = new LabelBuilder()
+                    .setLabel('Evidence Link')
+                    .setDescription('Provide a link to the evidence.')
+                    .setTextInputComponent(evidenceInput);
+
+                const situationInput = new TextInputBuilder()
+                    .setCustomId('situation')
+                    .setLabel('Explain the situation')
+                    .setPlaceholder('Explain what happened and how the player broke our session rules...')
+                    .setStyle(TextInputStyle.Paragraph)
+                    .setRequired(true)
+                    .setMaxLength(1000);
+
+                const situationLabel = new LabelBuilder()
+                    .setLabel('Explain the situation')
+                    .setDescription('Explain clearly what happened.')
+                    .setTextInputComponent(situationInput);
+
+                const reportModal = new ModalBuilder()
+                    .setCustomId('report_player_modal')
+                    .setTitle('Report Player')
+                    .addLabelComponents(playerLabel, evidenceLabel, situationLabel);
+
+                await interaction.showModal(reportModal);
+                return;
             }
 
-            const category = interaction.guild.channels.cache.get(categoryId);
-            if (!category) {
-                return interaction.followUp({ content: 'Ticket category not found. Please contact an administrator.', flags: 64 });
+            if (ticketType === 'modmail') {
+                const issueInput = new TextInputBuilder()
+                    .setCustomId('modmail_issue')
+                    .setLabel('Explain your issue')
+                    .setPlaceholder('Write here the details of your request...')
+                    .setStyle(TextInputStyle.Paragraph)
+                    .setRequired(true)
+                    .setMaxLength(1000);
+
+                const issueLabel = new LabelBuilder()
+                    .setLabel('Explain your issue')
+                    .setDescription('Tell our staff team how we can help you.')
+                    .setTextInputComponent(issueInput);
+
+                const modmailModal = new ModalBuilder()
+                    .setCustomId('modmail_modal')
+                    .setTitle('Modmail')
+                    .addLabelComponents(issueLabel);
+
+                await interaction.showModal(modmailModal);
+                return;
             }
+        }
 
-            const sanitizedUsername = interaction.user.username.toLowerCase().replace(/[^a-z0-9]/g, '');
-            const ticketName = `support-${sanitizedUsername}`;
+        if (interaction.isModalSubmit() && interaction.customId === 'report_player_modal') {
+            const selectedUsers = interaction.fields.getSelectedUsers('reported_player');
+            const reportedUser = selectedUsers.first();
 
-            const permissionOverwrites = [
-                { id: interaction.guild.id, deny: [PermissionsBitField.Flags.ViewChannel] },
-                { id: interaction.user.id, allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.SendMessages, PermissionsBitField.Flags.ReadMessageHistory] },
-                { id: staffRoleId, allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.SendMessages, PermissionsBitField.Flags.ReadMessageHistory] }
-            ];
+            const evidence = interaction.fields.getTextInputValue('evidence_link');
+            const situation = interaction.fields.getTextInputValue('situation');
 
-            let ticketChannel;
-            try {
-                ticketChannel = await interaction.guild.channels.create({
-                    name: ticketName,
-                    type: ChannelType.GuildText,
-                    parent: category.id,
-                    permissionOverwrites: permissionOverwrites
+            if (reportedUser.bot) {
+                await interaction.reply({
+                    content: 'You cannot report a bot.',
+                    flags: 64
                 });
-            } catch (error) {
-                try {
-                    ticketChannel = await interaction.guild.channels.create({
-                        name: `${ticketName}-${Math.floor(Math.random() * 9999)}`,
-                        type: ChannelType.GuildText,
-                        parent: category.id,
-                        permissionOverwrites: permissionOverwrites
-                    });
-                } catch (err) {
-                    logCrash('TICKET_CREATE_ERROR', err);
-                    return interaction.followUp({ content: 'Error creating the ticket. Please try again later.', flags: 64 });
-                }
+                return;
             }
 
-            await ticketChannel.setTopic(interaction.user.id).catch(() => {});
+            console.log('Report Player');
+            console.log('Reporter:', interaction.user.id);
+            console.log('Reported Player:', reportedUser.id);
+            console.log('Evidence:', evidence);
+            console.log('Situation:', situation);
 
-            const embed = new EmbedBuilder()
-                .setTitle('Support Ticket')
-                .setDescription(`**Description:**\n${description}\n\nHello ${interaction.user.username}!\n\nA staff member will assist you shortly.\nPlease wait patiently for a response.`)
-                .setColor(COLORS.TICKET)
-                .setThumbnail(THUMBNAIL_URL);
+            await interaction.reply({
+                content: 'Your player report has been submitted to the staff team.',
+                flags: 64
+            });
+            return;
+        }
 
-            const row = new ActionRowBuilder().addComponents(
-                new ButtonBuilder().setCustomId('claim_ticket').setLabel('Claim Ticket').setStyle(ButtonStyle.Success),
-                new ButtonBuilder().setCustomId('close_ticket').setLabel('Close Ticket').setStyle(ButtonStyle.Danger)
-            );
+        if (interaction.isModalSubmit() && interaction.customId === 'modmail_modal') {
+            const issue = interaction.fields.getTextInputValue('modmail_issue');
 
-            await ticketChannel.send({ content: `<@&${staffRoleId}> - New ticket from <@${interaction.user.id}>`, embeds: [embed], components: [row] });
+            console.log('Modmail');
+            console.log('User:', interaction.user.id);
+            console.log('Issue:', issue);
 
-            await interaction.followUp({ content: `Ticket created: ${ticketChannel}`, flags: 64 });
+            await interaction.reply({
+                content: 'Your modmail has been submitted to the staff team.',
+                flags: 64
+            });
             return;
         }
 
@@ -1874,12 +1806,12 @@ process.on('SIGINT', () => { process.exit(); });
 process.on('SIGTERM', () => { process.exit(); });
 
 if (!process.env.DISCORD_TOKEN) {
-    console.error('DISCORD_TOKEN mancante nel file .env!');
+    console.error('DISCORD_TOKEN missing in .env file!');
     process.exit(1);
 }
 
 client.login(process.env.DISCORD_TOKEN).catch((error) => {
     logCrash('LOGIN_ERROR', error);
-    console.error('Login fallito. Controlla il token nel file .env');
+    console.error('Login failed. Check the token in the .env file');
     process.exit(1);
 });
