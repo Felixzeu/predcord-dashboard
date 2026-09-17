@@ -981,7 +981,7 @@ function renderModlogs(logs) {
         const action = log.action || log.type || 'N/A';
         const target = log.targetTag || log.targetId || log.userTag || 'System';
         const reason = log.reason || log.details || 'No details';
-        const date = log.dateFormatted || (log.timestamp ? new Date(log.timestamp).toLocaleString('en-US') : '');
+        const date = log.dateFormatted || (log.date ? new Date(log.date).toLocaleString('en-US') : '');
         const mod = log.moderatorTag || log.userTag || 'Bot';
 
         return `
@@ -1540,9 +1540,10 @@ function setupEvents() {
         window.location.href = '/login';
     };
 
+    let switchingTab = false;
+
     document.querySelectorAll('.nav-tab').forEach(tab => {
         tab.onclick = () => {
-            const currentActive = document.querySelector('.tab-content:not(.hidden)');
             const target = tab.dataset.tab;
             const targetContent = document.getElementById(`tab-${target}`);
             if (!targetContent) return;
@@ -1550,14 +1551,9 @@ function setupEvents() {
             document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
             tab.classList.add('active');
 
-            const loadTarget = () => {
-                document.querySelectorAll('.tab-content').forEach(c => {
-                    c.classList.add('hidden');
-                    c.classList.remove('fade-in');
-                });
-                targetContent.classList.remove('hidden');
-                targetContent.classList.add('fade-in');
+            const currentActive = document.querySelector('.tab-content:not(.hidden)');
 
+            const loadTarget = () => {
                 if (target === 'logs') {
                     if (!userHasDashboardPermission('viewLogsRoles')) {
                         showAccessDenied();
@@ -1575,15 +1571,33 @@ function setupEvents() {
                 }
             };
 
-            if (currentActive && currentActive !== targetContent) {
-                currentActive.classList.add('fade-out');
-                setTimeout(() => {
-                    currentActive.classList.remove('fade-out');
-                    loadTarget();
-                }, 220);
-            } else {
+            if (!currentActive || currentActive === targetContent) {
                 loadTarget();
+                return;
             }
+
+            if (switchingTab) return;
+            switchingTab = true;
+
+            currentActive.classList.add('fade-out');
+
+            setTimeout(() => {
+                currentActive.classList.add('hidden');
+                currentActive.classList.remove('fade-out');
+
+                targetContent.classList.remove('hidden');
+                targetContent.style.opacity = '0';
+
+                requestAnimationFrame(() => {
+                    targetContent.style.opacity = '1';
+                    loadTarget();
+
+                    setTimeout(() => {
+                        targetContent.style.opacity = '';
+                        switchingTab = false;
+                    }, 350);
+                });
+            }, 180);
         };
     });
 
