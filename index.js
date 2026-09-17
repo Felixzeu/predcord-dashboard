@@ -1793,7 +1793,7 @@ async function handleCustomCommand(message, command, args, cmdData) {
     if (cmdType === 'embed') {
         const embed = new EmbedBuilder()
             .setDescription(replyText)
-            .setColor(cmdData.color || COLORS.INFO);
+            .setColor(typeof cmdData.color === 'number' ? cmdData.color : COLORS.INFO);
         if (cmdData.title) embed.setTitle(cmdData.title);
         if (cmdThumbnail) embed.setThumbnail(cmdThumbnail);
         if (cmdImage) embed.setImage(cmdImage);
@@ -1813,7 +1813,7 @@ async function handleCustomCommand(message, command, args, cmdData) {
 
                 const extraEmbed = new EmbedBuilder()
                     .setDescription(extraText)
-                    .setColor(extra.color || COLORS.INFO);
+                    .setColor(typeof extra.color === 'number' ? extra.color : COLORS.INFO);
                 if (extra.title) extraEmbed.setTitle(extra.title);
                 if (extra.thumbnail && isValidUrl(extra.thumbnail)) extraEmbed.setThumbnail(extra.thumbnail);
                 if (extra.image && isValidUrl(extra.image)) extraEmbed.setImage(extra.image);
