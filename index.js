@@ -2061,7 +2061,8 @@ client.on('interactionCreate', async (interaction) => {
                 userId: interaction.user.id,
                 userTag: interaction.user.tag,
                 details: `Support ticket (${typeName}) created in ${ticketChannel.name}`,
-                channelId: ticketChannel.id
+                channelId: ticketChannel.id,
+                extra: { channelName: ticketChannel.name, ticketType: typeName }
             });
             return;
         }
@@ -2347,7 +2348,8 @@ client.on('interactionCreate', async (interaction) => {
                 userId: interaction.user.id,
                 userTag: interaction.user.tag,
                 details: `Ticket ${interaction.channel.name} claimed`,
-                channelId: interaction.channel.id
+                channelId: interaction.channel.id,
+                extra: { channelName: interaction.channel.name }
             });
             return;
         }
@@ -2410,7 +2412,12 @@ client.on('interactionCreate', async (interaction) => {
                     userTag: interaction.user.tag,
                     details: `Ticket ${interaction.channel.name} closed${transcriptId ? ` (transcript available)` : ''}`,
                     channelId: interaction.channel.id,
-                    transcriptId: transcriptId || null
+                    transcriptId: transcriptId || null,
+                    extra: {
+                        channelName: interaction.channel.name,
+                        ticketOwnerTag: ownerTag,
+                        claimedByTag: claimInfo.claimedByTag || null
+                    }
                 });
             
                 setTimeout(async () => {
