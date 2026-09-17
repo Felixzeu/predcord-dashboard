@@ -626,8 +626,8 @@ async function generateTicketTranscript(channel, closer, ticketMeta = {}) {
                 new ButtonBuilder()
                     .setLabel('Transcript')
                     .setStyle(ButtonStyle.Link)
-                    .setURL(`https://predcord-dashboard.onrender.com/transcript/${transcriptDoc._id}`)        
-        );
+                    .setURL(`${process.env.DASHBOARD_URL || 'https://predcord-dashboard.onrender.com'}/transcript/${transcriptDoc._id}`)
+            );
 
             await logChannel.send({ embeds: [embed], components: [row] }).catch(err => {
                 console.error('[TICKET-LOG] send error:', err.message);
