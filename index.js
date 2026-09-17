@@ -1965,6 +1965,8 @@ client.on('interactionCreate', async (interaction) => {
         }
 
         if (interaction.isButton() && interaction.customId === 'claim_ticket') {
+            await interaction.deferUpdate();
+
             const config = await getGuildConfig(interaction.guild.id);
             const staffRole = config.staffRoleId ? interaction.guild.roles.cache.get(config.staffRoleId) : null;
             const adminRole = config.adminRoleId ? interaction.guild.roles.cache.get(config.adminRoleId) : null;
@@ -1973,7 +1975,7 @@ client.on('interactionCreate', async (interaction) => {
             const isAdmin = adminRole && interaction.member.roles.cache.has(adminRole.id);
 
             if (!isStaff && !isAdmin) {
-                return interaction.reply({
+                return interaction.followUp({
                     content: '❌ Only staff members can claim tickets.',
                     flags: 64
                 });
@@ -1981,7 +1983,7 @@ client.on('interactionCreate', async (interaction) => {
 
             const ticketOwnerId = interaction.channel.topic;
             if (!ticketOwnerId) {
-                return interaction.reply({ content: '❌ Could not find ticket owner.', flags: 64 });
+                return interaction.followUp({ content: '❌ Could not find ticket owner.', flags: 64 });
             }
 
             const newOverwrites = [
@@ -2059,6 +2061,8 @@ client.on('interactionCreate', async (interaction) => {
         }
 
         if (interaction.isButton() && interaction.customId === 'close_ticket') {
+            await interaction.deferUpdate();
+
             const config = await getGuildConfig(interaction.guild.id);
             const staffRole = config.staffRoleId ? interaction.guild.roles.cache.get(config.staffRoleId) : null;
             const adminRole = config.adminRoleId ? interaction.guild.roles.cache.get(config.adminRoleId) : null;
@@ -2067,7 +2071,7 @@ client.on('interactionCreate', async (interaction) => {
             const isAdmin = adminRole && interaction.member.roles.cache.has(adminRole.id);
 
             if (!isStaff && !isAdmin) {
-                return interaction.reply({
+                return interaction.followUp({
                     content: '❌ Only staff members can close tickets.',
                     flags: 64
                 });
