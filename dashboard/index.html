@@ -25,6 +25,7 @@
             <button class="nav-tab active" data-tab="commands">Comandi Custom</button>
             <button class="nav-tab hidden" data-tab="permissions" id="navTabPermissions">Permessi</button>
             <button class="nav-tab hidden" data-tab="config" id="navTabConfig">Configurazione</button>
+            <button class="nav-tab hidden" data-tab="tickets" id="navTabTickets">Tickets</button>
             <button class="nav-tab" data-tab="logs">Logs</button>
         </nav>
     </aside>
@@ -187,30 +188,47 @@
                     <select id="cfgStaffRole" class="config-select"></select>
                 </div>
                 <div class="permission-card">
-                    <h3>Mod Role</h3>
-                    <p class="permission-desc">Ruolo moderatore</p>
-                    <select id="cfgModRole" class="config-select"></select>
-                </div>
-                <div class="permission-card">
                     <h3>Admin Role</h3>
                     <p class="permission-desc">Ruolo amministratore</p>
                     <select id="cfgAdminRole" class="config-select"></select>
                 </div>
             </div>
+        </div>
 
-            <div class="divider-thick"></div>
+        <div id="tab-tickets" class="tab-content hidden">
+            <div class="panel-header">
+                <h2>Ticket Configuration</h2>
+                <button id="saveTicketsBtn" class="btn-primary">Save Configuration</button>
+            </div>
 
-            <h2 class="section-title">Ticket</h2>
+            <p class="permissions-info">
+                Configure the ticket system. These settings are used by the <strong>/panel</strong> command to create ticket channels.
+            </p>
+
+            <h2 class="section-title">Ticket Settings</h2>
             <div class="permissions-grid">
                 <div class="permission-card">
-                    <h3>Support Category</h3>
-                    <p class="permission-desc">Categoria in cui creare i ticket di supporto</p>
-                    <select id="cfgSupportCategory" class="config-select"></select>
+                    <h3>Tickets Category</h3>
+                    <p class="permission-desc">Category where ticket channels will be created</p>
+                    <select id="ticketCategory" class="config-select"></select>
                 </div>
+
                 <div class="permission-card">
-                    <h3>Report Category</h3>
-                    <p class="permission-desc">Categoria in cui creare i ticket di report</p>
-                    <select id="cfgReportCategory" class="config-select"></select>
+                    <h3>Ticket Logs</h3>
+                    <p class="permission-desc">Channel where ticket logs will be sent</p>
+                    <select id="ticketLogs" class="config-select"></select>
+                </div>
+
+                <div class="permission-card">
+                    <h3>Staff Role</h3>
+                    <p class="permission-desc">Role pinged on new tickets and allowed to claim/close them</p>
+                    <select id="ticketStaffRole" class="config-select"></select>
+                </div>
+
+                <div class="permission-card">
+                    <h3>Admin Role</h3>
+                    <p class="permission-desc">Role with full ticket permissions (claim, close, manage)</p>
+                    <select id="ticketAdminRole" class="config-select"></select>
                 </div>
             </div>
         </div>
