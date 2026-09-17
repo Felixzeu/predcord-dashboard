@@ -501,7 +501,7 @@ function openModal(name = null) {
         document.getElementById('cmdType').value = cmd.type || 'text';
         document.getElementById('cmdTitle').value = cmd.title || '';
         document.getElementById('cmdResponse').value = cmd.response || '';
-        document.getElementById('cmdColor').value = '#' + (cmd.color || 0xE67E22).toString(16).padStart(6, '0');
+        document.getElementById('cmdColor').value = '#' + (typeof cmd.color === 'number' ? cmd.color : 0xE67E22).toString(16).padStart(6, '0');
         document.getElementById('cmdThumbnail').value = cmd.thumbnail || '';
         document.getElementById('cmdImage').value = cmd.image || '';
         document.getElementById('cmdDelete').checked = cmd.deleteCommand !== false;
@@ -682,7 +682,7 @@ function addEmbedBlock(data = {}, silent = false) {
     const list = document.getElementById('extraEmbedsList');
     if (!list) return;
     const idx = extraEmbedCounter++;
-    const colorHex = '#' + (data.color || 0x7289DA).toString(16).padStart(6, '0');
+    const colorHex = '#' + (typeof data.color === 'number' ? data.color : 0x7289DA).toString(16).padStart(6, '0');
     const block = document.createElement('div');
     block.className = 'extra-embed-block';
     block.dataset.idx = idx;
@@ -949,8 +949,15 @@ async function saveCommand(e) {
     let prefix = document.getElementById('cmdPrefix').value.trim();
     if (prefix.length !== 1) prefix = '*';
 
-    const allowedRoles = Array.from(document.querySelectorAll('#rolesList .role-toggle-input:checked'))
-        .map(cb => cb.value);
+    let allowedRoles;
+    if (rolesLoaded) {
+        allowedRoles = Array.from(document.querySelectorAll('#rolesList .role-toggle-input:checked'))
+            .map(cb => cb.value);
+    } else if (editingName && currentCommands[editingName] && Array.isArray(currentCommands[editingName].allowedRoles)) {
+        allowedRoles = currentCommands[editingName].allowedRoles;
+    } else {
+        allowedRoles = [];
+    }
 
     const durationRaw = document.getElementById('cmdDuration').value;
     const durationValue = parseInt(durationRaw);
