@@ -1,4 +1,4 @@
-const { Client, GatewayIntentBits, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, ChannelType, PermissionsBitField, Events, ModalBuilder, TextInputBuilder, TextInputStyle, StringSelectMenuBuilder } = require('discord.js');
+const { Client, GatewayIntentBits, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, ChannelType, PermissionsBitField, Events, ModalBuilder, TextInputBuilder, TextInputStyle, StringSelectMenuBuilder, SlashCommandBuilder, REST, Routes } = require('discord.js');
 const fs = require('fs');
 const path = require('path');
 const db = require('./db');
@@ -84,6 +84,7 @@ const COLORS = {
 
 const BLACK = 0x000000;
 const PROJECTED_ERROR = 0xED4245;
+const RED = 0xED4245;
 
 const SOCIAL_LINKS = {
     twitch: "https://www.twitch.tv/predagefn",
@@ -129,10 +130,6 @@ async function getGuildConfig(guildId) {
     };
 }
 
-async function saveConfig(guildId, key, value) {
-    await db.saveGuildConfigDB(guildId, key, value);
-}
-
 async function isAdminSafe(member) {
     try {
         if (!member) return false;
@@ -175,10 +172,6 @@ async function hasModPerms(member) {
 
 async function hasStaffPermission(member) {
     return (await isAdminSafe(member)) || (await isModeratorSafe(member)) || (await isStaffSafe(member));
-}
-
-async function canUseSetupCommand(member) {
-    return await isAdminSafe(member);
 }
 
 async function canUseBaseCommands(member) {
@@ -733,7 +726,6 @@ client.once('clientReady', async () => {
     global.PredCord = {
         client,
         getGuildConfig,
-        saveConfig,
         loadCustomCommands: async (guildId) => await db.loadCustomCommandsDB(guildId),
         saveCustomCommands: async (guildId, name, data) => await db.saveCustomCommandDB(guildId, name, data),
         deleteCustomCommand: async (guildId, name) => await db.deleteCustomCommandDB(guildId, name),
@@ -754,6 +746,28 @@ client.once('clientReady', async () => {
         db
     };
     console.log('[DASHBOARD] API global.PredCord esposte');
+
+    // Registra lo slash command /panel
+    try {
+        const commands = [
+            new SlashCommandBuilder()
+                .setName('panel')
+                .setDescription('Send the ticket panel in this channel')
+                .setDefaultMemberPermissions(PermissionsBitField.Flags.Administrator)
+                .toJSON()
+        ];
+
+        const rest = new REST({ version: '10' }).setToken(process.env.DISCORD_TOKEN);
+
+        console.log('[SLASH] Registrazione comandi globali...');
+        await rest.put(
+            Routes.applicationCommands(client.user.id),
+            { body: commands }
+        );
+        console.log('[SLASH] ✅ Comandi registrati');
+    } catch (err) {
+        console.error('[SLASH] ❌ Errore registrazione:', err);
+    }
 });
 
 client.on('guildMemberAdd', async (member) => {
@@ -956,7 +970,7 @@ async function handleNativeCommand(message, command, args) {
             .setColor(COLORS.INFO)
             .setThumbnail(THUMBNAIL_URL)
             .addFields(
-                { name: 'Admin Only', value: '`*setup` - Configure bot\n`*sendticket` - Send ticket message', inline: false },
+                { name: 'Admin Only', value: '`/panel` - Send ticket panel', inline: false },
                 { name: 'Mod & Admin', value: '`*av [user]` - Show avatar\n`*w [user]` - User info\n`*server` - Server info\n`*social` - Social links\n`*page {userid} {page}` - Paginate modlogs\n`*help` - This message', inline: false },
                 { name: 'Warnings (Mod+)', value: '`*warnings @user/ID`\n`*clearwarns @user/ID`', inline: false },
                 { name: 'Bans (Mod+)', value: '`*ban @user/ID [reason]`\n`*unban ID`\n`*kick @user/ID [reason]`\n`*mute @user/ID [minutes] [reason]`\n`*unmute @user/ID`', inline: false }
@@ -1107,133 +1121,6 @@ async function handleNativeCommand(message, command, args) {
         await clearWarnings(message.guild, user, message.author);
         const embed = new EmbedBuilder().setDescription(`All warnings cleared for ${user.toString()}`).setColor(COLORS.SUCCESS).setThumbnail(THUMBNAIL_URL);
         await message.channel.send({ embeds: [embed] });
-        await message.delete().catch(() => {});
-        return;
-    }
-
-    if (message.content === `${NATIVE_PREFIX}setup`) {
-        if (!(await canUseSetupCommand(message.member))) return;
-        const config = await getGuildConfig(message.guild.id);
-        const embed = new EmbedBuilder()
-            .setTitle('Setup Panel - PredCord')
-            .setDescription('Configure your server settings by typing `*setup <number>`\n\nExample: `*setup 1 #channel`')
-            .setColor(COLORS.INFO)
-            .setThumbnail(THUMBNAIL_URL)
-            .addFields(
-                { name: '01. Join/Leave Log', value: config.joinLeaveLogChannelId ? `<#${config.joinLeaveLogChannelId}>` : 'Not set', inline: true },
-                { name: '02. Mod Log', value: config.modLogChannelId ? `<#${config.modLogChannelId}>` : 'Not set', inline: true },
-                { name: '03. Message Log', value: config.messageLogChannelId ? `<#${config.messageLogChannelId}>` : 'Not set', inline: true },
-                { name: '04. Transcripts', value: config.transcriptsChannelId ? `<#${config.transcriptsChannelId}>` : 'Not set', inline: true },
-                { name: '05. Staff Role', value: config.staffRoleId ? `<@&${config.staffRoleId}>` : 'Not set', inline: true },
-                { name: '06. Mod Role', value: config.modRoleId ? `<@&${config.modRoleId}>` : 'Not set', inline: true },
-                { name: '07. Admin Role', value: config.adminRoleId ? `<@&${config.adminRoleId}>` : 'Not set', inline: true },
-                { name: '08. Support Category', value: config.supportCategoryId ? `<#${config.supportCategoryId}>` : 'Not set', inline: true },
-                { name: '09. Report Category', value: config.reportCategoryId ? `<#${config.reportCategoryId}>` : 'Not set', inline: true }
-            );
-        await message.reply({ embeds: [embed] });
-        return;
-    }
-
-    if (message.content.startsWith(`${NATIVE_PREFIX}setup `)) {
-        if (!(await canUseSetupCommand(message.member))) return;
-        const num = parseInt(message.content.split(' ')[1]);
-        if (isNaN(num)) return;
-        const settingNames = {
-            1: 'joinLeaveLogChannelId', 2: 'modLogChannelId', 3: 'messageLogChannelId',
-            4: 'transcriptsChannelId', 5: 'staffRoleId', 6: 'modRoleId', 7: 'adminRoleId',
-            8: 'supportCategoryId', 9: 'reportCategoryId'
-        };
-        if (!settingNames[num]) return;
-        const isRoleConfig = (num === 5 || num === 6 || num === 7);
-        const typeText = isRoleConfig ? 'Role' : 'Channel';
-        const embed = new EmbedBuilder()
-            .setTitle('Configuration')
-            .setDescription(`Please send the ${isRoleConfig ? 'role ID or mention the role' : 'channel ID or mention the channel'}.\n\nType \`cancel\` to abort.`)
-            .setColor(COLORS.INFO)
-            .setThumbnail(THUMBNAIL_URL);
-        await message.reply({ embeds: [embed] });
-        const filter = (m) => m.author.id === message.author.id;
-        const collector = message.channel.createMessageCollector({ filter, time: 60000, max: 1 });
-        collector.on('collect', async (msg) => {
-            try {
-                if (msg.content.toLowerCase() === 'cancel') {
-                    const cancelEmbed = new EmbedBuilder().setDescription('Configuration cancelled.').setColor(COLORS.WARNING).setThumbnail(THUMBNAIL_URL);
-                    await msg.reply({ embeds: [cancelEmbed] });
-                    return;
-                }
-                let value = null;
-                const content = msg.content.trim();
-                const channelMentionMatch = content.match(/<#(\d+)>/);
-                const roleMentionMatch = content.match(/<@&(\d+)>/);
-                const idMatch = content.match(/^(\d+)$/);
-                if (channelMentionMatch) value = channelMentionMatch[1];
-                else if (roleMentionMatch) value = roleMentionMatch[1];
-                else if (idMatch) value = idMatch[1];
-                if (!value) {
-                    const errorEmbed = new EmbedBuilder().setDescription('Invalid format. Please send an ID or a valid mention.').setColor(COLORS.ERROR).setThumbnail(THUMBNAIL_URL);
-                    await msg.reply({ embeds: [errorEmbed] });
-                    return;
-                }
-                if (!isRoleConfig) {
-                    const channelExists = message.guild.channels.cache.get(value);
-                    if (!channelExists) {
-                        const errorEmbed = new EmbedBuilder().setDescription(`${typeText} not found.`).setColor(COLORS.ERROR).setThumbnail(THUMBNAIL_URL);
-                        await msg.reply({ embeds: [errorEmbed] });
-                        return;
-                    }
-                } else {
-                    const roleExists = message.guild.roles.cache.get(value);
-                    if (!roleExists) {
-                        const errorEmbed = new EmbedBuilder().setDescription('Role not found.').setColor(COLORS.ERROR).setThumbnail(THUMBNAIL_URL);
-                        await msg.reply({ embeds: [errorEmbed] });
-                        return;
-                    }
-                }
-                await saveConfig(message.guild.id, settingNames[num], value);
-                const successEmbed = new EmbedBuilder()
-                    .setTitle('Configuration Saved')
-                    .setDescription(`${settingNames[num]} has been successfully configured!`)
-                    .addFields({ name: 'Value', value: isRoleConfig ? `<@&${value}>` : `<#${value}>`, inline: true })
-                    .setColor(COLORS.SUCCESS)
-                    .setThumbnail(THUMBNAIL_URL);
-                await msg.reply({ embeds: [successEmbed] });
-            } catch (error) {
-                logCrash('SETUP_COLLECTOR', error);
-            }
-        });
-        collector.on('end', (collected, reason) => {
-            if (collected.size === 0 && reason === 'time') {
-                const timeoutEmbed = new EmbedBuilder().setDescription('Time expired. Run `*setup` again.').setColor(COLORS.ERROR).setThumbnail(THUMBNAIL_URL);
-                message.channel.send({ embeds: [timeoutEmbed] }).catch(() => {});
-            }
-        });
-        return;
-    }
-
-    if (command === 'sendticket') {
-        if (!(await canUseSetupCommand(message.member))) return;
-        const config = await getGuildConfig(message.guild.id);
-        if (!config.staffRoleId) {
-            const embed = new EmbedBuilder().setDescription('Staff role not configured. Run `*setup` option 05.').setColor(COLORS.ERROR).setThumbnail(THUMBNAIL_URL);
-            return message.reply({ embeds: [embed] });
-        }
-        if (!config.supportCategoryId) {
-            const embed = new EmbedBuilder().setDescription('Support category not configured. Run `*setup` option 08.').setColor(COLORS.ERROR).setThumbnail(THUMBNAIL_URL);
-            return message.reply({ embeds: [embed] });
-        }
-        if (!config.reportCategoryId) {
-            const embed = new EmbedBuilder().setDescription('Report category not configured. Run `*setup` option 09.').setColor(COLORS.ERROR).setThumbnail(THUMBNAIL_URL);
-            return message.reply({ embeds: [embed] });
-        }
-        const ticketEmbed = new EmbedBuilder()
-            .setTitle('Support and Report')
-            .setDescription('Click the button below to open a ticket.\n\nTicket types available:\n- Support\n- Report Player')
-            .setColor(COLORS.TICKET)
-            .setThumbnail(THUMBNAIL_URL);
-        const row = new ActionRowBuilder().addComponents(
-            new ButtonBuilder().setCustomId('create_ticket').setLabel('Create Ticket').setStyle(ButtonStyle.Primary)
-        );
-        await message.channel.send({ embeds: [ticketEmbed], components: [row] });
         await message.delete().catch(() => {});
         return;
     }
@@ -1777,26 +1664,118 @@ async function handleCustomCommand(message, command, args, cmdData) {
 
 client.on('interactionCreate', async (interaction) => {
     try {
-        if (interaction.isStringSelectMenu() && interaction.customId === 'ticket_type_menu') {
-            await showTicketDescriptionModal(interaction, interaction.values[0]);
+        if (interaction.isChatInputCommand()) {
+            if (interaction.commandName === 'panel') {
+                if (!(await isAdminSafe(interaction.member))) {
+                    return interaction.reply({ content: 'You do not have permission to use this command.', flags: 64 });
+                }
+
+                await interaction.reply({ content: 'The ticket panel has been sent.', flags: 64 });
+
+                const embed = new EmbedBuilder()
+                    .setTitle('Report Player & Modmail')
+                    .setDescription('Click "**Open A Ticket**", choose the ticket category, and complete the text box. Our staff team will reply as soon as they can.')
+                    .setColor(RED);
+
+                const row = new ActionRowBuilder().addComponents(
+                    new ButtonBuilder()
+                        .setCustomId('open_ticket_panel')
+                        .setLabel('Open A Ticket')
+                        .setStyle(ButtonStyle.Primary)
+                );
+
+                await interaction.channel.send({ embeds: [embed], components: [row] });
+                return;
+            }
             return;
         }
-        if (interaction.isModalSubmit() && interaction.customId === 'ticket_modal_support') {
-            const description = interaction.fields.getTextInputValue('ticket_description');
-            await createTicket(interaction, 'support', { description });
+
+        if (interaction.isButton() && interaction.customId === 'open_ticket_panel') {
+            const modal = new ModalBuilder()
+                .setCustomId('ticket_panel_modal')
+                .setTitle('Open A Ticket');
+
+            const descriptionInput = new TextInputBuilder()
+                .setCustomId('ticket_panel_description')
+                .setLabel('Describe your issue')
+                .setStyle(TextInputStyle.Paragraph)
+                .setPlaceholder('Write here the details of your request...')
+                .setRequired(true)
+                .setMaxLength(1000);
+
+            modal.addComponents(new ActionRowBuilder().addComponents(descriptionInput));
+            await interaction.showModal(modal);
             return;
         }
-        if (interaction.isModalSubmit() && interaction.customId === 'ticket_modal_report') {
-            const playerId = interaction.fields.getTextInputValue('player_id');
-            const clipLink = interaction.fields.getTextInputValue('clip_link');
-            const description = interaction.fields.getTextInputValue('report_description');
-            await createTicket(interaction, 'report', { playerId, clipLink, description });
+
+        if (interaction.isModalSubmit() && interaction.customId === 'ticket_panel_modal') {
+            const description = interaction.fields.getTextInputValue('ticket_panel_description');
+
+            await interaction.reply({ content: 'Your request has been received. Opening a ticket...', flags: 64 });
+
+            const guildConfig = await getGuildConfig(interaction.guild.id);
+            const staffRoleId = guildConfig.staffRoleId;
+            const categoryId = guildConfig.supportCategoryId;
+
+            if (!staffRoleId || !categoryId) {
+                return interaction.followUp({ content: 'Ticket system is not configured yet. Please contact an administrator.', flags: 64 });
+            }
+
+            const category = interaction.guild.channels.cache.get(categoryId);
+            if (!category) {
+                return interaction.followUp({ content: 'Ticket category not found. Please contact an administrator.', flags: 64 });
+            }
+
+            const sanitizedUsername = interaction.user.username.toLowerCase().replace(/[^a-z0-9]/g, '');
+            const ticketName = `support-${sanitizedUsername}`;
+
+            const permissionOverwrites = [
+                { id: interaction.guild.id, deny: [PermissionsBitField.Flags.ViewChannel] },
+                { id: interaction.user.id, allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.SendMessages, PermissionsBitField.Flags.ReadMessageHistory] },
+                { id: staffRoleId, allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.SendMessages, PermissionsBitField.Flags.ReadMessageHistory] }
+            ];
+
+            let ticketChannel;
+            try {
+                ticketChannel = await interaction.guild.channels.create({
+                    name: ticketName,
+                    type: ChannelType.GuildText,
+                    parent: category.id,
+                    permissionOverwrites: permissionOverwrites
+                });
+            } catch (error) {
+                try {
+                    ticketChannel = await interaction.guild.channels.create({
+                        name: `${ticketName}-${Math.floor(Math.random() * 9999)}`,
+                        type: ChannelType.GuildText,
+                        parent: category.id,
+                        permissionOverwrites: permissionOverwrites
+                    });
+                } catch (err) {
+                    logCrash('TICKET_CREATE_ERROR', err);
+                    return interaction.followUp({ content: 'Error creating the ticket. Please try again later.', flags: 64 });
+                }
+            }
+
+            await ticketChannel.setTopic(interaction.user.id).catch(() => {});
+
+            const embed = new EmbedBuilder()
+                .setTitle('Support Ticket')
+                .setDescription(`**Description:**\n${description}\n\nHello ${interaction.user.username}!\n\nA staff member will assist you shortly.\nPlease wait patiently for a response.`)
+                .setColor(COLORS.TICKET)
+                .setThumbnail(THUMBNAIL_URL);
+
+            const row = new ActionRowBuilder().addComponents(
+                new ButtonBuilder().setCustomId('claim_ticket').setLabel('Claim Ticket').setStyle(ButtonStyle.Success),
+                new ButtonBuilder().setCustomId('close_ticket').setLabel('Close Ticket').setStyle(ButtonStyle.Danger)
+            );
+
+            await ticketChannel.send({ content: `<@&${staffRoleId}> - New ticket from <@${interaction.user.id}>`, embeds: [embed], components: [row] });
+
+            await interaction.followUp({ content: `Ticket created: ${ticketChannel}`, flags: 64 });
             return;
         }
-        if (interaction.isButton() && interaction.customId === 'create_ticket') {
-            await showTicketTypeMenu(interaction);
-            return;
-        }
+
         if (interaction.isButton() && interaction.customId === 'claim_ticket') {
             const config = await getGuildConfig(interaction.guild.id);
             const staffRoleId = config.staffRoleId;
@@ -1833,6 +1812,7 @@ client.on('interactionCreate', async (interaction) => {
             }
             return;
         }
+
         if (interaction.isButton() && interaction.customId === 'close_ticket') {
             const config = await getGuildConfig(interaction.guild.id);
             const staffRoleId = config.staffRoleId;
@@ -1855,7 +1835,7 @@ client.on('interactionCreate', async (interaction) => {
         logCrash('INTERACTION_HANDLER', error, { customId: interaction?.customId });
         try {
             if (interaction?.isRepliable && interaction.isRepliable()) {
-                const payload = { content: 'Si e verificato un errore. Riprova.', flags: 64 };
+                const payload = { content: 'An error occurred. Please try again.', flags: 64 };
                 if (interaction.replied || interaction.deferred) {
                     await interaction.followUp(payload).catch(() => {});
                 } else {
