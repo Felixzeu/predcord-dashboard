@@ -24,6 +24,7 @@
         <nav class="nav-tabs">
             <button class="nav-tab active" data-tab="commands">Comandi Custom</button>
             <button class="nav-tab hidden" data-tab="permissions" id="navTabPermissions">Permessi</button>
+            <button class="nav-tab hidden" data-tab="config" id="navTabConfig">Configurazione</button>
             <button class="nav-tab" data-tab="logs">Logs</button>
         </nav>
     </aside>
@@ -142,6 +143,74 @@
                     <div id="projectedRolesList" class="roles-list">
                         <p class="loading-text">Caricamento...</p>
                     </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="tab-config" class="tab-content hidden">
+            <div class="panel-header">
+                <h2>Configurazione</h2>
+                <button id="saveConfigBtn" class="btn-primary">Salva Configurazione</button>
+            </div>
+
+            <h2 class="section-title">Canali Log</h2>
+            <div class="permissions-grid">
+                <div class="permission-card">
+                    <h3>Join/Leave Log</h3>
+                    <p class="permission-desc">Canale per i log di ingresso/uscita</p>
+                    <select id="cfgJoinLeave" class="config-select"></select>
+                </div>
+                <div class="permission-card">
+                    <h3>Mod Log</h3>
+                    <p class="permission-desc">Canale per i log di moderazione</p>
+                    <select id="cfgModLog" class="config-select"></select>
+                </div>
+                <div class="permission-card">
+                    <h3>Message Log</h3>
+                    <p class="permission-desc">Canale per i log dei messaggi (edit/delete)</p>
+                    <select id="cfgMessageLog" class="config-select"></select>
+                </div>
+                <div class="permission-card">
+                    <h3>Transcripts</h3>
+                    <p class="permission-desc">Canale per i transcript dei ticket</p>
+                    <select id="cfgTranscripts" class="config-select"></select>
+                </div>
+            </div>
+
+            <div class="divider-thick"></div>
+
+            <h2 class="section-title">Ruoli</h2>
+            <div class="permissions-grid">
+                <div class="permission-card">
+                    <h3>Staff Role</h3>
+                    <p class="permission-desc">Ruolo dello staff (accesso ai ticket)</p>
+                    <select id="cfgStaffRole" class="config-select"></select>
+                </div>
+                <div class="permission-card">
+                    <h3>Mod Role</h3>
+                    <p class="permission-desc">Ruolo moderatore</p>
+                    <select id="cfgModRole" class="config-select"></select>
+                </div>
+                <div class="permission-card">
+                    <h3>Admin Role</h3>
+                    <p class="permission-desc">Ruolo amministratore</p>
+                    <select id="cfgAdminRole" class="config-select"></select>
+                </div>
+            </div>
+
+            <div class="divider-thick"></div>
+
+            <h2 class="section-title">Ticket</h2>
+            <div class="permissions-grid">
+                <div class="permission-card">
+                    <h3>Support Category</h3>
+                    <p class="permission-desc">Categoria in cui creare i ticket di supporto</p>
+                    <select id="cfgSupportCategory" class="config-select"></select>
+                </div>
+                <div class="permission-card">
+                    <h3>Report Category</h3>
+                    <p class="permission-desc">Categoria in cui creare i ticket di report</p>
+                    <select id="cfgReportCategory" class="config-select"></select>
                 </div>
             </div>
         </div>
