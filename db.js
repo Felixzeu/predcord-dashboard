@@ -142,6 +142,26 @@ const DashboardLogSchema = new mongoose.Schema({
 DashboardLogSchema.index({ guildId: 1, date: -1 });
 DashboardLogSchema.index({ guildId: 1, type: 1, date: -1 });
 
+const TranscriptSchema = new mongoose.Schema({
+    guildId: { type: String, required: true, index: true },
+    channelId: { type: String, required: true, index: true },
+    channelName: { type: String, required: true },
+    ticketType: { type: String, default: 'support' },
+    ticketOwnerId: { type: String, default: null },
+    ticketOwnerTag: { type: String, default: null },
+    createdBy: { type: String, default: null },
+    createdByTag: { type: String, default: null },
+    claimedBy: { type: String, default: null },
+    claimedByTag: { type: String, default: null },
+    closedBy: { type: String, default: null },
+    closedByTag: { type: String, default: null },
+    messages: { type: Array, default: [] },
+    createdAt: { type: Date, default: Date.now, index: true },
+    closedAt: { type: Date, default: Date.now, index: true }
+}, { timestamps: true });
+
+TranscriptSchema.index({ guildId: 1, closedAt: -1 });
+
 const ModLog = mongoose.model('ModLog', ModLogSchema);
 const Warning = mongoose.model('Warning', WarningSchema);
 const GuildConfig = mongoose.model('GuildConfig', GuildConfigSchema);
@@ -149,6 +169,7 @@ const CustomCommand = mongoose.model('CustomCommand', CustomCommandSchema);
 const PendingBan = mongoose.model('PendingBan', PendingBanSchema);
 const CommandCooldown = mongoose.model('CommandCooldown', CommandCooldownSchema);
 const DashboardLog = mongoose.model('DashboardLog', DashboardLogSchema);
+const Transcript = mongoose.model('Transcript', TranscriptSchema);
 
 async function getNextCaseId(guildId) {
     const last = await ModLog.findOne({ guildId }).sort({ caseId: -1 }).lean();
@@ -392,6 +413,45 @@ async function getDashboardLogsDB(guildId, limit = 200) {
     return DashboardLog.find({ guildId }).sort({ date: -1 }).limit(limit).lean();
 }
 
+async function saveTranscriptDB(data) {
+    try {
+        const doc = await Transcript.create({
+            guildId: data.guildId,
+            channelId: data.channelId,
+            channelName: data.channelName,
+            ticketType: data.ticketType || 'support',
+            ticketOwnerId: data.ticketOwnerId || null,
+            ticketOwnerTag: data.ticketOwnerTag || null,
+            createdBy: data.createdBy || null,
+            createdByTag: data.createdByTag || null,
+            claimedBy: data.claimedBy || null,
+            claimedByTag: data.claimedByTag || null,
+            closedBy: data.closedBy || null,
+            closedByTag: data.closedByTag || null,
+            messages: data.messages || [],
+            createdAt: data.createdAt || new Date(),
+            closedAt: data.closedAt || new Date()
+        });
+        return doc.toObject();
+    } catch (err) {
+        console.error('[DB] saveTranscriptDB error:', err.message);
+        return null;
+    }
+}
+
+async function getTranscriptDB(guildId, transcriptId) {
+    return Transcript.findOne({ _id: transcriptId, guildId }).lean();
+}
+
+async function getTranscriptsByGuildDB(guildId, limit = 100) {
+    return Transcript.find({ guildId }).sort({ closedAt: -1 }).limit(limit).lean();
+}
+
+async function deleteTranscriptDB(guildId, transcriptId) {
+    const res = await Transcript.deleteOne({ _id: transcriptId, guildId });
+    return res.deletedCount > 0;
+}
+
 module.exports = {
     connectDB,
     ModLog,
@@ -429,5 +489,10 @@ module.exports = {
     removePendingBan,
     getPendingBan,
     saveDashboardLogDB,
-    getDashboardLogsDB
+    getDashboardLogsDB,
+    Transcript,
+    saveTranscriptDB,
+    getTranscriptDB,
+    getTranscriptsByGuildDB,
+    deleteTranscriptDB,
 };
