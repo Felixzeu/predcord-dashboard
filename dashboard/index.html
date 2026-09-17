@@ -70,13 +70,6 @@
                 <button id="savePermissionsBtn" class="btn-primary">Salva Permessi</button>
             </div>
 
-            <p class="permissions-info">
-                Seleziona i ruoli che possono eseguire ciascuna azione nella dashboard.
-                Se non selezioni nessun ruolo per una categoria, <strong>nessuno</strong> potrà eseguire quell'azione.
-                <br><br>
-                Nella sezione <strong>Utenti Speciali</strong> puoi aggiungere ID Discord specifici che bypassano i controlli dei ruoli.
-            </p>
-
             <div class="permissions-grid">
                 <div class="permission-card">
                     <h3>Creare Comandi</h3>
@@ -114,12 +107,6 @@
             <div class="divider-thick"></div>
 
             <h2 class="section-title">Utenti Speciali</h2>
-            <p class="permissions-info">
-                Aggiungi ID Discord specifici per dare accesso diretto senza dover configurare ruoli.
-                <br><br>
-                <strong>Admin</strong>: può creare, modificare, eliminare comandi e vedere i logs (ma NON gestire i permessi).<br>
-                <strong>Owner</strong>: può fare tutto, compreso gestire questa sezione Permessi.
-            </p>
 
             <div class="permissions-grid">
                 <div class="permission-card">
@@ -154,11 +141,6 @@
             <div class="divider-thick"></div>
 
             <h2 class="section-title">Projected Roles</h2>
-            <p class="permissions-info">
-                Seleziona i ruoli protetti. Gli utenti con uno di questi ruoli <strong>non potranno essere bannati, mutati, warnati o kickati</strong> da nessun moderatore (nemmeno dall'Owner).
-                <br><br>
-                Se qualcuno prova a moderare un utente con un Projected Role, il bot risponderà con un embed rosso di errore.
-            </p>
 
             <div class="permissions-grid">
                 <div class="permission-card" style="grid-column: 1 / -1;">
@@ -439,8 +421,8 @@
 </div>
 
 <div id="formToast" class="form-toast hidden">
-    <span class="form-toast-icon">⚠️</span>
-    <span class="form-toast-text">Compila tutti i campi</span>
+    <span class="form-toast-icon">🕳️</span>
+    <span class="form-toast-text">Fill all fields</span>
 </div>
 
 <script src="/app.js"></script>
