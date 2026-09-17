@@ -8,6 +8,7 @@ const CRASH_LOG_FILE = './crash_log.json';
 const MAX_CRASH_LOGS = 100;
 const LOGS_PER_PAGE = 5;
 const NATIVE_PREFIX = '*';
+const ticketClaims = new Map();
 const COMMAND_COOLDOWN_SECONDS = 5;
 
 function logCrash(type, error, context = {}) {
@@ -2044,7 +2045,7 @@ client.on('interactionCreate', async (interaction) => {
             );
 
             await ticketChannel.send({
-                content: staffRole ? `<@&${staffRole.id}>` : '',
+                content: `${interaction.user.toString()}${staffRole ? ` <@&${staffRole.id}>` : ''}`,
                 embeds: [embed],
                 components: [row]
             });
@@ -2209,7 +2210,7 @@ client.on('interactionCreate', async (interaction) => {
             );
 
             await ticketChannel.send({
-                content: staffRole ? `<@&${staffRole.id}>` : '',
+                content: `${interaction.user.toString()}${staffRole ? ` <@&${staffRole.id}>` : ''}`,
                 embeds: [embed],
                 components: [row]
             });
@@ -2335,6 +2336,11 @@ client.on('interactionCreate', async (interaction) => {
 
             await interaction.channel.send({ embeds: [embed], components: [closeRow] });
 
+            ticketClaims.set(interaction.channel.id, {
+                claimedBy: interaction.user.id,
+                claimedByTag: interaction.user.tag
+            });
+
             await db.saveDashboardLogDB(interaction.guild.id, {
                 type: 'ticket',
                 action: 'ticket_claimed',
@@ -2374,14 +2380,29 @@ client.on('interactionCreate', async (interaction) => {
                 } catch (error) {}
             
                 await interaction.channel.send({ embeds: [embed] });
-            
+
+                const ownerId = interaction.channel.topic || null;
+                let ownerTag = null;
+                if (ownerId) {
+                    try {
+                        const ownerUser = await client.users.fetch(ownerId);
+                        ownerTag = ownerUser.tag;
+                    } catch {}
+                }
+                const claimInfo = ticketClaims.get(interaction.channel.id) || {};
+
                 const transcriptId = await generateTicketTranscript(interaction.channel, interaction.user, {
                     ticketType: interaction.channel.name.startsWith('report-') ? 'report' : 'support',
-                    ticketOwnerId: interaction.channel.topic || null,
-                    createdBy: interaction.channel.topic || null,
+                    ticketOwnerId: ownerId,
+                    ticketOwnerTag: ownerTag,
+                    createdBy: ownerId,
+                    createdByTag: ownerTag,
+                    claimedBy: claimInfo.claimedBy || null,
+                    claimedByTag: claimInfo.claimedByTag || null,
                     closedBy: interaction.user.id
                 });
-            
+                ticketClaims.delete(interaction.channel.id);
+
                 await db.saveDashboardLogDB(interaction.guild.id, {
                     type: 'ticket',
                     action: 'ticket_closed',
