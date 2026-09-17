@@ -509,7 +509,7 @@ function openModal(name = null) {
 
         clearExtraEmbeds();
         if (Array.isArray(cmd.extraEmbeds)) {
-            cmd.extraEmbeds.forEach(e => addEmbedBlock(e));
+            cmd.extraEmbeds.forEach(e => addEmbedBlock(e, true));
         }
 
         const baseToggle = document.getElementById('cmdIsBase');
@@ -678,7 +678,7 @@ function updateTypeUI() {
 
 let extraEmbedCounter = 0;
 
-function addEmbedBlock(data = {}) {
+function addEmbedBlock(data = {}, silent = false) {
     const list = document.getElementById('extraEmbedsList');
     if (!list) return;
     const idx = extraEmbedCounter++;
@@ -705,7 +705,7 @@ function addEmbedBlock(data = {}) {
     block.querySelector('.extra-embed-remove').onclick = () => { block.remove(); updatePreview(); };
     block.querySelectorAll('input, textarea').forEach(el => el.addEventListener('input', updatePreview));
     list.appendChild(block);
-    updatePreview();
+    if (!silent) updatePreview();
 }
 
 function clearExtraEmbeds() {
