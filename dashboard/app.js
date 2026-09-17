@@ -4,7 +4,9 @@ let editingName = null;
 let currentMembers = [];
 let currentModlogs = [];
 let currentRoles = [];
+let currentChannels = [];
 let rolesLoaded = false;
+let configLoaded = false;
 let dashboardPermissions = {
     createRoles: [],
     editRoles: [],
@@ -24,6 +26,10 @@ let myPermissions = {
     viewLogsRoles: false,
     managePermissions: false
 };
+
+function isOwner() {
+    return isAdmin || myRole === 'owner';
+}
 
 function showToast(message, type = 'success') {
     const existing = document.querySelector('.toast');
@@ -157,12 +163,17 @@ async function loadMyPermissions() {
 }
 
 function updatePermissionsTabVisibility() {
-    const tab = document.getElementById('navTabPermissions');
-    if (!tab) return;
-    if (myPermissions.managePermissions) {
-        tab.classList.remove('hidden');
-    } else {
-        tab.classList.add('hidden');
+    const permTab = document.getElementById('navTabPermissions');
+    const configTab = document.getElementById('navTabConfig');
+
+    if (permTab) {
+        if (myPermissions.managePermissions) permTab.classList.remove('hidden');
+        else permTab.classList.add('hidden');
+    }
+
+    if (configTab) {
+        if (isOwner()) configTab.classList.remove('hidden');
+        else configTab.classList.add('hidden');
     }
 }
 
@@ -876,7 +887,6 @@ async function loadPermissionsSection() {
         renderSpecialUsers('ownerUsersList', dashboardPermissions.ownerUsers, 'owner');
 
     } catch (e) {
-        console.error('[PERMISSIONS] loadPermissionsSection error:', e);
         if (createList) createList.innerHTML = `<p class="loading-text">Errore: ${e.message}</p>`;
     }
 }
@@ -1055,6 +1065,129 @@ async function savePermissions() {
     }
 }
 
+async function loadConfigSection() {
+    if (!currentGuild) return;
+
+    if (!isOwner()) {
+        showAccessDenied();
+        return;
+    }
+
+    const selects = [
+        'cfgJoinLeave', 'cfgModLog', 'cfgMessageLog', 'cfgTranscripts',
+        'cfgStaffRole', 'cfgModRole', 'cfgAdminRole',
+        'cfgSupportCategory', 'cfgReportCategory'
+    ];
+    selects.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.innerHTML = '<option>Caricamento...</option>';
+    });
+
+    try {
+        const [channelsRes, rolesRes, configRes] = await Promise.all([
+            fetch(`/api/channels/${currentGuild}`),
+            fetch(`/api/roles/${currentGuild}`),
+            fetch(`/api/guildconfig/${currentGuild}`)
+        ]);
+
+        if (!channelsRes.ok || !rolesRes.ok || !configRes.ok) throw new Error('Errore caricamento');
+
+        const channels = await channelsRes.json();
+        const roles = await rolesRes.json();
+        const config = await configRes.json();
+
+        currentChannels = channels;
+        currentRoles = roles;
+
+        const textChannels = channels.filter(c => c.type === 'text');
+        const categoryChannels = channels.filter(c => c.type === 'category');
+
+        renderSelect('cfgJoinLeave', textChannels, config.joinLeaveLogChannelId);
+        renderSelect('cfgModLog', textChannels, config.modLogChannelId);
+        renderSelect('cfgMessageLog', textChannels, config.messageLogChannelId);
+        renderSelect('cfgTranscripts', textChannels, config.transcriptsChannelId);
+
+        renderSelect('cfgStaffRole', roles, config.staffRoleId);
+        renderSelect('cfgModRole', roles, config.modRoleId);
+        renderSelect('cfgAdminRole', roles, config.adminRoleId);
+
+        renderSelect('cfgSupportCategory', categoryChannels, config.supportCategoryId);
+        renderSelect('cfgReportCategory', categoryChannels, config.reportCategoryId);
+
+        configLoaded = true;
+    } catch (e) {
+        console.error('[CONFIG] loadConfigSection error:', e);
+        selects.forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.innerHTML = `<option>Errore: ${e.message}</option>`;
+        });
+    }
+}
+
+function renderSelect(selectId, items, selectedId) {
+    const el = document.getElementById(selectId);
+    if (!el) return;
+
+    let html = '<option value="">— Nessuno —</option>';
+    html += items.map(item => {
+        const selected = item.id === selectedId ? 'selected' : '';
+        return `<option value="${escapeAttr(item.id)}" ${selected}>${escapeHtml(item.name)}</option>`;
+    }).join('');
+
+    el.innerHTML = html;
+}
+
+async function saveConfig() {
+    if (!isOwner()) {
+        showAccessDenied();
+        return;
+    }
+
+    const btn = document.getElementById('saveConfigBtn');
+    const originalText = btn.innerHTML;
+    btn.innerHTML = 'Salvataggio...';
+    btn.disabled = true;
+
+    const getValue = (id) => {
+        const el = document.getElementById(id);
+        return el ? el.value || null : null;
+    };
+
+    const payload = {
+        joinLeaveLogChannelId: getValue('cfgJoinLeave'),
+        modLogChannelId: getValue('cfgModLog'),
+        messageLogChannelId: getValue('cfgMessageLog'),
+        transcriptsChannelId: getValue('cfgTranscripts'),
+        staffRoleId: getValue('cfgStaffRole'),
+        modRoleId: getValue('cfgModRole'),
+        adminRoleId: getValue('cfgAdminRole'),
+        supportCategoryId: getValue('cfgSupportCategory'),
+        reportCategoryId: getValue('cfgReportCategory')
+    };
+
+    try {
+        const res = await fetch(`/api/guildconfig/${currentGuild}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+
+        if (res.ok) {
+            showToast('Configurazione salvata');
+        } else if (res.status === 403) {
+            showAccessDenied();
+        } else {
+            const err = await res.json();
+            showToast(err.error || 'Errore', 'error');
+        }
+    } catch (err) {
+        showToast('Errore di connessione', 'error');
+    } finally {
+        btn.innerHTML = originalText;
+        btn.disabled = false;
+    }
+}
+
 function setupEvents() {
     const newCmdBtn = document.getElementById('newCmdBtn');
     if (newCmdBtn) newCmdBtn.onclick = () => openModal();
@@ -1103,6 +1236,9 @@ function setupEvents() {
     const savePermissionsBtn = document.getElementById('savePermissionsBtn');
     if (savePermissionsBtn) savePermissionsBtn.onclick = savePermissions;
 
+    const saveConfigBtn = document.getElementById('saveConfigBtn');
+    if (saveConfigBtn) saveConfigBtn.onclick = saveConfig;
+
     const adminUserAdd = document.getElementById('adminUserAdd');
     if (adminUserAdd) adminUserAdd.onclick = () => addSpecialUser('admin');
 
@@ -1148,6 +1284,8 @@ function setupEvents() {
                 loadModlogs();
             } else if (target === 'permissions') {
                 loadPermissionsSection();
+            } else if (target === 'config') {
+                loadConfigSection();
             } else if (target === 'commands') {
                 loadCommands();
             }
