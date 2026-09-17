@@ -5,32 +5,75 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Transcript • PredCord</title>
 <link rel="icon" type="image/png" href="/favicon.png">
-<link rel="stylesheet" href="/style.css">
+<link rel="stylesheet" href="/transcript.css">
 </head>
 <body>
-<header class="topbar">
-    <div class="logo">
-        <img src="/favicon.png" alt="PredCord" class="logo-img">
-        <span class="logo-accent">PredCord</span>
-        <span class="logo-sub">Transcript</span>
+<header class="transcript-topbar">
+    <div class="transcript-logo">
+        <img src="/favicon.png" alt="PredCord" class="transcript-logo-img">
+        <span class="transcript-logo-accent">PredCord</span>
+        <span class="transcript-logo-sub">Transcript</span>
     </div>
-    <div class="header-right">
-        <a href="/" class="btn-logout" style="text-decoration:none;">← Back to Dashboard</a>
-    </div>
+    <a href="/" class="transcript-back-btn">← Back to Dashboard</a>
 </header>
 
-<main style="display:block; max-width: 900px; margin: 0 auto; padding: 28px;">
-    <section class="content">
+<main class="transcript-main">
+    <div class="discord-wrapper">
         <div id="transcriptMeta" class="transcript-meta"></div>
-        <div id="transcriptMessages" class="transcript-messages">
-            <div class="loading">Loading transcript</div>
+        <div id="transcriptMessages" class="discord-messages">
+            <div class="discord-loading">Loading transcript...</div>
         </div>
-    </section>
+    </div>
 </main>
 
 <script>
 const pathParts = window.location.pathname.split('/');
 const transcriptId = pathParts[pathParts.length - 1];
+
+function escapeHtml(str) {
+    if (str === null || str === undefined) return '';
+    return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
+function formatDiscordText(text) {
+    if (!text) return '';
+    let t = escapeHtml(text);
+
+    t = t.replace(/&lt;@!?(\d+)&gt;/g, '<span class="discord-mention">@user</span>');
+    t = t.replace(/&lt;@&amp;(\d+)&gt;/g, '<span class="discord-mention">@role</span>');
+    t = t.replace(/&lt;#(\d+)&gt;/g, '<span class="discord-mention channel">#channel</span>');
+
+    t = t.replace(/`([^`]+)`/g, '<code class="discord-inline-code">$1</code>');
+    t = t.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+    t = t.replace(/\*([^*]+)\*/g, '<em>$1</em>');
+    t = t.replace(/__([^_]+)__/g, '<u>$1</u>');
+    t = t.replace(/~~([^~]+)~~/g, '<s>$1</s>');
+
+    t = t.replace(/\n/g, '<br>');
+
+    return t;
+}
+
+function formatDiscordTime(ts) {
+    const d = new Date(ts);
+    const now = new Date();
+    const isToday = d.toDateString() === now.toDateString();
+
+    const yesterday = new Date(now);
+    yesterday.setDate(yesterday.getDate() - 1);
+    const isYesterday = d.toDateString() === yesterday.toDateString();
+
+    const time = d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+
+    if (isToday) return `Today at ${time}`;
+    if (isYesterday) return `Yesterday at ${time}`;
+    return `${d.toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' })} ${time}`;
+}
 
 async function loadTranscript() {
     const metaEl = document.getElementById('transcriptMeta');
@@ -39,7 +82,6 @@ async function loadTranscript() {
     try {
         const meRes = await fetch('/api/me', { credentials: 'same-origin' });
         if (!meRes.ok) { window.location.href = '/login'; return; }
-        const me = await meRes.json();
 
         const guildsRes = await fetch('/api/guilds', { credentials: 'same-origin' });
         if (!guildsRes.ok) throw new Error('Failed to load guilds');
@@ -53,85 +95,87 @@ async function loadTranscript() {
         }
 
         if (!transcript) {
-            messagesEl.innerHTML = '<div class="empty-state"><h3>Transcript not found</h3></div>';
+            messagesEl.innerHTML = '<div class="discord-loading">Transcript not found</div>';
             return;
         }
 
-        const fmtDate = (d) => new Date(d).toLocaleString('en-US', { dateStyle: 'full', timeStyle: 'short' });
+        const fmtDate = (d) => new Date(d).toLocaleString('en-US', { dateStyle: 'long', timeStyle: 'short' });
 
         metaEl.innerHTML = `
-            <div class="transcript-header">
-                <h2 class="transcript-title">Ticket Transcript</h2>
-                <div class="transcript-info-grid">
-                    <div class="transcript-info-item">
-                        <span class="transcript-info-label">Created By</span>
-                        <span class="transcript-info-value">${transcript.createdByTag || 'Unknown'}</span>
+            <div class="transcript-header-card">
+                <div class="transcript-header-title">Ticket Transcript</div>
+                <div class="transcript-header-grid">
+                    <div class="transcript-header-item">
+                        <span class="transcript-header-label">Created By</span>
+                        <span class="transcript-header-value">${escapeHtml(transcript.createdByTag || 'Unknown')}</span>
                     </div>
-                    <div class="transcript-info-item">
-                        <span class="transcript-info-label">Date</span>
-                        <span class="transcript-info-value">${fmtDate(transcript.createdAt)}</span>
+                    <div class="transcript-header-item">
+                        <span class="transcript-header-label">Claimed By</span>
+                        <span class="transcript-header-value">${escapeHtml(transcript.claimedByTag || 'Not claimed')}</span>
                     </div>
-                    <div class="transcript-info-item">
-                        <span class="transcript-info-label">Claimed By</span>
-                        <span class="transcript-info-value">${transcript.claimedByTag || 'Not claimed'}</span>
+                    <div class="transcript-header-item">
+                        <span class="transcript-header-label">Closed By</span>
+                        <span class="transcript-header-value">${escapeHtml(transcript.closedByTag || 'Unknown')}</span>
                     </div>
-                    <div class="transcript-info-item">
-                        <span class="transcript-info-label">Closed By</span>
-                        <span class="transcript-info-value">${transcript.closedByTag || 'Unknown'}</span>
+                    <div class="transcript-header-item">
+                        <span class="transcript-header-label">Date</span>
+                        <span class="transcript-header-value">${fmtDate(transcript.createdAt)}</span>
                     </div>
                 </div>
             </div>
         `;
 
         if (!transcript.messages || transcript.messages.length === 0) {
-            messagesEl.innerHTML = '<div class="empty-state"><h3>No messages</h3></div>';
+            messagesEl.innerHTML = '<div class="discord-loading">No messages in this transcript</div>';
             return;
         }
 
         messagesEl.innerHTML = transcript.messages.map(msg => {
-            const time = new Date(msg.timestamp).toLocaleString('en-US', { dateStyle: 'short', timeStyle: 'short' });
+            const time = formatDiscordTime(msg.timestamp);
+            const authorName = msg.authorTag || msg.authorUsername || 'Unknown';
+            const avatar = msg.authorAvatar || 'https://cdn.discordapp.com/embed/avatars/0.png';
+            const botTag = msg.bot ? '<span class="discord-bot-tag">BOT</span>' : '';
+
             let attachmentsHtml = '';
             if (msg.attachments && msg.attachments.length > 0) {
-                attachmentsHtml = msg.attachments.map(a => {
+                attachmentsHtml = '<div class="discord-attachments">' + msg.attachments.map(a => {
                     if (a.contentType && a.contentType.startsWith('image/')) {
-                        return `<img class="transcript-attachment-img" src="${a.url}" alt="${a.name}">`;
+                        return `<img class="discord-attachment-img" src="${a.url}" alt="${escapeHtml(a.name)}">`;
                     }
-                    return `<a class="transcript-attachment-link" href="${a.url}" target="_blank">📎 ${a.name}</a>`;
-                }).join('');
+                    return `<a class="discord-attachment-file" href="${a.url}" target="_blank">📎 ${escapeHtml(a.name)}</a>`;
+                }).join('') + '</div>';
             }
 
             let embedsHtml = '';
             if (msg.embeds && msg.embeds.length > 0) {
                 embedsHtml = msg.embeds.map(e => {
                     let color = '#E67E22';
-                    if (e.color) color = '#' + e.color.toString(16).padStart(6, '0');
+                    if (e.color) color = '#' + Number(e.color).toString(16).padStart(6, '0');
                     let fieldsHtml = '';
                     if (e.fields && e.fields.length) {
-                        fieldsHtml = `<div class="transcript-embed-fields">${e.fields.map(f => `<div class="transcript-embed-field"><div class="transcript-embed-field-name">${f.name}</div><div class="transcript-embed-field-value">${f.value}</div></div>`).join('')}</div>`;
+                        fieldsHtml = '<div class="discord-embed-fields">' + e.fields.map(f =>
+                            `<div class="discord-embed-field"><div class="discord-embed-field-name">${escapeHtml(f.name)}</div><div class="discord-embed-field-value">${formatDiscordText(f.value)}</div></div>`
+                        ).join('') + '</div>';
                     }
-                    return `<div class="transcript-embed" style="border-left-color: ${color};">
-                        ${e.title ? `<div class="transcript-embed-title">${e.title}</div>` : ''}
-                        ${e.description ? `<div class="transcript-embed-desc">${e.description}</div>` : ''}
+                    return `<div class="discord-embed" style="border-left-color: ${color};">
+                        ${e.title ? `<div class="discord-embed-title">${escapeHtml(e.title)}</div>` : ''}
+                        ${e.description ? `<div class="discord-embed-desc">${formatDiscordText(e.description)}</div>` : ''}
                         ${fieldsHtml}
-                        ${e.image ? `<img class="transcript-embed-img" src="${e.image}">` : ''}
+                        ${e.image ? `<img class="discord-embed-img" src="${e.image}">` : ''}
                     </div>`;
                 }).join('');
             }
 
-            const authorName = msg.authorTag || msg.authorUsername || 'Unknown';
-            const avatar = msg.authorAvatar || 'https://cdn.discordapp.com/embed/avatars/0.png';
-            const botTag = msg.bot ? '<span class="discord-bot-tag">BOT</span>' : '';
-
             return `
-                <div class="transcript-msg">
-                    <img class="transcript-avatar" src="${avatar}" alt="">
-                    <div class="transcript-msg-body">
-                        <div class="transcript-msg-header">
-                            <span class="transcript-author">${authorName}</span>
+                <div class="discord-message">
+                    <img class="discord-msg-avatar" src="${avatar}" alt="">
+                    <div class="discord-msg-body">
+                        <div class="discord-msg-header">
+                            <span class="discord-msg-author">${escapeHtml(authorName)}</span>
                             ${botTag}
-                            <span class="transcript-time">${time}</span>
+                            <span class="discord-msg-time">${time}</span>
                         </div>
-                        ${msg.content ? `<div class="transcript-content">${msg.content.replace(/\n/g, '<br>')}</div>` : ''}
+                        ${msg.content ? `<div class="discord-msg-content">${formatDiscordText(msg.content)}</div>` : ''}
                         ${embedsHtml}
                         ${attachmentsHtml}
                     </div>
@@ -141,7 +185,7 @@ async function loadTranscript() {
 
     } catch (e) {
         console.error('[TRANSCRIPT]', e);
-        messagesEl.innerHTML = `<div class="empty-state"><h3>Error</h3><p>${e.message}</p></div>`;
+        messagesEl.innerHTML = `<div class="discord-loading">Error: ${escapeHtml(e.message)}</div>`;
     }
 }
 
