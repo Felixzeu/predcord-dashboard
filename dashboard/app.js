@@ -153,6 +153,120 @@ async function init() {
     }
 }
 
+/* ============================================================
+   USER MENU / AVATAR
+   ============================================================ */
+
+function setupUserMenu() {
+    const btn = document.getElementById('userAvatarBtn');
+    const dropdown = document.getElementById('userDropdown');
+
+    if (!btn || !dropdown) return;
+
+    btn.onclick = (e) => {
+        e.stopPropagation();
+        dropdown.classList.toggle('hidden');
+    };
+
+    document.addEventListener('click', (e) => {
+        if (!dropdown.classList.contains('hidden') && !e.target.closest('#userMenu')) {
+            dropdown.classList.add('hidden');
+        }
+    });
+}
+
+async function loadUserMenu() {
+    const defaultAvatar = 'https://cdn.discordapp.com/embed/avatars/0.png';
+
+    const avatarBtnImg = document.getElementById('userAvatarImg');
+    const ddAvatar = document.getElementById('userDropdownAvatar');
+    const ddDisplayName = document.getElementById('userDropdownDisplayName');
+    const ddUsername = document.getElementById('userDropdownUsername');
+    const ddRoles = document.getElementById('userDropdownRoles');
+
+    try {
+        const res = await fetch('/api/me', { credentials: 'same-origin' });
+        if (!res.ok) throw new Error('Errore caricamento utente');
+        const me = await res.json();
+
+        // Costruisci URL avatar
+        let avatarUrl = defaultAvatar;
+
+        if (me.avatar && typeof me.avatar === 'string' && me.avatar.startsWith('http')) {
+            avatarUrl = me.avatar;
+        } else if (me.avatar && me.id) {
+            const ext = me.avatar.startsWith('a_') ? 'gif' : 'png';
+            avatarUrl = `https://cdn.discordapp.com/avatars/${me.id}/${me.avatar}.${ext}?size=128`;
+        } else if (me.id) {
+            // Avatar default Discord basato sull'ID
+            try {
+                const index = Number(BigInt(me.id) >> 22n) % 6;
+                avatarUrl = `https://cdn.discordapp.com/embed/avatars/${index}.png`;
+            } catch {
+                avatarUrl = defaultAvatar;
+            }
+        }
+
+        if (avatarBtnImg) {
+            avatarBtnImg.src = avatarUrl;
+            avatarBtnImg.onerror = () => { avatarBtnImg.src = defaultAvatar; };
+        }
+        if (ddAvatar) {
+            ddAvatar.src = avatarUrl;
+            ddAvatar.onerror = () => { ddAvatar.src = defaultAvatar; };
+        }
+
+        // Nomi
+        const displayName = me.displayName || me.global_name || me.username || 'Utente';
+        const username = me.username || '';
+
+        if (ddDisplayName) ddDisplayName.textContent = displayName;
+        if (ddUsername) {
+            ddUsername.textContent = username || (me.id ? `ID: ${me.id}` : '—');
+            ddUsername.title = me.id ? `ID: ${me.id} — click per copiare` : '';
+            if (me.id) {
+                ddUsername.style.cursor = 'pointer';
+                ddUsername.onclick = () => {
+                    navigator.clipboard.writeText(me.id).then(() => {
+                        showToast('ID copiato negli appunti');
+                    }).catch(() => {});
+                };
+            }
+        }
+
+        // Ruoli
+        if (ddRoles) {
+            const roles = Array.isArray(me.roles) ? me.roles : [];
+
+            if (roles.length === 0) {
+                // Mostra almeno il ruolo dashboard
+                let roleBadge = 'Nessun ruolo';
+                if (me.isAdmin) roleBadge = 'Admin';
+                else if (me.role === 'owner') roleBadge = 'Owner';
+                else if (me.role === 'moderator') roleBadge = 'Moderator';
+
+                ddRoles.innerHTML = `<span class="user-role-badge">${roleBadge}</span>`;
+            } else {
+                ddRoles.innerHTML = roles.map(r => {
+                    const name = typeof r === 'string' ? r : (r.name || 'Ruolo');
+                    const color = (typeof r === 'object' && r.color) ? r.color : null;
+                    const style = color ? `style="color:#${color.toString(16).padStart(6, '0')};"` : '';
+                    return `<span class="user-role-badge" ${style}>${escapeHtml(name)}</span>`;
+                }).join('');
+            }
+        }
+    } catch (e) {
+        console.error('[USER-MENU] Errore:', e);
+        if (ddDisplayName) ddDisplayName.textContent = 'Utente';
+        if (ddUsername) ddUsername.textContent = '—';
+        if (ddRoles) ddRoles.innerHTML = '<span class="loading-text">Errore</span>';
+    }
+}
+
+/* ============================================================
+   FINE USER MENU
+   ============================================================ */
+
 async function loadMyPermissions() {
     try {
         const res = await fetch('/api/my-permissions');
