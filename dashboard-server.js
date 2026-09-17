@@ -894,6 +894,37 @@ app.post('/api/moderation/:guildId', requireAuth, async (req, res) => {
     }
 });
 
+app.get('/api/transcripts/:guildId', requireAuth, async (req, res) => {
+    try {
+        const hasPerm = await userHasPermission(req, 'viewLogsRoles');
+        if (!hasPerm) {
+            return res.status(403).json({ error: 'Access Denied' });
+        }
+        const { db } = global.PredCord;
+        const transcripts = await db.getTranscriptsByGuildDB(req.params.guildId, 100);
+        res.json(transcripts);
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
+app.get('/api/transcripts/:guildId/:transcriptId', requireAuth, async (req, res) => {
+    try {
+        const { db } = global.PredCord;
+        const transcript = await db.getTranscriptDB(req.params.guildId, req.params.transcriptId);
+        if (!transcript) {
+            return res.status(404).json({ error: 'Transcript not found' });
+        }
+        res.json(transcript);
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
+app.get('/transcript/:transcriptId', requireAuth, async (req, res) => {
+    res.sendFile(path.join(DASHBOARD_DIR, 'transcript.html'));
+});
+
 app.get('/', requireAuth, (req, res) => {
     res.sendFile(path.join(DASHBOARD_DIR, 'index.html'));
 });
