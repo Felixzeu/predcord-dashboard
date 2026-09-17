@@ -165,6 +165,7 @@ async function loadMyPermissions() {
 function updatePermissionsTabVisibility() {
     const permTab = document.getElementById('navTabPermissions');
     const configTab = document.getElementById('navTabConfig');
+    const ticketsTab = document.getElementById('navTabTickets');
 
     if (permTab) {
         if (myPermissions.managePermissions) permTab.classList.remove('hidden');
@@ -174,6 +175,11 @@ function updatePermissionsTabVisibility() {
     if (configTab) {
         if (isOwner()) configTab.classList.remove('hidden');
         else configTab.classList.add('hidden');
+    }
+
+    if (ticketsTab) {
+        if (isOwner()) ticketsTab.classList.remove('hidden');
+        else ticketsTab.classList.add('hidden');
     }
 }
 
@@ -1073,11 +1079,7 @@ async function loadConfigSection() {
         return;
     }
 
-    const selects = [
-        'cfgJoinLeave', 'cfgModLog', 'cfgMessageLog', 'cfgTranscripts',
-        'cfgStaffRole', 'cfgModRole', 'cfgAdminRole',
-        'cfgSupportCategory', 'cfgReportCategory'
-    ];
+    const selects = ['cfgJoinLeave', 'cfgModLog', 'cfgMessageLog', 'cfgTranscripts', 'cfgStaffRole', 'cfgAdminRole'];
     selects.forEach(id => {
         const el = document.getElementById(id);
         if (el) el.innerHTML = '<option>Caricamento...</option>';
@@ -1100,19 +1102,13 @@ async function loadConfigSection() {
         currentRoles = roles;
 
         const textChannels = channels.filter(c => c.type === 'text');
-        const categoryChannels = channels.filter(c => c.type === 'category');
 
         renderSelect('cfgJoinLeave', textChannels, config.joinLeaveLogChannelId);
         renderSelect('cfgModLog', textChannels, config.modLogChannelId);
         renderSelect('cfgMessageLog', textChannels, config.messageLogChannelId);
         renderSelect('cfgTranscripts', textChannels, config.transcriptsChannelId);
-
         renderSelect('cfgStaffRole', roles, config.staffRoleId);
-        renderSelect('cfgModRole', roles, config.modRoleId);
         renderSelect('cfgAdminRole', roles, config.adminRoleId);
-
-        renderSelect('cfgSupportCategory', categoryChannels, config.supportCategoryId);
-        renderSelect('cfgReportCategory', categoryChannels, config.reportCategoryId);
 
         configLoaded = true;
     } catch (e) {
@@ -1124,11 +1120,57 @@ async function loadConfigSection() {
     }
 }
 
+async function loadTicketsSection() {
+    if (!currentGuild) return;
+
+    if (!isOwner()) {
+        showAccessDenied();
+        return;
+    }
+
+    const selects = ['ticketCategory', 'ticketLogs', 'ticketStaffRole', 'ticketAdminRole'];
+    selects.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.innerHTML = '<option>Loading...</option>';
+    });
+
+    try {
+        const [channelsRes, rolesRes, configRes] = await Promise.all([
+            fetch(`/api/channels/${currentGuild}`),
+            fetch(`/api/roles/${currentGuild}`),
+            fetch(`/api/guildconfig/${currentGuild}`)
+        ]);
+
+        if (!channelsRes.ok || !rolesRes.ok || !configRes.ok) throw new Error('Loading error');
+
+        const channels = await channelsRes.json();
+        const roles = await rolesRes.json();
+        const config = await configRes.json();
+
+        currentChannels = channels;
+        currentRoles = roles;
+
+        const textChannels = channels.filter(c => c.type === 'text');
+        const categoryChannels = channels.filter(c => c.type === 'category');
+
+        renderSelect('ticketCategory', categoryChannels, config.supportCategoryId);
+        renderSelect('ticketLogs', textChannels, config.transcriptsChannelId);
+        renderSelect('ticketStaffRole', roles, config.staffRoleId);
+        renderSelect('ticketAdminRole', roles, config.adminRoleId);
+    } catch (e) {
+        console.error('[TICKETS] loadTicketsSection error:', e);
+        selects.forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.innerHTML = `<option>Error: ${e.message}</option>`;
+        });
+    }
+}
+
 function renderSelect(selectId, items, selectedId) {
     const el = document.getElementById(selectId);
     if (!el) return;
 
-    let html = '<option value="">— Nessuno —</option>';
+    let html = '<option value="">— None —</option>';
     html += items.map(item => {
         const selected = item.id === selectedId ? 'selected' : '';
         return `<option value="${escapeAttr(item.id)}" ${selected}>${escapeHtml(item.name)}</option>`;
@@ -1159,10 +1201,7 @@ async function saveConfig() {
         messageLogChannelId: getValue('cfgMessageLog'),
         transcriptsChannelId: getValue('cfgTranscripts'),
         staffRoleId: getValue('cfgStaffRole'),
-        modRoleId: getValue('cfgModRole'),
-        adminRoleId: getValue('cfgAdminRole'),
-        supportCategoryId: getValue('cfgSupportCategory'),
-        reportCategoryId: getValue('cfgReportCategory')
+        adminRoleId: getValue('cfgAdminRole')
     };
 
     try {
@@ -1182,6 +1221,52 @@ async function saveConfig() {
         }
     } catch (err) {
         showToast('Errore di connessione', 'error');
+    } finally {
+        btn.innerHTML = originalText;
+        btn.disabled = false;
+    }
+}
+
+async function saveTicketsConfig() {
+    if (!isOwner()) {
+        showAccessDenied();
+        return;
+    }
+
+    const btn = document.getElementById('saveTicketsBtn');
+    const originalText = btn.innerHTML;
+    btn.innerHTML = 'Saving...';
+    btn.disabled = true;
+
+    const getValue = (id) => {
+        const el = document.getElementById(id);
+        return el ? el.value || null : null;
+    };
+
+    const payload = {
+        supportCategoryId: getValue('ticketCategory'),
+        transcriptsChannelId: getValue('ticketLogs'),
+        staffRoleId: getValue('ticketStaffRole'),
+        adminRoleId: getValue('ticketAdminRole')
+    };
+
+    try {
+        const res = await fetch(`/api/guildconfig/${currentGuild}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+
+        if (res.ok) {
+            showToast('Ticket configuration saved');
+        } else if (res.status === 403) {
+            showAccessDenied();
+        } else {
+            const err = await res.json();
+            showToast(err.error || 'Error', 'error');
+        }
+    } catch (err) {
+        showToast('Connection error', 'error');
     } finally {
         btn.innerHTML = originalText;
         btn.disabled = false;
@@ -1239,6 +1324,9 @@ function setupEvents() {
     const saveConfigBtn = document.getElementById('saveConfigBtn');
     if (saveConfigBtn) saveConfigBtn.onclick = saveConfig;
 
+    const saveTicketsBtn = document.getElementById('saveTicketsBtn');
+    if (saveTicketsBtn) saveTicketsBtn.onclick = saveTicketsConfig;
+
     const adminUserAdd = document.getElementById('adminUserAdd');
     if (adminUserAdd) adminUserAdd.onclick = () => addSpecialUser('admin');
 
@@ -1286,6 +1374,8 @@ function setupEvents() {
                 loadPermissionsSection();
             } else if (target === 'config') {
                 loadConfigSection();
+            } else if (target === 'tickets') {
+                loadTicketsSection();
             } else if (target === 'commands') {
                 loadCommands();
             }
