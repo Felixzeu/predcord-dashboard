@@ -1745,3 +1745,10 @@ aside h3 {
     25% { transform: translateX(-4px); }
     75% { transform: translateX(4px); }
 }
+.login-logo img {
+    width: 80px;
+    height: 80px;
+    object-fit: contain;
+    border-radius: 12px;
+    filter: drop-shadow(0 0 20px rgba(230, 126, 34, 0.5));
+}
