@@ -1,4 +1,4 @@
-const { Client, GatewayIntentBits, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, ChannelType, PermissionsBitField, Events, ModalBuilder, LabelBuilder, TextInputBuilder, TextInputStyle, UserSelectMenuBuilder, StringSelectMenuBuilder, StringSelectMenuOptionBuilder, SlashCommandBuilder, REST, Routes } = require('discord.js');
+const { Client, GatewayIntentBits, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, ChannelType, PermissionsBitField, Events, ModalBuilder, LabelBuilder, TextInputBuilder, TextInputStyle, RadioGroupBuilder, RadioGroupOptionBuilder, StringSelectMenuBuilder, StringSelectMenuOptionBuilder, SlashCommandBuilder, REST, Routes } = require('discord.js');
 const fs = require('fs');
 const path = require('path');
 const db = require('./db');
@@ -1562,128 +1562,105 @@ client.on('interactionCreate', async (interaction) => {
         }
 
         if (interaction.isButton() && interaction.customId === 'open_ticket_panel') {
-            const ticketTypeSelect = new StringSelectMenuBuilder()
+            const modal = new ModalBuilder()
+                .setCustomId('ticket_panel_modal')
+                .setTitle('Open A Ticket');
+
+            const ticketType = new RadioGroupBuilder()
                 .setCustomId('ticket_type')
-                .setPlaceholder('Choose...')
-                .setMinValues(1)
-                .setMaxValues(1)
+                .setRequired(true)
                 .addOptions(
-                    new StringSelectMenuOptionBuilder()
+                    new RadioGroupOptionBuilder()
                         .setLabel('Report Player')
-                        .setDescription('Report whos breaking our session rules.')
+                        .setDescription("Report who's breaking our session rules.")
                         .setValue('report_player'),
-                    new StringSelectMenuOptionBuilder()
+
+                    new RadioGroupOptionBuilder()
                         .setLabel('Modmail')
                         .setDescription('Contact our staff team.')
                         .setValue('modmail')
                 );
 
-            const ticketTypeLabel = new LabelBuilder()
-                .setLabel('Ticket Type')
-                .setDescription('Choose what type of ticket you want to open.')
-                .setStringSelectMenuComponent(ticketTypeSelect);
-
-            const modal = new ModalBuilder()
-                .setCustomId('ticket_panel_modal')
-                .setTitle('Open A Ticket')
-                .addLabelComponents(ticketTypeLabel);
+            modal.addComponents(
+                new LabelBuilder()
+                    .setLabel('What type of ticket do you need?')
+                    .setRadioGroupComponent(ticketType)
+            );
 
             await interaction.showModal(modal);
             return;
         }
 
         if (interaction.isModalSubmit() && interaction.customId === 'ticket_panel_modal') {
-            const ticketType = interaction.fields.getStringSelectValues('ticket_type')[0];
+            const ticketType = interaction.fields.getTextInputValue('ticket_type');
 
             if (ticketType === 'report_player') {
-                const userSelect = new UserSelectMenuBuilder()
+                const modal = new ModalBuilder()
+                    .setCustomId('report_player_modal')
+                    .setTitle('Report Player');
+
+                const player = new TextInputBuilder()
                     .setCustomId('reported_player')
-                    .setPlaceholder('Choose...')
-                    .setMinValues(1)
-                    .setMaxValues(1);
-
-                const playerLabel = new LabelBuilder()
                     .setLabel('Choose...')
-                    .setDescription('Select the player you want to report.')
-                    .setUserSelectMenuComponent(userSelect);
+                    .setStyle(TextInputStyle.Short)
+                    .setPlaceholder('Mention the player you want to report')
+                    .setRequired(true);
 
-                const evidenceInput = new TextInputBuilder()
+                const evidence = new TextInputBuilder()
                     .setCustomId('evidence_link')
                     .setLabel('Evidence Link')
-                    .setPlaceholder('Paste a link to your evidence...')
                     .setStyle(TextInputStyle.Short)
-                    .setRequired(true)
-                    .setMaxLength(500);
+                    .setPlaceholder('https://...')
+                    .setRequired(false);
 
-                const evidenceLabel = new LabelBuilder()
-                    .setLabel('Evidence Link')
-                    .setDescription('Provide a link to the evidence.')
-                    .setTextInputComponent(evidenceInput);
-
-                const situationInput = new TextInputBuilder()
-                    .setCustomId('situation')
+                const explanation = new TextInputBuilder()
+                    .setCustomId('explain_situation')
                     .setLabel('Explain the situation')
-                    .setPlaceholder('Explain what happened and how the player broke our session rules...')
                     .setStyle(TextInputStyle.Paragraph)
+                    .setPlaceholder('Explain what happened...')
                     .setRequired(true)
                     .setMaxLength(1000);
 
-                const situationLabel = new LabelBuilder()
-                    .setLabel('Explain the situation')
-                    .setDescription('Explain clearly what happened.')
-                    .setTextInputComponent(situationInput);
+                modal.addComponents(
+                    new ActionRowBuilder().addComponents(player),
+                    new ActionRowBuilder().addComponents(evidence),
+                    new ActionRowBuilder().addComponents(explanation)
+                );
 
-                const reportModal = new ModalBuilder()
-                    .setCustomId('report_player_modal')
-                    .setTitle('Report Player')
-                    .addLabelComponents(playerLabel, evidenceLabel, situationLabel);
-
-                await interaction.showModal(reportModal);
+                await interaction.showModal(modal);
                 return;
             }
 
             if (ticketType === 'modmail') {
-                const issueInput = new TextInputBuilder()
-                    .setCustomId('modmail_issue')
+                const modal = new ModalBuilder()
+                    .setCustomId('modmail_modal')
+                    .setTitle('Modmail');
+
+                const issue = new TextInputBuilder()
+                    .setCustomId('explain_issue')
                     .setLabel('Explain your issue')
-                    .setPlaceholder('Write here the details of your request...')
                     .setStyle(TextInputStyle.Paragraph)
+                    .setPlaceholder('Tell us how we can help...')
                     .setRequired(true)
                     .setMaxLength(1000);
 
-                const issueLabel = new LabelBuilder()
-                    .setLabel('Explain your issue')
-                    .setDescription('Tell our staff team how we can help you.')
-                    .setTextInputComponent(issueInput);
+                modal.addComponents(
+                    new ActionRowBuilder().addComponents(issue)
+                );
 
-                const modmailModal = new ModalBuilder()
-                    .setCustomId('modmail_modal')
-                    .setTitle('Modmail')
-                    .addLabelComponents(issueLabel);
-
-                await interaction.showModal(modmailModal);
+                await interaction.showModal(modal);
                 return;
             }
         }
 
         if (interaction.isModalSubmit() && interaction.customId === 'report_player_modal') {
-            const selectedUsers = interaction.fields.getSelectedUsers('reported_player');
-            const reportedUser = selectedUsers.first();
-
+            const reportedPlayer = interaction.fields.getTextInputValue('reported_player');
             const evidence = interaction.fields.getTextInputValue('evidence_link');
-            const situation = interaction.fields.getTextInputValue('situation');
-
-            if (reportedUser.bot) {
-                await interaction.reply({
-                    content: 'You cannot report a bot.',
-                    flags: 64
-                });
-                return;
-            }
+            const situation = interaction.fields.getTextInputValue('explain_situation');
 
             console.log('Report Player');
             console.log('Reporter:', interaction.user.id);
-            console.log('Reported Player:', reportedUser.id);
+            console.log('Reported Player:', reportedPlayer);
             console.log('Evidence:', evidence);
             console.log('Situation:', situation);
 
@@ -1695,7 +1672,7 @@ client.on('interactionCreate', async (interaction) => {
         }
 
         if (interaction.isModalSubmit() && interaction.customId === 'modmail_modal') {
-            const issue = interaction.fields.getTextInputValue('modmail_issue');
+            const issue = interaction.fields.getTextInputValue('explain_issue');
 
             console.log('Modmail');
             console.log('User:', interaction.user.id);
