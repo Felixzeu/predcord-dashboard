@@ -1071,6 +1071,50 @@ async function savePermissions() {
     }
 }
 
+function renderSingleSelectList(containerId, items, selectedId, configKey) {
+    const list = document.getElementById(containerId);
+    if (!list) return;
+
+    if (!items || items.length === 0) {
+        list.innerHTML = '<p class="loading-text">Nessun elemento.</p>';
+        return;
+    }
+
+    let html = `
+        <div class="role-item">
+            <span class="role-name">— None —</span>
+            <label class="role-toggle">
+                <input type="checkbox" class="role-toggle-input radio-toggle" data-config="${configKey}" value="" ${!selectedId ? 'checked' : ''}>
+                <span class="role-toggle-switch"></span>
+            </label>
+        </div>
+    `;
+
+    html += items.map(item => {
+        const checked = item.id === selectedId ? 'checked' : '';
+        return `
+        <div class="role-item">
+            <span class="role-name">${escapeHtml(item.name)}</span>
+            <label class="role-toggle">
+                <input type="checkbox" class="role-toggle-input radio-toggle" data-config="${configKey}" value="${escapeAttr(item.id)}" ${checked}>
+                <span class="role-toggle-switch"></span>
+            </label>
+        </div>`;
+    }).join('');
+
+    list.innerHTML = html;
+
+    list.querySelectorAll('.role-toggle-input.radio-toggle').forEach(input => {
+        input.addEventListener('change', () => {
+            if (input.checked) {
+                list.querySelectorAll('.role-toggle-input.radio-toggle').forEach(other => {
+                    if (other !== input) other.checked = false;
+                });
+            }
+        });
+    });
+}
+
 async function loadConfigSection() {
     if (!currentGuild) return;
 
@@ -1079,10 +1123,10 @@ async function loadConfigSection() {
         return;
     }
 
-    const selects = ['cfgJoinLeave', 'cfgModLog', 'cfgMessageLog', 'cfgTranscripts', 'cfgStaffRole', 'cfgAdminRole'];
-    selects.forEach(id => {
+    const containers = ['cfgJoinLeaveList', 'cfgModLogList', 'cfgMessageLogList', 'cfgTranscriptsList', 'cfgStaffRoleList', 'cfgAdminRoleList'];
+    containers.forEach(id => {
         const el = document.getElementById(id);
-        if (el) el.innerHTML = '<option>Caricamento...</option>';
+        if (el) el.innerHTML = '<p class="loading-text">Caricamento...</p>';
     });
 
     try {
@@ -1103,19 +1147,19 @@ async function loadConfigSection() {
 
         const textChannels = channels.filter(c => c.type === 'text');
 
-        renderSelect('cfgJoinLeave', textChannels, config.joinLeaveLogChannelId);
-        renderSelect('cfgModLog', textChannels, config.modLogChannelId);
-        renderSelect('cfgMessageLog', textChannels, config.messageLogChannelId);
-        renderSelect('cfgTranscripts', textChannels, config.transcriptsChannelId);
-        renderSelect('cfgStaffRole', roles, config.staffRoleId);
-        renderSelect('cfgAdminRole', roles, config.adminRoleId);
+        renderSingleSelectList('cfgJoinLeaveList', textChannels, config.joinLeaveLogChannelId, 'joinLeaveLogChannelId');
+        renderSingleSelectList('cfgModLogList', textChannels, config.modLogChannelId, 'modLogChannelId');
+        renderSingleSelectList('cfgMessageLogList', textChannels, config.messageLogChannelId, 'messageLogChannelId');
+        renderSingleSelectList('cfgTranscriptsList', textChannels, config.transcriptsChannelId, 'transcriptsChannelId');
+        renderSingleSelectList('cfgStaffRoleList', roles, config.staffRoleId, 'staffRoleId');
+        renderSingleSelectList('cfgAdminRoleList', roles, config.adminRoleId, 'adminRoleId');
 
         configLoaded = true;
     } catch (e) {
         console.error('[CONFIG] loadConfigSection error:', e);
-        selects.forEach(id => {
+        containers.forEach(id => {
             const el = document.getElementById(id);
-            if (el) el.innerHTML = `<option>Errore: ${e.message}</option>`;
+            if (el) el.innerHTML = `<p class="loading-text">Errore: ${e.message}</p>`;
         });
     }
 }
@@ -1128,10 +1172,10 @@ async function loadTicketsSection() {
         return;
     }
 
-    const selects = ['ticketCategory', 'ticketLogs', 'ticketStaffRole', 'ticketAdminRole'];
-    selects.forEach(id => {
+    const containers = ['ticketCategoryList', 'ticketLogsList', 'ticketStaffRoleList', 'ticketAdminRoleList'];
+    containers.forEach(id => {
         const el = document.getElementById(id);
-        if (el) el.innerHTML = '<option>Loading...</option>';
+        if (el) el.innerHTML = '<p class="loading-text">Loading...</p>';
     });
 
     try {
@@ -1153,30 +1197,24 @@ async function loadTicketsSection() {
         const textChannels = channels.filter(c => c.type === 'text');
         const categoryChannels = channels.filter(c => c.type === 'category');
 
-        renderSelect('ticketCategory', categoryChannels, config.supportCategoryId);
-        renderSelect('ticketLogs', textChannels, config.transcriptsChannelId);
-        renderSelect('ticketStaffRole', roles, config.staffRoleId);
-        renderSelect('ticketAdminRole', roles, config.adminRoleId);
+        renderSingleSelectList('ticketCategoryList', categoryChannels, config.supportCategoryId, 'supportCategoryId');
+        renderSingleSelectList('ticketLogsList', textChannels, config.transcriptsChannelId, 'transcriptsChannelId');
+        renderSingleSelectList('ticketStaffRoleList', roles, config.staffRoleId, 'staffRoleId');
+        renderSingleSelectList('ticketAdminRoleList', roles, config.adminRoleId, 'adminRoleId');
     } catch (e) {
         console.error('[TICKETS] loadTicketsSection error:', e);
-        selects.forEach(id => {
+        containers.forEach(id => {
             const el = document.getElementById(id);
-            if (el) el.innerHTML = `<option>Error: ${e.message}</option>`;
+            if (el) el.innerHTML = `<p class="loading-text">Error: ${e.message}</p>`;
         });
     }
 }
 
-function renderSelect(selectId, items, selectedId) {
-    const el = document.getElementById(selectId);
-    if (!el) return;
-
-    let html = '<option value="">— None —</option>';
-    html += items.map(item => {
-        const selected = item.id === selectedId ? 'selected' : '';
-        return `<option value="${escapeAttr(item.id)}" ${selected}>${escapeHtml(item.name)}</option>`;
-    }).join('');
-
-    el.innerHTML = html;
+function getSelectedValue(containerId) {
+    const list = document.getElementById(containerId);
+    if (!list) return null;
+    const checked = list.querySelector('.role-toggle-input.radio-toggle:checked');
+    return checked ? (checked.value || null) : null;
 }
 
 async function saveConfig() {
@@ -1190,18 +1228,13 @@ async function saveConfig() {
     btn.innerHTML = 'Salvataggio...';
     btn.disabled = true;
 
-    const getValue = (id) => {
-        const el = document.getElementById(id);
-        return el ? el.value || null : null;
-    };
-
     const payload = {
-        joinLeaveLogChannelId: getValue('cfgJoinLeave'),
-        modLogChannelId: getValue('cfgModLog'),
-        messageLogChannelId: getValue('cfgMessageLog'),
-        transcriptsChannelId: getValue('cfgTranscripts'),
-        staffRoleId: getValue('cfgStaffRole'),
-        adminRoleId: getValue('cfgAdminRole')
+        joinLeaveLogChannelId: getSelectedValue('cfgJoinLeaveList'),
+        modLogChannelId: getSelectedValue('cfgModLogList'),
+        messageLogChannelId: getSelectedValue('cfgMessageLogList'),
+        transcriptsChannelId: getSelectedValue('cfgTranscriptsList'),
+        staffRoleId: getSelectedValue('cfgStaffRoleList'),
+        adminRoleId: getSelectedValue('cfgAdminRoleList')
     };
 
     try {
@@ -1238,16 +1271,11 @@ async function saveTicketsConfig() {
     btn.innerHTML = 'Saving...';
     btn.disabled = true;
 
-    const getValue = (id) => {
-        const el = document.getElementById(id);
-        return el ? el.value || null : null;
-    };
-
     const payload = {
-        supportCategoryId: getValue('ticketCategory'),
-        transcriptsChannelId: getValue('ticketLogs'),
-        staffRoleId: getValue('ticketStaffRole'),
-        adminRoleId: getValue('ticketAdminRole')
+        supportCategoryId: getSelectedValue('ticketCategoryList'),
+        transcriptsChannelId: getSelectedValue('ticketLogsList'),
+        staffRoleId: getSelectedValue('ticketStaffRoleList'),
+        adminRoleId: getSelectedValue('ticketAdminRoleList')
     };
 
     try {
