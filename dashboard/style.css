@@ -461,12 +461,6 @@ header {
     color: var(--primary-light);
 }
 
-.user-dropdown-username::after {
-    content: ' 📋';
-    font-size: 10px;
-    opacity: 0.6;
-}
-
 .user-dropdown-divider {
     height: 1px;
     background: rgba(255, 255, 255, 0.06);
@@ -510,24 +504,35 @@ header {
     flex-shrink: 0;
 }
 
-.copied-toast {
+.toast {
     position: fixed;
-    top: 20px;
-    right: 20px;
-    background: linear-gradient(135deg, var(--primary), var(--primary-dark));
-    color: white;
+    bottom: 24px;
+    right: 24px;
     padding: 12px 20px;
     border-radius: 10px;
     font-weight: 700;
     font-size: 14px;
+    color: #fff;
+    background: linear-gradient(135deg, var(--primary), var(--primary-dark));
     box-shadow: 0 10px 30px rgba(230, 126, 34, 0.5);
     z-index: 99999;
     animation: toastSlide 0.3s ease;
+    pointer-events: none;
+}
+
+.toast.success {
+    background: linear-gradient(135deg, #248046, #1a5e33);
+    box-shadow: 0 10px 30px rgba(36, 128, 70, 0.5);
+}
+
+.toast.error {
+    background: linear-gradient(135deg, #da373c, #a1262a);
+    box-shadow: 0 10px 30px rgba(218, 55, 60, 0.5);
 }
 
 @keyframes toastSlide {
-    from { opacity: 0; transform: translateX(50px); }
-    to { opacity: 1; transform: translateX(0); }
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
 }
 
 main {
