@@ -2343,53 +2343,61 @@ client.on('interactionCreate', async (interaction) => {
             return;
         }
 
-        if (interaction.isButton() && interaction.customId === 'close_ticket') {
-            await interaction.deferUpdate();
-
-            const config = await getGuildConfig(interaction.guild.id);
-            const staffRole = config.staffRoleId ? interaction.guild.roles.cache.get(config.staffRoleId) : null;
-            const adminRole = config.adminRoleId ? interaction.guild.roles.cache.get(config.adminRoleId) : null;
-
-            const isStaff = staffRole && interaction.member.roles.cache.has(staffRole.id);
-            const isAdmin = adminRole && interaction.member.roles.cache.has(adminRole.id);
-
-            if (!isStaff && !isAdmin) {
-                return interaction.followUp({
-                    content: '❌ Only staff members can close tickets.',
-                    flags: 64
-                });
-            }
-
-            const embed = new EmbedBuilder()
-                .setTitle('Ticket Closed')
-                .setDescription('This ticket has been closed, the channel will be deleted in 5 seconds....')
-                .setColor(RED);
-
-            try {
-                const noButtonsRow = new ActionRowBuilder();
-                await interaction.message.edit({ components: [noButtonsRow] });
-            } catch (error) {}
-
-            await interaction.channel.send({ embeds: [embed] });
-
-            await db.saveDashboardLogDB(interaction.guild.id, {
-                type: 'ticket',
-                action: 'ticket_closed',
-                userId: interaction.user.id,
-                userTag: interaction.user.tag,
-                details: `Ticket ${interaction.channel.name} closed`,
-                channelId: interaction.channel.id
-            });
-
-            setTimeout(async () => {
+            if (interaction.isButton() && interaction.customId === 'close_ticket') {
+                await interaction.deferUpdate();
+            
+                const config = await getGuildConfig(interaction.guild.id);
+                const staffRole = config.staffRoleId ? interaction.guild.roles.cache.get(config.staffRoleId) : null;
+                const adminRole = config.adminRoleId ? interaction.guild.roles.cache.get(config.adminRoleId) : null;
+            
+                const isStaff = staffRole && interaction.member.roles.cache.has(staffRole.id);
+                const isAdmin = adminRole && interaction.member.roles.cache.has(adminRole.id);
+            
+                if (!isStaff && !isAdmin) {
+                    return interaction.followUp({
+                        content: '❌ Only staff members can close tickets.',
+                        flags: 64
+                    });
+                }
+            
+                const embed = new EmbedBuilder()
+                    .setTitle('Ticket Closed')
+                    .setDescription('This ticket has been closed, the channel will be deleted in 5 seconds....')
+                    .setColor(RED);
+            
                 try {
-                    if (interaction.channel && interaction.channel.deletable) {
-                        await interaction.channel.delete();
-                    }
+                    const noButtonsRow = new ActionRowBuilder();
+                    await interaction.message.edit({ components: [noButtonsRow] });
                 } catch (error) {}
-            }, 5000);
-            return;
-        }
+            
+                await interaction.channel.send({ embeds: [embed] });
+            
+                const transcriptId = await generateTicketTranscript(interaction.channel, interaction.user, {
+                    ticketType: interaction.channel.name.startsWith('report-') ? 'report' : 'support',
+                    ticketOwnerId: interaction.channel.topic || null,
+                    createdBy: interaction.channel.topic || null,
+                    closedBy: interaction.user.id
+                });
+            
+                await db.saveDashboardLogDB(interaction.guild.id, {
+                    type: 'ticket',
+                    action: 'ticket_closed',
+                    userId: interaction.user.id,
+                    userTag: interaction.user.tag,
+                    details: `Ticket ${interaction.channel.name} closed${transcriptId ? ` (transcript available)` : ''}`,
+                    channelId: interaction.channel.id,
+                    transcriptId: transcriptId || null
+                });
+            
+                setTimeout(async () => {
+                    try {
+                        if (interaction.channel && interaction.channel.deletable) {
+                            await interaction.channel.delete();
+                        }
+                    } catch (error) {}
+                }, 5000);
+                return;
+            }
     } catch (error) {
         logCrash('INTERACTION_HANDLER', error, { customId: interaction?.customId });
         try {
