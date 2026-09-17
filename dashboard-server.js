@@ -318,6 +318,49 @@ app.get('/api/me/full', requireAuth, async (req, res) => {
     }
 });
 
+app.get('/api/me/guild-info', requireAuth, async (req, res) => {
+    try {
+        if (!req.session.user || !req.session.user.isDiscord) {
+            return res.status(403).json({ error: 'Solo utenti Discord' });
+        }
+
+        const { client } = global.PredCord;
+
+        const guildId = req.query.guildId || MAIN_GUILD_ID;
+        if (!guildId) {
+            return res.status(400).json({ error: 'Missing guildId' });
+        }
+
+        const guild = client.guilds.cache.get(guildId);
+        if (!guild) return res.status(404).json({ error: 'Guild not found' });
+
+        let member;
+        try {
+            member = await guild.members.fetch(req.session.user.id);
+        } catch {
+            return res.status(404).json({ error: 'Member not found' });
+        }
+
+        const roles = member.roles.cache
+            .filter(r => r.id !== guild.id)
+            .sort((a, b) => b.position - a.position)
+            .map(r => ({
+                id: r.id,
+                name: r.name,
+                color: r.color
+            }));
+
+        res.json({
+            displayName: member.displayName || member.user.username,
+            nickname: member.nickname || null,
+            roles
+        });
+    } catch (e) {
+        console.error('[ME-GUILD-INFO]', e);
+        res.status(500).json({ error: e.message });
+    }
+});
+
 app.get('/api/my-permissions', requireAuth, async (req, res) => {
     try {
         const role = getUserRole(req);
