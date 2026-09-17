@@ -68,20 +68,13 @@ body::after {
 
 .tab-content {
     opacity: 1;
-    transition: opacity 0.25s ease;
+    transition: opacity 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+    will-change: opacity;
 }
 
 .tab-content.fade-out {
     opacity: 0;
-}
-
-.tab-content.fade-in {
-    animation: fadeIn 0.3s ease forwards;
-}
-
-@keyframes fadeIn {
-    from { opacity: 0; transform: translateY(6px); }
-    to   { opacity: 1; transform: translateY(0); }
+    pointer-events: none;
 }
 
 .login-page {
@@ -634,6 +627,8 @@ aside h3 {
     border-radius: 20px;
     border: 1px solid var(--border);
     min-height: 500px;
+    position: relative;
+    overflow: hidden;
 }
 
 .panel-header {
@@ -1067,13 +1062,25 @@ aside h3 {
 .modlog-badge.command { background: rgba(88, 101, 242, 0.2); color: #7289da; }
 .modlog-badge.ticket  { background: rgba(16, 185, 129, 0.2); color: #34d399; }
 .modlog-badge.generic { background: rgba(148, 155, 164, 0.2); color: #b9bbbe; }
+.modlog-badge.auto_mod { background: rgba(245, 158, 11, 0.2); color: #fbbf24; }
+.modlog-badge.moderation { background: rgba(239, 68, 68, 0.2); color: #f87171; }
 .modlog-badge.custom_command_used { background: rgba(88, 101, 242, 0.2); color: #7289da; }
+.modlog-badge.native_command_used { background: rgba(88, 101, 242, 0.2); color: #7289da; }
 .modlog-badge.user_banned { background: rgba(220, 38, 38, 0.3); color: #ff5555; }
+.modlog-badge.user_unbanned { background: rgba(16, 185, 129, 0.2); color: #34d399; }
 .modlog-badge.user_kicked { background: rgba(239, 68, 68, 0.2); color: #f87171; }
 .modlog-badge.user_warned { background: rgba(245, 158, 11, 0.2); color: #fbbf24; }
 .modlog-badge.user_muted { background: rgba(230, 126, 34, 0.2); color: #ffa754; }
+.modlog-badge.user_unmuted { background: rgba(16, 185, 129, 0.2); color: #34d399; }
+.modlog-badge.messages_purged { background: rgba(148, 155, 164, 0.2); color: #b9bbbe; }
+.modlog-badge.user_banned_auto { background: rgba(220, 38, 38, 0.3); color: #ff5555; }
+.modlog-badge.user_kicked_auto { background: rgba(239, 68, 68, 0.2); color: #f87171; }
+.modlog-badge.user_muted_auto { background: rgba(230, 126, 34, 0.2); color: #ffa754; }
+.modlog-badge.user_unbanned_auto { background: rgba(16, 185, 129, 0.2); color: #34d399; }
 .modlog-badge.ticket_created { background: rgba(16, 185, 129, 0.2); color: #34d399; }
+.modlog-badge.ticket_claimed { background: rgba(255, 215, 0, 0.2); color: #FFD700; }
 .modlog-badge.ticket_closed { background: rgba(239, 68, 68, 0.2); color: #f87171; }
+.modlog-badge.report_created { background: rgba(245, 158, 11, 0.2); color: #fbbf24; }
 
 .modlog-target {
     color: var(--text);
