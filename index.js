@@ -1,4 +1,4 @@
-const { Client, GatewayIntentBits, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, ChannelType, PermissionsBitField, Events, ModalBuilder, LabelBuilder, TextInputBuilder, TextInputStyle, RadioGroupBuilder, RadioGroupOptionBuilder, StringSelectMenuBuilder, StringSelectMenuOptionBuilder, SlashCommandBuilder, REST, Routes } = require('discord.js');
+const { Client, GatewayIntentBits, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, ChannelType, PermissionsBitField, Events, ModalBuilder, LabelBuilder, TextInputBuilder, TextInputStyle, RadioGroupBuilder, RadioGroupOptionBuilder, UserSelectMenuBuilder, SlashCommandBuilder, REST, Routes } = require('discord.js');
 const fs = require('fs');
 const path = require('path');
 const db = require('./db');
@@ -570,6 +570,33 @@ async function canUsePageCommand(member, guildId) {
     } catch {
         return (await isAdminSafe(member)) || (await isModeratorSafe(member));
     }
+}
+
+async function sendSupportPanel(channel) {
+    const embed = new EmbedBuilder()
+        .setTitle('Support Tickets')
+        .setDescription(
+            'Need help or want to report a player? Our support team is here to assist you. ' +
+            'Click one of the buttons below to create a ticket.'
+        )
+        .setColor('#5865F2');
+
+    const buttons = new ActionRowBuilder()
+        .addComponents(
+            new ButtonBuilder()
+                .setCustomId('support_ticket')
+                .setLabel('Support')
+                .setStyle(ButtonStyle.Success),
+            new ButtonBuilder()
+                .setCustomId('report_player')
+                .setLabel('Report Player')
+                .setStyle(ButtonStyle.Primary)
+        );
+
+    await channel.send({
+        embeds: [embed],
+        components: [buttons]
+    });
 }
 
 client.once('clientReady', async () => {
@@ -1541,203 +1568,159 @@ client.on('interactionCreate', async (interaction) => {
                     return interaction.reply({ content: 'You do not have permission to use this command.', flags: 64 });
                 }
 
-                await interaction.reply({ content: 'The ticket panel has been sent.', flags: 64 });
+                await sendSupportPanel(interaction.channel);
 
-                const embed = new EmbedBuilder()
-                    .setTitle('Report Player & Modmail')
-                    .setDescription('Click "**Open A Ticket**", choose the ticket category, and complete the text box. Our staff team will reply as soon as they can.')
-                    .setColor(RED);
-
-                const row = new ActionRowBuilder().addComponents(
-                    new ButtonBuilder()
-                        .setCustomId('open_ticket_panel')
-                        .setLabel('Open A Ticket')
-                        .setStyle(ButtonStyle.Primary)
-                );
-
-                await interaction.channel.send({ embeds: [embed], components: [row] });
+                await interaction.reply({ content: '✅ Support panel created.', flags: 64 });
                 return;
             }
             return;
         }
 
         if (interaction.isButton() && interaction.customId === 'open_ticket_panel') {
-            const modal = new ModalBuilder()
-                .setCustomId('ticket_panel_modal')
-                .setTitle('Open A Ticket');
+            await sendSupportPanel(interaction.channel);
+            await interaction.reply({ content: '✅ Support panel created.', flags: 64 });
+            return;
+        }
 
-            const ticketType = new RadioGroupBuilder()
-                .setCustomId('ticket_type')
+        if (interaction.isButton() && interaction.customId === 'support_ticket') {
+            const modal = new ModalBuilder()
+                .setCustomId('support_modal')
+                .setTitle('Support');
+
+            const supportType = new RadioGroupBuilder()
+                .setCustomId('support_type')
                 .setRequired(true)
                 .addOptions(
                     new RadioGroupOptionBuilder()
-                        .setLabel('Report Player')
-                        .setDescription("Report who's breaking our session rules.")
-                        .setValue('report_player'),
-
-                    new RadioGroupOptionBuilder()
                         .setLabel('Modmail')
-                        .setDescription('Contact our staff team.')
-                        .setValue('modmail')
+                        .setDescription('Contact Our staff')
+                        .setValue('modmail'),
+                    new RadioGroupOptionBuilder()
+                        .setLabel('Application Issue')
+                        .setDescription('Having an issue with your application')
+                        .setValue('application_issue')
                 );
 
-            modal.addComponents(
+            const supportMessage = new TextInputBuilder()
+                .setCustomId('support_message')
+                .setStyle(TextInputStyle.Paragraph)
+                .setPlaceholder('Tell us how we can help...')
+                .setRequired(true)
+                .setMaxLength(1000);
+
+            modal.addLabelComponents(
                 new LabelBuilder()
-                    .setLabel('What type of ticket do you need?')
-                    .setRadioGroupComponent(ticketType)
+                    .setLabel('What type of support do you need?')
+                    .setRadioGroupComponent(supportType),
+                new LabelBuilder()
+                    .setLabel('How can we help you?')
+                    .setTextInputComponent(supportMessage)
             );
 
             await interaction.showModal(modal);
             return;
         }
 
-        if (interaction.isModalSubmit() && interaction.customId === 'ticket_panel_modal') {
-            const ticketType = interaction.fields.getTextInputValue('ticket_type');
+        if (interaction.isButton() && interaction.customId === 'report_player') {
+            const modal = new ModalBuilder()
+                .setCustomId('report_player_modal')
+                .setTitle('Report Player');
 
-            if (ticketType === 'report_player') {
-                const modal = new ModalBuilder()
-                    .setCustomId('report_player_modal')
-                    .setTitle('Report Player');
+            const userSelect = new UserSelectMenuBuilder()
+                .setCustomId('reported_user')
+                .setPlaceholder('Choose a player...')
+                .setMinValues(1)
+                .setMaxValues(1)
+                .setRequired(true);
 
-                const player = new TextInputBuilder()
-                    .setCustomId('reported_player')
-                    .setLabel('Choose...')
-                    .setStyle(TextInputStyle.Short)
-                    .setPlaceholder('Mention the player you want to report')
-                    .setRequired(true);
+            const evidenceProof = new TextInputBuilder()
+                .setCustomId('evidence_proof')
+                .setStyle(TextInputStyle.Short)
+                .setPlaceholder('Paste a link to your evidence...')
+                .setRequired(false)
+                .setMaxLength(500);
 
-                const evidence = new TextInputBuilder()
-                    .setCustomId('evidence_link')
-                    .setLabel('Evidence Link')
-                    .setStyle(TextInputStyle.Short)
-                    .setPlaceholder('https://...')
-                    .setRequired(false);
+            const moreInformation = new TextInputBuilder()
+                .setCustomId('more_information')
+                .setStyle(TextInputStyle.Paragraph)
+                .setPlaceholder('Provide any additional information...')
+                .setRequired(false)
+                .setMaxLength(1000);
 
-                const explanation = new TextInputBuilder()
-                    .setCustomId('explain_situation')
-                    .setLabel('Explain the situation')
-                    .setStyle(TextInputStyle.Paragraph)
-                    .setPlaceholder('Explain what happened...')
-                    .setRequired(true)
-                    .setMaxLength(1000);
+            modal.addLabelComponents(
+                new LabelBuilder()
+                    .setLabel('Choose Player')
+                    .setDescription('Select the player you want to report.')
+                    .setUserSelectMenuComponent(userSelect),
+                new LabelBuilder()
+                    .setLabel('Evidence Proof')
+                    .setTextInputComponent(evidenceProof),
+                new LabelBuilder()
+                    .setLabel('Do you want add more information?')
+                    .setTextInputComponent(moreInformation)
+            );
 
-                modal.addComponents(
-                    new ActionRowBuilder().addComponents(player),
-                    new ActionRowBuilder().addComponents(evidence),
-                    new ActionRowBuilder().addComponents(explanation)
-                );
+            await interaction.showModal(modal);
+            return;
+        }
 
-                await interaction.showModal(modal);
-                return;
+        if (interaction.isModalSubmit() && interaction.customId === 'support_modal') {
+            const supportType = interaction.fields.getRadioGroup('support_type', true);
+            const message = interaction.fields.getTextInputValue('support_message');
+
+            console.log('=================================');
+            console.log('SUPPORT TICKET');
+            console.log('=================================');
+            console.log('User:', interaction.user.tag);
+            console.log('User ID:', interaction.user.id);
+            console.log('Type:', supportType);
+            console.log('Message:', message);
+            console.log('=================================');
+
+            let typeName;
+            if (supportType === 'modmail') {
+                typeName = 'Modmail';
+            } else if (supportType === 'application_issue') {
+                typeName = 'Application Issue';
             }
 
-            if (ticketType === 'modmail') {
-                const modal = new ModalBuilder()
-                    .setCustomId('modmail_modal')
-                    .setTitle('Modmail');
-
-                const issue = new TextInputBuilder()
-                    .setCustomId('explain_issue')
-                    .setLabel('Explain your issue')
-                    .setStyle(TextInputStyle.Paragraph)
-                    .setPlaceholder('Tell us how we can help...')
-                    .setRequired(true)
-                    .setMaxLength(1000);
-
-                modal.addComponents(
-                    new ActionRowBuilder().addComponents(issue)
-                );
-
-                await interaction.showModal(modal);
-                return;
-            }
+            await interaction.reply({
+                content: `✅ Your **${typeName}** request has been submitted to our staff team.`,
+                flags: 64
+            });
+            return;
         }
 
         if (interaction.isModalSubmit() && interaction.customId === 'report_player_modal') {
-            const reportedPlayer = interaction.fields.getTextInputValue('reported_player');
-            const evidence = interaction.fields.getTextInputValue('evidence_link');
-            const situation = interaction.fields.getTextInputValue('explain_situation');
+            const selectedUsers = interaction.fields.getSelectedUsers('reported_user', true);
+            const reportedUser = selectedUsers.first();
 
-            console.log('Report Player');
-            console.log('Reporter:', interaction.user.id);
-            console.log('Reported Player:', reportedPlayer);
-            console.log('Evidence:', evidence);
-            console.log('Situation:', situation);
+            if (!reportedUser || reportedUser.bot) {
+                await interaction.reply({
+                    content: '❌ You cannot report a bot. Please select a real player.',
+                    flags: 64
+                });
+                return;
+            }
+
+            const evidence = interaction.fields.getTextInputValue('evidence_proof');
+            const moreInformation = interaction.fields.getTextInputValue('more_information');
+
+            console.log('=================================');
+            console.log('PLAYER REPORT');
+            console.log('=================================');
+            console.log('Reporter:', interaction.user.tag);
+            console.log('Reporter ID:', interaction.user.id);
+            console.log('Reported Player:', reportedUser.tag);
+            console.log('Reported Player ID:', reportedUser.id);
+            console.log('Evidence:', evidence || 'None');
+            console.log('More Information:', moreInformation || 'None');
+            console.log('=================================');
 
             await interaction.reply({
-                content: 'Your player report has been submitted to the staff team.',
+                content: `✅ Your report against **${reportedUser.tag}** has been submitted to our staff team.`,
                 flags: 64
             });
-            return;
-        }
-
-        if (interaction.isModalSubmit() && interaction.customId === 'modmail_modal') {
-            const issue = interaction.fields.getTextInputValue('explain_issue');
-
-            console.log('Modmail');
-            console.log('User:', interaction.user.id);
-            console.log('Issue:', issue);
-
-            await interaction.reply({
-                content: 'Your modmail has been submitted to the staff team.',
-                flags: 64
-            });
-            return;
-        }
-
-        if (interaction.isButton() && interaction.customId === 'claim_ticket') {
-            const config = await getGuildConfig(interaction.guild.id);
-            const staffRoleId = config.staffRoleId;
-            const isStaffMember = staffRoleId && interaction.member.roles.cache.has(staffRoleId);
-            if (!isStaffMember && !(await isAdminSafe(interaction.member)) && !(await isModeratorSafe(interaction.member))) {
-                return interaction.reply({ content: 'Only staff team members can claim tickets.', flags: 64 });
-            }
-            const ticketOwnerId = interaction.channel.topic;
-            if (!ticketOwnerId) return interaction.reply({ content: 'Could not find ticket owner.', flags: 64 });
-            const newOverwrites = [
-                { id: interaction.guild.id, deny: [PermissionsBitField.Flags.ViewChannel] },
-                { id: ticketOwnerId, allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.SendMessages, PermissionsBitField.Flags.ReadMessageHistory] },
-                { id: interaction.user.id, allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.SendMessages, PermissionsBitField.Flags.ReadMessageHistory] },
-                { id: client.user.id, allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.SendMessages, PermissionsBitField.Flags.ReadMessageHistory] }
-            ];
-            if (staffRoleId) newOverwrites.push({ id: staffRoleId, allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.SendMessages, PermissionsBitField.Flags.ReadMessageHistory] });
-            await interaction.channel.permissionOverwrites.set(newOverwrites);
-            const embed = new EmbedBuilder()
-                .setTitle('Ticket Claimed')
-                .setDescription(`${interaction.user} has claimed this ticket and will now assist you.`)
-                .setColor(COLORS.SUCCESS)
-                .setThumbnail(THUMBNAIL_URL);
-            await interaction.channel.send({ content: `<@${ticketOwnerId}>`, embeds: [embed] });
-            try {
-                const newRow = new ActionRowBuilder().addComponents(
-                    new ButtonBuilder().setCustomId('close_ticket').setLabel('Close Ticket').setStyle(ButtonStyle.Danger)
-                );
-                await interaction.message.edit({ components: [newRow] });
-            } catch (error) {}
-            try {
-                await interaction.reply({ content: 'You have claimed this ticket!', flags: 64 });
-            } catch (error) {
-                await interaction.followUp({ content: 'You have claimed this ticket!', flags: 64 }).catch(() => {});
-            }
-            return;
-        }
-
-        if (interaction.isButton() && interaction.customId === 'close_ticket') {
-            const config = await getGuildConfig(interaction.guild.id);
-            const staffRoleId = config.staffRoleId;
-            const isStaffMember = staffRoleId && interaction.member.roles.cache.has(staffRoleId);
-            if (!isStaffMember && !(await isAdminSafe(interaction.member)) && !(await isModeratorSafe(interaction.member))) {
-                return interaction.reply({ content: 'Only staff team members can close tickets.', flags: 64 });
-            }
-            await generateTicketTranscript(interaction.channel, interaction.user);
-            await interaction.channel.send({ content: 'This ticket will be closed in 5 seconds...' });
-            try { await interaction.reply({ content: 'Closing ticket...', flags: 64 }); } catch (error) {}
-            setTimeout(async () => {
-                try {
-                    const channel = interaction.channel;
-                    if (channel && channel.deletable) await channel.delete();
-                } catch (error) {}
-            }, 5000);
             return;
         }
     } catch (error) {
