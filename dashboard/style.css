@@ -1618,6 +1618,10 @@ aside h3 {
     border-color: rgba(230, 126, 34, 0.4);
 }
 
+.modal-actions {
+    margin-top: 24px;
+}
+
 .permissions-box {
     position: fixed;
     top: 50%;
