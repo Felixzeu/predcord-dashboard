@@ -1,10 +1,14 @@
 const { Client, GatewayIntentBits, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, ChannelType, PermissionsBitField, Events, ModalBuilder, TextInputBuilder, TextInputStyle, StringSelectMenuBuilder } = require('discord.js');
 const fs = require('fs');
 const path = require('path');
+const db = require('./db');
 require('dotenv').config();
 
 const CRASH_LOG_FILE = './crash_log.json';
 const MAX_CRASH_LOGS = 100;
+const LOGS_PER_PAGE = 5;
+const NATIVE_PREFIX = '*';
+const COMMAND_COOLDOWN_SECONDS = 5;
 
 function logCrash(type, error, context = {}) {
     try {
@@ -45,29 +49,6 @@ setInterval(() => {
     }
 }, 60000);
 
-function safeWriteJSON(filePath, data) {
-    try {
-        const tmp = `${filePath}.tmp`;
-        fs.writeFileSync(tmp, JSON.stringify(data, null, 2));
-        fs.renameSync(tmp, filePath);
-        return true;
-    } catch (error) {
-        logCrash('JSON_WRITE_ERROR', error, { filePath });
-        return false;
-    }
-}
-
-function safeReadJSON(filePath, fallback = {}) {
-    try {
-        if (!fs.existsSync(filePath)) return fallback;
-        const data = JSON.parse(fs.readFileSync(filePath, 'utf8'));
-        return data ?? fallback;
-    } catch (error) {
-        logCrash('JSON_READ_ERROR', error, { filePath });
-        return fallback;
-    }
-}
-
 console.log('[ANTI-CRASH] Sistema di protezione attivato');
 
 const client = new Client({
@@ -82,26 +63,10 @@ const client = new Client({
     ]
 });
 
-const SERVER_CONFIG_FILE = './server_config.json';
-const MODLOGS_FILE = './modlogs.json';
 const TRANSCRIPTS_DIR = './transcripts/';
-const WARNINGS_FILE = './warnings.json';
-const CUSTOM_COMMANDS_FILE = './custom_commands.json';
-
-let serverConfigs = {};
-let userModLogs = new Map();
-let warnings = new Map();
 
 if (!fs.existsSync(TRANSCRIPTS_DIR)) {
     fs.mkdirSync(TRANSCRIPTS_DIR, { recursive: true });
-}
-
-function loadCustomCommands() {
-    return safeReadJSON(CUSTOM_COMMANDS_FILE, {});
-}
-
-function saveCustomCommands(data) {
-    return safeWriteJSON(CUSTOM_COMMANDS_FILE, data);
 }
 
 const THUMBNAIL_URL = "https://media.discordapp.net/attachments/1365770639398408303/1494756290935656498/image.png";
@@ -116,6 +81,9 @@ const COLORS = {
     TICKET: 0xE67E22,
     REPORT: 0xE67E22
 };
+
+const BLACK = 0x000000;
+const PROJECTED_ERROR = 0xED4245;
 
 const SOCIAL_LINKS = {
     twitch: "https://www.twitch.tv/predagefn",
@@ -135,100 +103,110 @@ const EMOJIS = {
     instagram: '<:insta:1549468767916916806>'
 };
 
-function getGuildConfig(guildId) {
-    if (!serverConfigs[guildId]) {
-        serverConfigs[guildId] = {
-            joinLeaveLogChannelId: null,
-            modLogChannelId: null,
-            messageLogChannelId: null,
-            transcriptsChannelId: null,
-            staffRoleId: null,
-            modRoleId: null,
-            adminRoleId: null,
-            supportCategoryId: null,
-            reportCategoryId: null
-        };
-    }
-    if (serverConfigs[guildId].supportRoleId && !serverConfigs[guildId].staffRoleId) {
-        serverConfigs[guildId].staffRoleId = serverConfigs[guildId].supportRoleId;
-        delete serverConfigs[guildId].supportRoleId;
-    }
-    if (!Object.prototype.hasOwnProperty.call(serverConfigs[guildId], 'staffRoleId')) serverConfigs[guildId].staffRoleId = null;
-    if (!Object.prototype.hasOwnProperty.call(serverConfigs[guildId], 'modRoleId')) serverConfigs[guildId].modRoleId = null;
-    if (!Object.prototype.hasOwnProperty.call(serverConfigs[guildId], 'adminRoleId')) serverConfigs[guildId].adminRoleId = null;
-    return serverConfigs[guildId];
+function applyPositionalArgs(text, args) {
+    if (!text) return '';
+    return text.replace(/\$(\d+)/g, (match, num) => {
+        const idx = parseInt(num, 10) - 1;
+        if (idx >= 0 && idx < args.length) {
+            return args[idx];
+        }
+        return match;
+    });
 }
 
-function saveConfig(guildId, key, value) {
-    const config = getGuildConfig(guildId);
-    config[key] = value;
-    serverConfigs[guildId] = config;
-    saveServerConfigs();
+async function getGuildConfig(guildId) {
+    const config = await db.getGuildConfigDB(guildId);
+    return {
+        joinLeaveLogChannelId: config.joinLeaveLogChannelId,
+        modLogChannelId: config.modLogChannelId,
+        messageLogChannelId: config.messageLogChannelId,
+        transcriptsChannelId: config.transcriptsChannelId,
+        staffRoleId: config.staffRoleId,
+        modRoleId: config.modRoleId,
+        adminRoleId: config.adminRoleId,
+        supportCategoryId: config.supportCategoryId,
+        reportCategoryId: config.reportCategoryId
+    };
 }
 
-function loadServerConfigs() {
-    serverConfigs = safeReadJSON(SERVER_CONFIG_FILE, {});
-    console.log(`Loaded configurations for ${Object.keys(serverConfigs).length} servers`);
+async function saveConfig(guildId, key, value) {
+    await db.saveGuildConfigDB(guildId, key, value);
 }
 
-function saveServerConfigs() {
-    safeWriteJSON(SERVER_CONFIG_FILE, serverConfigs);
-}
-
-function isAdminSafe(member) {
+async function isAdminSafe(member) {
     try {
         if (!member) return false;
         if (member.permissions?.has(PermissionsBitField.Flags.Administrator)) return true;
         const guildId = member.guild?.id;
         if (!guildId) return false;
-        const config = getGuildConfig(guildId);
+        const config = await getGuildConfig(guildId);
         if (config.adminRoleId && member.roles?.cache?.has(config.adminRoleId)) return true;
         return false;
     } catch { return false; }
 }
 
-function isModeratorSafe(member) {
+async function isModeratorSafe(member) {
     try {
         if (!member) return false;
-        if (isAdminSafe(member)) return true;
+        if (await isAdminSafe(member)) return true;
         const guildId = member.guild?.id;
         if (!guildId) return false;
-        const config = getGuildConfig(guildId);
+        const config = await getGuildConfig(guildId);
         if (config.modRoleId && member.roles?.cache?.has(config.modRoleId)) return true;
         return false;
     } catch { return false; }
 }
 
-function isStaffSafe(member) {
+async function isStaffSafe(member) {
     try {
         if (!member) return false;
-        if (isModeratorSafe(member)) return true;
+        if (await isModeratorSafe(member)) return true;
         const guildId = member.guild?.id;
         if (!guildId) return false;
-        const config = getGuildConfig(guildId);
+        const config = await getGuildConfig(guildId);
         if (config.staffRoleId && member.roles?.cache?.has(config.staffRoleId)) return true;
         return false;
     } catch { return false; }
 }
 
-function isAdmin(member) { return isAdminSafe(member); }
-function isModerator(member) { return isModeratorSafe(member); }
-function isStaff(member) { return isStaffSafe(member); }
-
-function hasModPerms(member) {
-    return isAdminSafe(member) || isModeratorSafe(member);
+async function hasModPerms(member) {
+    return (await isAdminSafe(member)) || (await isModeratorSafe(member));
 }
 
-function hasStaffPermission(member) {
-    return isAdminSafe(member) || isModeratorSafe(member) || isStaffSafe(member);
+async function hasStaffPermission(member) {
+    return (await isAdminSafe(member)) || (await isModeratorSafe(member)) || (await isStaffSafe(member));
 }
 
-function canUseSetupCommand(member) {
-    return isAdminSafe(member);
+async function canUseSetupCommand(member) {
+    return await isAdminSafe(member);
 }
 
-function canUseBaseCommands(member) {
-    return isAdminSafe(member) || isModeratorSafe(member);
+async function canUseBaseCommands(member) {
+    return (await isAdminSafe(member)) || (await isModeratorSafe(member));
+}
+
+async function hasProjectedRole(member, guildId) {
+    if (!member) return false;
+    try {
+        const projected = await db.getProjectedRolesDB(guildId);
+        if (!projected || projected.length === 0) return false;
+        return projected.some(roleId => member.roles?.cache?.has(roleId));
+    } catch {
+        return false;
+    }
+}
+
+async function projectedRoleBlock(message, targetMember) {
+    if (!targetMember) return false;
+    if (await hasProjectedRole(targetMember, message.guild.id)) {
+        const embed = new EmbedBuilder()
+            .setDescription(`I cannot moderate **${targetMember.user.username}** (${targetMember.user.id}) because they have a **Projected Role**.`)
+            .setColor(PROJECTED_ERROR);
+        await message.channel.send({ embeds: [embed] });
+        await message.delete().catch(() => {});
+        return true;
+    }
+    return false;
 }
 
 async function getUserFromInput(guild, input) {
@@ -245,127 +223,120 @@ async function getUserFromInput(guild, input) {
         const member = await guild.members.fetch(userId);
         return { user: member.user, member: member };
     } catch {
-        return { user: { id: userId, tag: `Unknown User (${userId})` }, member: null };
+        try {
+            const user = await client.users.fetch(userId);
+            return { user: user, member: null };
+        } catch {
+            return { user: { id: userId, tag: `Unknown User (${userId})` }, member: null };
+        }
     }
+}
+
+function checkCustomCommandPermission(cmdData, member) {
+    if (Array.isArray(cmdData.allowedRoles)) {
+        if (cmdData.allowedRoles.length === 0) return false;
+        return cmdData.allowedRoles.some(roleId => member.roles?.cache?.has(roleId));
+    }
+    return true;
 }
 
 async function sendActionDM(user, action, reason, moderator, duration = null) {
     try {
-        const guildName = moderator?.guild?.name || 'Server';
-        const actionText = { 'warned': 'avvertito', 'banned': 'bannato', 'kicked': 'kickato', 'muted': 'mutato' };
-        const actionEmoji = { 'warned': '⚠️', 'banned': '🔨', 'kicked': '👢', 'muted': '🔇' };
-        const emoji = actionEmoji[action] || '📌';
-        let description = `${emoji} Sei stato **${actionText[action] || action}** nel server **${guildName}**.`;
-        if (duration) description = `${emoji} Sei stato **mutato** per **${duration}** nel server **${guildName}**.`;
+        const actionText = {
+            'warned': 'warned',
+            'banned': 'banned',
+            'kicked': 'kicked',
+            'muted': 'muted'
+        };
+        const label = actionText[action] || action;
+        const description = `**You have been ${label} for ${reason || 'no reason provided'}**`;
 
-        const timestamp = Math.floor(Date.now() / 1000);
         const embed = new EmbedBuilder()
             .setDescription(description)
-            .setColor(COLORS.WARNING)
-            .addFields(
-                { name: 'Motivo', value: reason || 'Non specificato', inline: false },
-                { name: 'Data', value: `<t:${timestamp}:R>`, inline: false }
+            .setColor(COLORS.WARNING);
+
+        const payload = { embeds: [embed] };
+
+        if (action === 'banned') {
+            const row = new ActionRowBuilder().addComponents(
+                new ButtonBuilder()
+                    .setLabel('Appeal your ban')
+                    .setStyle(ButtonStyle.Link)
+                    .setURL('https://dyno.gg/account')
             );
-        if (duration) embed.addFields({ name: 'Durata', value: duration, inline: false });
-        await user.send({ embeds: [embed] }).catch(() => console.log(`DM failed: ${user?.tag || user?.id}`));
+            payload.components = [row];
+        }
+
+        await user.send(payload).catch(() => console.log(`DM failed: ${user?.tag || user?.id}`));
     } catch (error) {
         logCrash('DM_ERROR', error, { userId: user?.id, action });
     }
 }
 
-function loadWarnings() {
-    const saved = safeReadJSON(WARNINGS_FILE, {});
-    warnings.clear();
-    for (const [userId, userWarnings] of Object.entries(saved)) {
-        warnings.set(userId, userWarnings);
-    }
-    console.log(`Loaded ${warnings.size} warning records`);
-}
-
-function saveWarnings() {
-    const obj = {};
-    for (const [userId, userWarnings] of warnings.entries()) {
-        obj[userId] = userWarnings;
-    }
-    safeWriteJSON(WARNINGS_FILE, obj);
-}
-
 async function addWarning(guild, user, moderator, reason) {
-    const userId = user.id;
-    if (!warnings.has(userId)) warnings.set(userId, []);
-    const userWarnings = warnings.get(userId);
-    const warningId = userWarnings.length + 1;
-    userWarnings.push({
-        id: warningId,
+    const warning = await db.addWarningDB({
+        guildId: guild.id,
+        userId: user.id,
+        userTag: user.tag,
         moderatorId: moderator.id,
         moderatorTag: moderator.tag,
         reason: reason || 'No reason provided',
-        date: new Date().toISOString(),
-        dateFormatted: formatFullDate(new Date())
+        date: new Date(),
+        active: true
     });
-    warnings.set(userId, userWarnings);
-    saveWarnings();
-    const member = guild.members.cache.get(userId);
+
+    const allWarnings = await db.getUserWarningsDB(guild.id, user.id);
+    const warningCount = allWarnings.length;
+
+    const member = guild.members.cache.get(user.id);
     if (member) {
-        if (userWarnings.length >= 10) {
-            await member.ban({ reason: 'Auto-ban: 10 warnings' }).catch(() => {});
-            await sendActionDM(user, 'banned', '10 warnings accumulati', { tag: 'Auto-Mod', guild: guild });
-            await saveModLog(guild, 'User banned (auto)', user, client.user, '10 warnings accumulated', null);
-        } else if (userWarnings.length >= 5) {
-            await member.kick('Auto-kick: 5 warnings').catch(() => {});
-            await sendActionDM(user, 'kicked', '5 warnings accumulati', { tag: 'Auto-Mod', guild: guild });
-            await saveModLog(guild, 'User kicked (auto)', user, client.user, '5 warnings accumulated', null);
-        } else if (userWarnings.length >= 3) {
-            await member.timeout(30 * 60 * 1000, 'Auto-mute: 3 warnings').catch(() => {});
-            await sendActionDM(user, 'muted', '3 warnings accumulati', { tag: 'Auto-Mod', guild: guild }, '30 minutes');
-            await saveModLog(guild, 'User muted (auto)', user, client.user, '3 warnings accumulated', '30 minutes');
+        if (warningCount >= 10) {
+            if (await hasProjectedRole(member, guild.id)) {
+                console.log(`[PROJECTED] Skipped auto-ban for ${user.tag} (projected role)`);
+            } else {
+                await member.ban({ reason: 'Auto-ban: 10 warnings' }).catch(() => {});
+                await sendActionDM(user, 'banned', '10 warnings accumulated', { tag: 'Auto-Mod', guild: guild });
+                await saveModLog(guild, 'User banned (auto)', user, client.user, '10 warnings accumulated', null);
+            }
+        } else if (warningCount >= 5) {
+            if (await hasProjectedRole(member, guild.id)) {
+                console.log(`[PROJECTED] Skipped auto-kick for ${user.tag} (projected role)`);
+            } else {
+                await member.kick('Auto-kick: 5 warnings').catch(() => {});
+                await sendActionDM(user, 'kicked', '5 warnings accumulated', { tag: 'Auto-Mod', guild: guild });
+                await saveModLog(guild, 'User kicked (auto)', user, client.user, '5 warnings accumulated', null);
+            }
+        } else if (warningCount >= 3) {
+            if (await hasProjectedRole(member, guild.id)) {
+                console.log(`[PROJECTED] Skipped auto-mute for ${user.tag} (projected role)`);
+            } else {
+                await member.timeout(28 * 24 * 60 * 60 * 1000, 'Auto-mute: 3 warnings').catch(() => {});
+                await sendActionDM(user, 'muted', '3 warnings accumulated', { tag: 'Auto-Mod', guild: guild }, '28 days');
+                await saveModLog(guild, 'User muted (auto)', user, client.user, '3 warnings accumulated', '28 days');
+            }
         }
     }
-    return warningId;
+    return warning.warningId;
 }
 
 async function removeWarning(guild, user, moderator, warningId) {
-    const userId = user.id;
-    if (!warnings.has(userId)) return false;
-    const userWarnings = warnings.get(userId);
-    const warningIndex = userWarnings.findIndex(w => w.id === parseInt(warningId));
-    if (warningIndex === -1) return false;
-    userWarnings.splice(warningIndex, 1);
-    userWarnings.forEach((w, idx) => { w.id = idx + 1; });
-    if (userWarnings.length === 0) {
-        warnings.delete(userId);
-    } else {
-        warnings.set(userId, userWarnings);
-    }
-    saveWarnings();
-    return true;
+    return await db.removeWarningDB(guild.id, user.id, warningId);
 }
 
 async function clearWarnings(guild, user, moderator) {
-    const userId = user.id;
-    if (!warnings.has(userId)) return false;
-    warnings.delete(userId);
-    saveWarnings();
-    return true;
+    return await db.clearWarningsDB(guild.id, user.id);
 }
 
-async function getUserWarnings(userId) {
-    return warnings.get(userId) || [];
+async function getUserWarnings(userId, guildId) {
+    if (!guildId) return [];
+    return await db.getUserWarningsDB(guildId, userId);
 }
 
 async function saveModLog(guild, action, target, moderator, reason, duration = null) {
     try {
-        let userLogs;
-        if (target.id === 'channel') {
-            if (!userModLogs.has('channel')) userModLogs.set('channel', []);
-            userLogs = userModLogs.get('channel');
-        } else {
-            if (!userModLogs.has(target.id)) userModLogs.set(target.id, []);
-            userLogs = userModLogs.get(target.id);
-        }
-        const logId = userLogs.length + 1;
-        userLogs.push({
-            id: logId,
+        const log = await db.createModLog({
+            guildId: guild.id,
+            guildName: guild.name,
             action: action,
             targetId: target.id,
             targetTag: target.tag,
@@ -373,19 +344,11 @@ async function saveModLog(guild, action, target, moderator, reason, duration = n
             moderatorTag: moderator.tag,
             reason: reason || 'No reason provided',
             duration,
-            guildId: guild.id,
-            guildName: guild.name,
-            date: new Date().toISOString(),
-            dateFormatted: formatFullDate(new Date()),
-            hammerTime: formatHammerTime(new Date())
+            date: new Date(),
+            active: true
         });
-        if (target.id === 'channel') {
-            userModLogs.set('channel', userLogs);
-        } else {
-            userModLogs.set(target.id, userLogs);
-        }
-        saveData();
-        const config = getGuildConfig(guild.id);
+
+        const config = await getGuildConfig(guild.id);
         const logChannel = client.channels.cache.get(config.modLogChannelId);
         if (logChannel) {
             const logEmbed = new EmbedBuilder()
@@ -401,54 +364,40 @@ async function saveModLog(guild, action, target, moderator, reason, duration = n
                 );
             } else {
                 logEmbed.addFields(
-                    { name: 'User', value: `${target.toString()}`, inline: true },
+                    { name: 'User', value: `<@${target.id}>`, inline: true },
                     { name: 'Moderator', value: `${moderator.toString()}`, inline: true },
                     { name: 'Reason', value: reason || 'No reason provided', inline: false },
                     { name: 'Date', value: formatFullDate(new Date()), inline: true },
-                    { name: 'Log ID', value: `#${logId}`, inline: true }
+                    { name: 'Case ID', value: `#${log.caseId}`, inline: true }
                 );
             }
             if (duration) logEmbed.addFields({ name: 'Duration', value: duration, inline: true });
             await logChannel.send({ embeds: [logEmbed] }).catch(() => {});
         }
+        return log;
     } catch (error) {
         logCrash('MODLOG_ERROR', error, { action });
+        return null;
     }
 }
 
-function formatModerationHistory(userId, guildId, username) {
-    const logs = [];
+async function formatModerationHistory(userId, guildId, username, page = 1) {
+    const totalLogs = await db.ModLog.countDocuments({ guildId, targetId: userId });
 
-    if (userModLogs && typeof userModLogs.forEach === 'function') {
-        userModLogs.forEach((userLogs) => {
-            if (Array.isArray(userLogs)) {
-                for (const log of userLogs) {
-                    if (log.guildId === guildId && log.targetId === userId) {
-                        logs.push(log);
-                    }
-                }
-            }
-        });
+    if (totalLogs === 0) {
+        return `**${username}** has no modlogs.`;
     }
 
-    if (logs.length === 0) {
-        return `✅ Nessuna sanzione registrata per **${username}**.`;
-    }
+    const totalPages = Math.max(1, Math.ceil(totalLogs / LOGS_PER_PAGE));
+    const safePage = Math.min(Math.max(1, page), totalPages);
+    const skip = (safePage - 1) * LOGS_PER_PAGE;
 
-    logs.sort((a, b) => new Date(b.date) - new Date(a.date));
-
-    const typeEmoji = {
-        'User banned': '🔨',
-        'User kicked': '👢',
-        'User muted': '🔇',
-        'User warned': '⚠️',
-        'User unbanned': '✅',
-        'User unmuted': '🔊',
-        'Messages purged': '🧹',
-        'User banned (auto)': '🤖🔨',
-        'User kicked (auto)': '🤖👢',
-        'User muted (auto)': '🤖🔇'
-    };
+    const logs = await db.ModLog
+        .find({ guildId, targetId: userId })
+        .sort({ date: -1 })
+        .skip(skip)
+        .limit(LOGS_PER_PAGE)
+        .lean();
 
     const typeLabel = (action) => {
         const a = (action || '').toLowerCase();
@@ -464,21 +413,18 @@ function formatModerationHistory(userId, guildId, username) {
 
     let output = `**Modlogs for ${username}**\n`;
 
-    for (const log of logs.slice(0, 10)) {
-        const emoji = typeEmoji[log.action] || '📌';
+    for (const log of logs) {
         const tipo = typeLabel(log.action);
         const durata = log.duration ? ` (${log.duration})` : '';
         const timestamp = Math.floor(new Date(log.date).getTime() / 1000);
 
-        output += `\n**Case ${log.id}**\n`;
-        output += `${emoji} Type: **${tipo}**${durata}\n`;
-        output += `Moderator: **${log.moderatorTag} (${log.moderatorId})**\n`;
-        output += `Reason: **${log.reason}** - <t:${timestamp}:R>\n`;
+        output += `\n**Case ${log.caseId}**\n`;
+        output += `**Type**: ${tipo}${durata}\n`;
+        output += `**Moderator**: ${log.moderatorTag} (${log.moderatorId})\n`;
+        output += `**Reason**: ${log.reason} - <t:${timestamp}:f>\n`;
     }
 
-    if (logs.length > 10) {
-        output += `\n*...e altre ${logs.length - 10} sanzioni*`;
-    }
+    output += `\nPage ${safePage}/${totalPages} | Total Logs: ${totalLogs} | ${userId}`;
 
     return output;
 }
@@ -486,11 +432,6 @@ function formatModerationHistory(userId, guildId, username) {
 function formatFullDate(date) {
     const timestamp = Math.floor(date.getTime() / 1000);
     return `<t:${timestamp}:F>`;
-}
-
-function formatHammerTime(date) {
-    const timestamp = Math.floor(date.getTime() / 1000);
-    return `<t:${timestamp}:R>`;
 }
 
 function isValidUrl(string) {
@@ -505,7 +446,7 @@ function isValidUrl(string) {
 
 async function sendJoinLog(member) {
     try {
-        const config = getGuildConfig(member.guild.id);
+        const config = await getGuildConfig(member.guild.id);
         const channel = client.channels.cache.get(config.joinLeaveLogChannelId);
         if (!channel) return;
         const embed = new EmbedBuilder()
@@ -528,7 +469,7 @@ async function sendJoinLog(member) {
 
 async function sendLeaveLog(member) {
     try {
-        const config = getGuildConfig(member.guild.id);
+        const config = await getGuildConfig(member.guild.id);
         const channel = client.channels.cache.get(config.joinLeaveLogChannelId);
         if (!channel) return;
         const embed = new EmbedBuilder()
@@ -658,7 +599,7 @@ async function createTicket(interaction, ticketType, data) {
     };
     const config = typeConfig[ticketType];
     if (!config) return interaction.reply({ content: 'Tipo di ticket non valido.', flags: 64 });
-    const guildConfig = getGuildConfig(interaction.guild.id);
+    const guildConfig = await getGuildConfig(interaction.guild.id);
     const staffRoleId = guildConfig.staffRoleId;
     const categoryId = guildConfig[config.categoryKey];
     if (!staffRoleId) return interaction.reply({ content: 'Staff role not configured. Please run `*setup` first.', flags: 64 });
@@ -741,7 +682,7 @@ async function generateTicketTranscript(channel, closer) {
         const fileName = `transcript-${channel.name}-${Date.now()}.txt`;
         const filePath = path.join(TRANSCRIPTS_DIR, fileName);
         fs.writeFileSync(filePath, transcript);
-        const config = getGuildConfig(channel.guild.id);
+        const config = await getGuildConfig(channel.guild.id);
         const transcriptChannel = client.channels.cache.get(config.transcriptsChannelId);
         if (transcriptChannel) {
             await transcriptChannel.send({
@@ -757,35 +698,45 @@ async function generateTicketTranscript(channel, closer) {
     }
 }
 
-function loadData() {
-    const saved = safeReadJSON(MODLOGS_FILE, {});
-    userModLogs.clear();
-    for (const [userId, logs] of Object.entries(saved)) userModLogs.set(userId, logs);
-    loadServerConfigs();
-    loadWarnings();
+async function canUsePageCommand(member, guildId) {
+    try {
+        const mdCmd = await db.CustomCommand.findOne({ guildId, name: 'md' }).lean();
+        if (!mdCmd) {
+            return (await isAdminSafe(member)) || (await isModeratorSafe(member));
+        }
+        if (Array.isArray(mdCmd.allowedRoles)) {
+            if (mdCmd.allowedRoles.length === 0) return false;
+            return mdCmd.allowedRoles.some(roleId => member.roles?.cache?.has(roleId));
+        }
+        const perm = mdCmd.permission || 'everyone';
+        if (perm === 'admin') return await isAdminSafe(member);
+        if (perm === 'mod') return await hasModPerms(member);
+        if (perm === 'staff') return await isStaffSafe(member);
+        return true;
+    } catch {
+        return (await isAdminSafe(member)) || (await isModeratorSafe(member));
+    }
 }
 
-function saveData() {
-    const modLogsObject = {};
-    for (const [userId, logs] of userModLogs.entries()) modLogsObject[userId] = logs;
-    safeWriteJSON(MODLOGS_FILE, modLogsObject);
-    saveWarnings();
-}
+client.once('clientReady', async () => {
 
-client.once('ready', async () => {
     console.log(`Bot PredCord connesso come ${client.user.tag}`);
-    loadServerConfigs();
-    loadWarnings();
-    loadData();
-    const customCmds = loadCustomCommands();
-    const totalCmds = Object.values(customCmds).reduce((acc, g) => acc + Object.keys(g).length, 0);
-    console.log(`[CUSTOM] Comandi custom caricati: ${totalCmds} in ${Object.keys(customCmds).length} server`);
+
+    const connected = await db.connectDB();
+    if (!connected) {
+        console.error('[DB] Impossibile connettersi a MongoDB. Verifica MONGODB_URI nel .env');
+        process.exit(1);
+    }
+
+    console.log('[DB] Database pronto');
 
     global.PredCord = {
         client,
         getGuildConfig,
-        loadCustomCommands,
-        saveCustomCommands,
+        saveConfig,
+        loadCustomCommands: async (guildId) => await db.loadCustomCommandsDB(guildId),
+        saveCustomCommands: async (guildId, name, data) => await db.saveCustomCommandDB(guildId, name, data),
+        deleteCustomCommand: async (guildId, name) => await db.deleteCustomCommandDB(guildId, name),
         isAdminSafe,
         isModeratorSafe,
         isStaffSafe,
@@ -793,15 +744,14 @@ client.once('ready', async () => {
         COLORS,
         THUMBNAIL_URL,
         EmbedBuilder,
-        userModLogs,
-        warnings,
         getUserWarnings,
         addWarning,
         removeWarning,
         clearWarnings,
         saveModLog,
-        saveData,
-        formatModerationHistory
+        formatModerationHistory,
+        getProjectedRolesDB: async (guildId) => await db.getProjectedRolesDB(guildId),
+        db
     };
     console.log('[DASHBOARD] API global.PredCord esposte');
 });
@@ -827,7 +777,7 @@ client.on(Events.MessageDelete, async (message) => {
     try {
         if (!message.guild) return;
         if (message.author?.bot) return;
-        const config = getGuildConfig(message.guild.id);
+        const config = await getGuildConfig(message.guild.id);
         const logChannel = client.channels.cache.get(config.messageLogChannelId);
         if (!logChannel) return;
         const embed = new EmbedBuilder()
@@ -850,7 +800,7 @@ client.on(Events.MessageUpdate, async (oldMessage, newMessage) => {
         if (!newMessage.guild) return;
         if (oldMessage.content === newMessage.content) return;
         if (newMessage.author?.bot) return;
-        const config = getGuildConfig(newMessage.guild.id);
+        const config = await getGuildConfig(newMessage.guild.id);
         const logChannel = client.channels.cache.get(config.messageLogChannelId);
         if (!logChannel) return;
         const embed = new EmbedBuilder()
@@ -873,901 +823,957 @@ client.on('messageCreate', async (message) => {
     try {
         if (message.author.bot) return;
         if (!message.guild) return;
-        if (!message.content.startsWith('*')) return;
+        if (!message.content) return;
+
+        const firstChar = message.content.charAt(0);
+
+        if (/^[a-zA-Z0-9]/.test(firstChar)) return;
+
         const args = message.content.slice(1).trim().split(/ +/);
         const command = args.shift().toLowerCase();
-        const hasModPermsCheck = hasModPerms(message.member);
 
-        if (command === 'help') {
-            if (!canUseBaseCommands(message.member)) {
-                await message.delete().catch(() => {});
-                return;
-            }
-            const embed = new EmbedBuilder()
-                .setTitle('PredCord Commands')
-                .setDescription('Comandi disponibili in base al tuo ruolo:')
-                .setColor(COLORS.INFO)
-                .setThumbnail(THUMBNAIL_URL)
-                .addFields(
-                    { name: 'Admin Only', value: '`*setup` - Configure bot\n`*sendticket` - Send ticket message', inline: false },
-                    { name: 'Mod & Admin', value: '`*av [user]` - Show avatar\n`*w [user]` - User info\n`*server` - Server info\n`*social` - Social links\n`*help` - This message', inline: false },
-                    { name: 'Warnings (Mod+)', value: '`*warn @user/ID [reason]`\n`*warnings @user/ID`\n`*delwarn @user/ID [id]`\n`*clearwarns @user/ID`', inline: false },
-                    { name: 'Moderation (Mod+)', value: '`*ban @user/ID [reason]`\n`*unban ID`\n`*kick @user/ID [reason]`\n`*mute @user/ID [minutes] [reason]`\n`*unmute @user/ID`\n`*purge [1-100]`', inline: false },
-                    { name: 'Tickets', value: 'Staff/Mod/Admin: `*tickets`', inline: false }
-                );
-            await message.channel.send({ embeds: [embed] });
-            await message.delete().catch(() => {});
-            return;
-        }
+        const customCmds = await db.loadCustomCommandsDB(message.guild.id);
 
-        if (command === 'av') {
-            if (!canUseBaseCommands(message.member)) {
-                await message.delete().catch(() => {});
-                return;
-            }
-            const user = message.mentions.users.first() || message.author;
-            const embed = new EmbedBuilder()
-                .setTitle(`${user.tag}'s Avatar`)
-                .setImage(user.displayAvatarURL({ dynamic: true, size: 4096 }))
-                .setColor(COLORS.INFO)
-                .setThumbnail(THUMBNAIL_URL);
-            await message.channel.send({ embeds: [embed] });
-            await message.delete().catch(() => {});
-            return;
-        }
+        if (customCmds && customCmds[command]) {
+            const cmdData = customCmds[command];
+            const cmdPrefix = cmdData.prefix || '*';
 
-        if (command === 'w') {
-            if (!canUseBaseCommands(message.member)) {
-                await message.delete().catch(() => {});
-                return;
-            }
-            let targetUser = message.mentions.users.first();
-            const userId = args[0];
-            if (!targetUser && userId && /^\d+$/.test(userId)) {
-                try {
-                    const fetched = await message.guild.members.fetch(userId);
-                    targetUser = fetched.user;
-                } catch { targetUser = null; }
-            }
-            const user = targetUser || message.author;
-            let member = message.guild.members.cache.get(user.id);
-            if (!member) member = await message.guild.members.fetch(user.id).catch(() => null);
-            if (!member) {
-                const embed = new EmbedBuilder().setDescription('User not found on this server.').setColor(COLORS.ERROR).setThumbnail(THUMBNAIL_URL);
-                await message.channel.send({ embeds: [embed] });
-                await message.delete().catch(() => {});
-                return;
-            }
-            const roles = member.roles.cache.filter(r => r.id !== message.guild.id).map(r => r.toString()).join(', ') || 'No roles';
-            const embed = new EmbedBuilder()
-                .setTitle(`Information about ${user.tag}`)
-                .setThumbnail(user.displayAvatarURL({ dynamic: true, size: 1024 }))
-                .setColor(COLORS.INFO)
-                .addFields(
-                    { name: 'Member since', value: formatFullDate(member.joinedAt), inline: true },
-                    { name: 'Account created', value: formatFullDate(user.createdAt), inline: true },
-                    { name: 'ID', value: user.id, inline: true },
-                    { name: 'Roles', value: roles.substring(0, 1024), inline: false }
-                );
-            await message.channel.send({ embeds: [embed] });
-            await message.delete().catch(() => {});
-            return;
-        }
-
-        if (command === 'server') {
-            if (!canUseBaseCommands(message.member)) {
-                await message.delete().catch(() => {});
-                return;
-            }
-            const guild = message.guild;
-            const embed = new EmbedBuilder()
-                .setTitle(`Information about ${guild.name}`)
-                .setThumbnail(guild.iconURL({ dynamic: true, size: 1024 }))
-                .setColor(COLORS.INFO)
-                .addFields(
-                    { name: 'Owner', value: `<@${guild.ownerId}>`, inline: true },
-                    { name: 'Members', value: `${guild.memberCount}`, inline: true },
-                    { name: 'Channels', value: `${guild.channels.cache.size}`, inline: true },
-                    { name: 'Roles', value: `${guild.roles.cache.size}`, inline: true },
-                    { name: 'Created on', value: formatFullDate(guild.createdAt), inline: true },
-                    { name: 'ID', value: guild.id, inline: true }
-                );
-            await message.channel.send({ embeds: [embed] });
-            await message.delete().catch(() => {});
-            return;
-        }
-
-        if (command === 'social') {
-            if (!canUseBaseCommands(message.member)) {
-                await message.delete().catch(() => {});
-                return;
-            }
-            await sendSocialEmbed(message.channel);
-            await message.delete().catch(() => {});
-            return;
-        }
-
-        if (command === 'warn') {
-            if (!hasModPermsCheck) { await message.delete().catch(() => {}); return; }
-            const input = args[0];
-            if (!input) {
-                const embed = new EmbedBuilder().setDescription('You need to mention a user or provide an ID.\nExample: `*warn @user reason`').setColor(COLORS.ERROR).setThumbnail(THUMBNAIL_URL);
-                await message.channel.send({ embeds: [embed] });
-                await message.delete().catch(() => {});
-                return;
-            }
-            const result = await getUserFromInput(message.guild, input);
-            if (!result || !result.user) {
-                const embed = new EmbedBuilder().setDescription('User not found.').setColor(COLORS.ERROR).setThumbnail(THUMBNAIL_URL);
-                await message.channel.send({ embeds: [embed] });
-                await message.delete().catch(() => {});
-                return;
-            }
-            const user = result.user;
-            const reason = args.slice(1).join(' ') || 'No reason provided';
-            const warningId = await addWarning(message.guild, user, message.author, reason);
-            await sendActionDM(user, 'warned', reason, { tag: message.author.tag, guild: message.guild });
-            const embed = new EmbedBuilder()
-                .setTitle('User warned')
-                .setDescription(`${user.toString()} has been warned`)
-                .setColor(COLORS.WARNING)
-                .setThumbnail(THUMBNAIL_URL)
-                .addFields(
-                    { name: 'Reason', value: reason, inline: false },
-                    { name: 'Warning ID', value: `#${warningId}`, inline: true }
-                );
-            await message.channel.send({ embeds: [embed] });
-            await saveModLog(message.guild, 'User warned', user, message.author, reason);
-            await message.delete().catch(() => {});
-            return;
-        }
-
-        if (command === 'warnings') {
-            if (!hasModPermsCheck) { await message.delete().catch(() => {}); return; }
-            const input = args[0];
-            if (!input) {
-                const embed = new EmbedBuilder().setDescription('You need to mention a user or provide an ID.').setColor(COLORS.ERROR).setThumbnail(THUMBNAIL_URL);
-                await message.channel.send({ embeds: [embed] });
-                await message.delete().catch(() => {});
-                return;
-            }
-            const result = await getUserFromInput(message.guild, input);
-            if (!result || !result.user) {
-                const embed = new EmbedBuilder().setDescription('User not found.').setColor(COLORS.ERROR).setThumbnail(THUMBNAIL_URL);
-                await message.channel.send({ embeds: [embed] });
-                await message.delete().catch(() => {});
-                return;
-            }
-            const user = result.user;
-            const userWarnings = await getUserWarnings(user.id);
-            if (userWarnings.length === 0) {
-                const embed = new EmbedBuilder().setDescription(`${user.toString()} has no warnings.`).setColor(COLORS.SUCCESS).setThumbnail(THUMBNAIL_URL);
-                await message.channel.send({ embeds: [embed] });
-            } else {
-                let warningsList = '';
-                for (const warn of userWarnings) {
-                    warningsList += `**#${warn.id}** - ${warn.reason}\n*By ${warn.moderatorTag} on ${warn.dateFormatted}*\n\n`;
-                }
-                const embed = new EmbedBuilder().setTitle(`Warnings for ${user.tag}`).setDescription(warningsList).setColor(COLORS.WARNING).setThumbnail(THUMBNAIL_URL);
-                await message.channel.send({ embeds: [embed] });
-            }
-            await message.delete().catch(() => {});
-            return;
-        }
-
-        if (command === 'delwarn') {
-            if (!hasModPermsCheck) { await message.delete().catch(() => {}); return; }
-            const input = args[0];
-            const warningId = args[1];
-            if (!input || !warningId) {
-                const embed = new EmbedBuilder().setDescription('You need to mention a user and specify warning ID.').setColor(COLORS.ERROR).setThumbnail(THUMBNAIL_URL);
-                await message.channel.send({ embeds: [embed] });
-                await message.delete().catch(() => {});
-                return;
-            }
-            const result = await getUserFromInput(message.guild, input);
-            if (!result || !result.user) {
-                const embed = new EmbedBuilder().setDescription('User not found.').setColor(COLORS.ERROR).setThumbnail(THUMBNAIL_URL);
-                await message.channel.send({ embeds: [embed] });
-                await message.delete().catch(() => {});
-                return;
-            }
-            const user = result.user;
-            const success = await removeWarning(message.guild, user, message.author, warningId);
-            if (success) {
-                const embed = new EmbedBuilder().setDescription(`Warning #${warningId} removed from ${user.toString()}`).setColor(COLORS.SUCCESS).setThumbnail(THUMBNAIL_URL);
-                await message.channel.send({ embeds: [embed] });
-            } else {
-                const embed = new EmbedBuilder().setDescription(`Warning #${warningId} not found for ${user.toString()}`).setColor(COLORS.ERROR).setThumbnail(THUMBNAIL_URL);
-                await message.channel.send({ embeds: [embed] });
-            }
-            await message.delete().catch(() => {});
-            return;
-        }
-
-        if (command === 'clearwarns') {
-            if (!hasModPermsCheck) { await message.delete().catch(() => {}); return; }
-            const input = args[0];
-            if (!input) {
-                const embed = new EmbedBuilder().setDescription('You need to mention a user or provide an ID.').setColor(COLORS.ERROR).setThumbnail(THUMBNAIL_URL);
-                await message.channel.send({ embeds: [embed] });
-                await message.delete().catch(() => {});
-                return;
-            }
-            const result = await getUserFromInput(message.guild, input);
-            if (!result || !result.user) {
-                const embed = new EmbedBuilder().setDescription('User not found.').setColor(COLORS.ERROR).setThumbnail(THUMBNAIL_URL);
-                await message.channel.send({ embeds: [embed] });
-                await message.delete().catch(() => {});
-                return;
-            }
-            const user = result.user;
-            await clearWarnings(message.guild, user, message.author);
-            const embed = new EmbedBuilder().setDescription(`All warnings cleared for ${user.toString()}`).setColor(COLORS.SUCCESS).setThumbnail(THUMBNAIL_URL);
-            await message.channel.send({ embeds: [embed] });
-            await message.delete().catch(() => {});
-            return;
-        }
-
-        if (message.content === '*setup') {
-            if (!canUseSetupCommand(message.member)) return;
-            const config = getGuildConfig(message.guild.id);
-            const embed = new EmbedBuilder()
-                .setTitle('Setup Panel - PredCord')
-                .setDescription('Configure your server settings by typing `*setup <number>`\n\nExample: `*setup 1 #channel`')
-                .setColor(COLORS.INFO)
-                .setThumbnail(THUMBNAIL_URL)
-                .addFields(
-                    { name: '01. Join/Leave Log', value: config.joinLeaveLogChannelId ? `<#${config.joinLeaveLogChannelId}>` : 'Not set', inline: true },
-                    { name: '02. Mod Log', value: config.modLogChannelId ? `<#${config.modLogChannelId}>` : 'Not set', inline: true },
-                    { name: '03. Message Log', value: config.messageLogChannelId ? `<#${config.messageLogChannelId}>` : 'Not set', inline: true },
-                    { name: '04. Transcripts', value: config.transcriptsChannelId ? `<#${config.transcriptsChannelId}>` : 'Not set', inline: true },
-                    { name: '05. Staff Role', value: config.staffRoleId ? `<@&${config.staffRoleId}>` : 'Not set', inline: true },
-                    { name: '06. Mod Role', value: config.modRoleId ? `<@&${config.modRoleId}>` : 'Not set', inline: true },
-                    { name: '07. Admin Role', value: config.adminRoleId ? `<@&${config.adminRoleId}>` : 'Not set', inline: true },
-                    { name: '08. Support Category', value: config.supportCategoryId ? `<#${config.supportCategoryId}>` : 'Not set', inline: true },
-                    { name: '09. Report Category', value: config.reportCategoryId ? `<#${config.reportCategoryId}>` : 'Not set', inline: true }
-                );
-            await message.reply({ embeds: [embed] });
-            return;
-        }
-
-        if (message.content.startsWith('*setup ')) {
-            if (!canUseSetupCommand(message.member)) return;
-            const num = parseInt(message.content.split(' ')[1]);
-            if (isNaN(num)) return;
-            const settingNames = {
-                1: 'joinLeaveLogChannelId', 2: 'modLogChannelId', 3: 'messageLogChannelId',
-                4: 'transcriptsChannelId', 5: 'staffRoleId', 6: 'modRoleId', 7: 'adminRoleId',
-                8: 'supportCategoryId', 9: 'reportCategoryId'
-            };
-            if (!settingNames[num]) return;
-            const isRoleConfig = (num === 5 || num === 6 || num === 7);
-            const typeText = isRoleConfig ? 'Role' : 'Channel';
-            const embed = new EmbedBuilder()
-                .setTitle('Configuration')
-                .setDescription(`Please send the ${isRoleConfig ? 'role ID or mention the role' : 'channel ID or mention the channel'}.\n\nType \`cancel\` to abort.`)
-                .setColor(COLORS.INFO)
-                .setThumbnail(THUMBNAIL_URL);
-            await message.reply({ embeds: [embed] });
-            const filter = (m) => m.author.id === message.author.id;
-            const collector = message.channel.createMessageCollector({ filter, time: 60000, max: 1 });
-            collector.on('collect', async (msg) => {
-                try {
-                    if (msg.content.toLowerCase() === 'cancel') {
-                        const cancelEmbed = new EmbedBuilder().setDescription('Configuration cancelled.').setColor(COLORS.WARNING).setThumbnail(THUMBNAIL_URL);
-                        await msg.reply({ embeds: [cancelEmbed] });
+            if (cmdPrefix === firstChar) {
+                const hasPermission = checkCustomCommandPermission(cmdData, message.member);
+                if (hasPermission) {
+                    const cooldown = await db.getCommandCooldownDB(message.author.id, message.guild.id, `custom_${command}`);
+                    if (cooldown) {
+                        const remaining = Math.ceil((new Date(cooldown.expiresAt).getTime() - Date.now()) / 1000);
+                        const embed = new EmbedBuilder()
+                            .setDescription(`Attendi **${remaining}s** prima di riusare questo comando.`)
+                            .setColor(COLORS.WARNING);
+                        const msg = await message.channel.send({ embeds: [embed] });
+                        setTimeout(() => msg.delete().catch(() => {}), 3000);
+                        await message.delete().catch(() => {});
                         return;
                     }
-                    let value = null;
-                    const content = msg.content.trim();
-                    const channelMentionMatch = content.match(/<#(\d+)>/);
-                    const roleMentionMatch = content.match(/<@&(\d+)>/);
-                    const idMatch = content.match(/^(\d+)$/);
-                    if (channelMentionMatch) value = channelMentionMatch[1];
-                    else if (roleMentionMatch) value = roleMentionMatch[1];
-                    else if (idMatch) value = idMatch[1];
-                    if (!value) {
-                        const errorEmbed = new EmbedBuilder().setDescription('Invalid format. Please send an ID or a valid mention.').setColor(COLORS.ERROR).setThumbnail(THUMBNAIL_URL);
+                    await db.setCommandCooldownDB(message.author.id, message.guild.id, `custom_${command}`, COMMAND_COOLDOWN_SECONDS);
+                    await handleCustomCommand(message, command, args, cmdData);
+                    return;
+                } else {
+                    return;
+                }
+            }
+        }
+
+        if (firstChar === NATIVE_PREFIX) {
+            const cooldown = await db.getCommandCooldownDB(message.author.id, message.guild.id, `native_${command}`);
+            if (cooldown) {
+                const remaining = Math.ceil((new Date(cooldown.expiresAt).getTime() - Date.now()) / 1000);
+                const embed = new EmbedBuilder()
+                    .setDescription(`Attendi **${remaining}s** prima di riusare questo comando.`)
+                    .setColor(COLORS.WARNING);
+                const msg = await message.channel.send({ embeds: [embed] });
+                setTimeout(() => msg.delete().catch(() => {}), 3000);
+                await message.delete().catch(() => {});
+                return;
+            }
+            await db.setCommandCooldownDB(message.author.id, message.guild.id, `native_${command}`, COMMAND_COOLDOWN_SECONDS);
+            await handleNativeCommand(message, command, args);
+            return;
+        }
+
+    } catch (error) {
+        logCrash('MESSAGE_CREATE_HANDLER', error, { content: message?.content?.slice(0, 50) });
+    }
+});
+
+async function handleNativeCommand(message, command, args) {
+    if (command === 'page') {
+        const canUse = await canUsePageCommand(message.member, message.guild.id);
+        if (!canUse) { await message.delete().catch(() => {}); return; }
+
+        const input = args[0];
+        const pageArg = parseInt(args[1]);
+
+        if (!input) {
+            const embed = new EmbedBuilder().setDescription('Uso: `*page {userid} {pagina}`').setColor(COLORS.ERROR);
+            await message.channel.send({ embeds: [embed] });
+            await message.delete().catch(() => {});
+            return;
+        }
+
+        if (isNaN(pageArg) || pageArg < 1) {
+            const embed = new EmbedBuilder().setDescription('Specifica un numero di pagina valido (>= 1).').setColor(COLORS.ERROR);
+            await message.channel.send({ embeds: [embed] });
+            await message.delete().catch(() => {});
+            return;
+        }
+
+        let userId = null;
+        const mentionMatch = input.match(/^<@!?(\d+)>$/);
+        if (mentionMatch) userId = mentionMatch[1];
+        else if (/^\d+$/.test(input)) userId = input;
+
+        if (!userId) {
+            const embed = new EmbedBuilder().setDescription('ID utente non valido. Usa una mention o un ID.').setColor(COLORS.ERROR);
+            await message.channel.send({ embeds: [embed] });
+            await message.delete().catch(() => {});
+            return;
+        }
+
+        let username = `Unknown (${userId})`;
+        try {
+            const user = await client.users.fetch(userId);
+            username = user.username;
+        } catch {}
+
+        const totalLogs = await db.ModLog.countDocuments({ guildId: message.guild.id, targetId: userId });
+        if (totalLogs === 0) {
+            const embed = new EmbedBuilder().setDescription(`**${username}** has no modlogs.`).setColor(COLORS.INFO);
+            await message.channel.send({ embeds: [embed] });
+            await message.delete().catch(() => {});
+            return;
+        }
+
+        const totalPages = Math.max(1, Math.ceil(totalLogs / LOGS_PER_PAGE));
+        if (pageArg > totalPages) {
+            const embed = new EmbedBuilder().setDescription(`Invalid page. This user only has ${totalPages} pages.`).setColor(COLORS.ERROR);
+            await message.channel.send({ embeds: [embed] });
+            await message.delete().catch(() => {});
+            return;
+        }
+
+        const text = await formatModerationHistory(userId, message.guild.id, username, pageArg);
+        await message.channel.send(text);
+        await message.delete().catch(() => {});
+        return;
+    }
+
+    if (command === 'help') {
+        if (!(await canUseBaseCommands(message.member))) {
+            await message.delete().catch(() => {});
+            return;
+        }
+        const embed = new EmbedBuilder()
+            .setTitle('PredCord Commands')
+            .setDescription('Comandi disponibili in base al tuo ruolo:')
+            .setColor(COLORS.INFO)
+            .setThumbnail(THUMBNAIL_URL)
+            .addFields(
+                { name: 'Admin Only', value: '`*setup` - Configure bot\n`*sendticket` - Send ticket message', inline: false },
+                { name: 'Mod & Admin', value: '`*av [user]` - Show avatar\n`*w [user]` - User info\n`*server` - Server info\n`*social` - Social links\n`*page {userid} {page}` - Paginate modlogs\n`*help` - This message', inline: false },
+                { name: 'Warnings (Mod+)', value: '`*warnings @user/ID`\n`*clearwarns @user/ID`', inline: false },
+                { name: 'Bans (Mod+)', value: '`*ban @user/ID [reason]`\n`*unban ID`\n`*kick @user/ID [reason]`\n`*mute @user/ID [minutes] [reason]`\n`*unmute @user/ID`', inline: false }
+            );
+        await message.channel.send({ embeds: [embed] });
+        await message.delete().catch(() => {});
+        return;
+    }
+
+    if (command === 'av') {
+        if (!(await canUseBaseCommands(message.member))) {
+            await message.delete().catch(() => {});
+            return;
+        }
+        const user = message.mentions.users.first() || message.author;
+        const embed = new EmbedBuilder()
+            .setTitle(`${user.tag}'s Avatar`)
+            .setImage(user.displayAvatarURL({ dynamic: true, size: 4096 }))
+            .setColor(COLORS.INFO)
+            .setThumbnail(THUMBNAIL_URL);
+        await message.channel.send({ embeds: [embed] });
+        await message.delete().catch(() => {});
+        return;
+    }
+
+    if (command === 'w') {
+        if (!(await canUseBaseCommands(message.member))) {
+            await message.delete().catch(() => {});
+            return;
+        }
+        let targetUser = message.mentions.users.first();
+        const userId = args[0];
+        if (!targetUser && userId && /^\d+$/.test(userId)) {
+            try {
+                const fetched = await message.guild.members.fetch(userId);
+                targetUser = fetched.user;
+            } catch { targetUser = null; }
+        }
+        const user = targetUser || message.author;
+        let member = message.guild.members.cache.get(user.id);
+        if (!member) member = await message.guild.members.fetch(user.id).catch(() => null);
+        if (!member) {
+            const embed = new EmbedBuilder().setDescription('User not found on this server.').setColor(COLORS.ERROR).setThumbnail(THUMBNAIL_URL);
+            await message.channel.send({ embeds: [embed] });
+            await message.delete().catch(() => {});
+            return;
+        }
+        const roles = member.roles.cache.filter(r => r.id !== message.guild.id).map(r => r.toString()).join(', ') || 'No roles';
+        const embed = new EmbedBuilder()
+            .setTitle(`Information about ${user.tag}`)
+            .setThumbnail(user.displayAvatarURL({ dynamic: true, size: 1024 }))
+            .setColor(COLORS.INFO)
+            .addFields(
+                { name: 'Member since', value: formatFullDate(member.joinedAt), inline: true },
+                { name: 'Account created', value: formatFullDate(user.createdAt), inline: true },
+                { name: 'ID', value: user.id, inline: true },
+                { name: 'Roles', value: roles.substring(0, 1024), inline: false }
+            );
+        await message.channel.send({ embeds: [embed] });
+        await message.delete().catch(() => {});
+        return;
+    }
+
+    if (command === 'server') {
+        if (!(await canUseBaseCommands(message.member))) {
+            await message.delete().catch(() => {});
+            return;
+        }
+        const guild = message.guild;
+        const embed = new EmbedBuilder()
+            .setTitle(`Information about ${guild.name}`)
+            .setThumbnail(guild.iconURL({ dynamic: true, size: 1024 }))
+            .setColor(COLORS.INFO)
+            .addFields(
+                { name: 'Owner', value: `<@${guild.ownerId}>`, inline: true },
+                { name: 'Members', value: `${guild.memberCount}`, inline: true },
+                { name: 'Channels', value: `${guild.channels.cache.size}`, inline: true },
+                { name: 'Roles', value: `${guild.roles.cache.size}`, inline: true },
+                { name: 'Created on', value: formatFullDate(guild.createdAt), inline: true },
+                { name: 'ID', value: guild.id, inline: true }
+            );
+        await message.channel.send({ embeds: [embed] });
+        await message.delete().catch(() => {});
+        return;
+    }
+
+    if (command === 'social') {
+        if (!(await canUseBaseCommands(message.member))) {
+            await message.delete().catch(() => {});
+            return;
+        }
+        await sendSocialEmbed(message.channel);
+        await message.delete().catch(() => {});
+        return;
+    }
+
+    if (command === 'warnings') {
+        if (!(await hasModPerms(message.member))) { await message.delete().catch(() => {}); return; }
+        const input = args[0];
+        if (!input) {
+            const embed = new EmbedBuilder().setDescription('You need to mention a user or provide an ID.').setColor(COLORS.ERROR).setThumbnail(THUMBNAIL_URL);
+            await message.channel.send({ embeds: [embed] });
+            await message.delete().catch(() => {});
+            return;
+        }
+        const result = await getUserFromInput(message.guild, input);
+        if (!result || !result.user) {
+            const embed = new EmbedBuilder().setDescription('User not found.').setColor(COLORS.ERROR).setThumbnail(THUMBNAIL_URL);
+            await message.channel.send({ embeds: [embed] });
+            await message.delete().catch(() => {});
+            return;
+        }
+        const user = result.user;
+        const userWarnings = await getUserWarnings(user.id, message.guild.id);
+        if (userWarnings.length === 0) {
+            const embed = new EmbedBuilder().setDescription(`${user.toString()} has no warnings.`).setColor(COLORS.SUCCESS).setThumbnail(THUMBNAIL_URL);
+            await message.channel.send({ embeds: [embed] });
+        } else {
+            let warningsList = '';
+            for (const warn of userWarnings) {
+                const ts = Math.floor(new Date(warn.date).getTime() / 1000);
+                warningsList += `**#${warn.warningId}** - ${warn.reason}\n*By ${warn.moderatorTag} - <t:${ts}:R>*\n\n`;
+            }
+            const embed = new EmbedBuilder().setTitle(`Warnings for ${user.tag}`).setDescription(warningsList).setColor(COLORS.WARNING).setThumbnail(THUMBNAIL_URL);
+            await message.channel.send({ embeds: [embed] });
+        }
+        await message.delete().catch(() => {});
+        return;
+    }
+
+    if (command === 'clearwarns') {
+        if (!(await hasModPerms(message.member))) { await message.delete().catch(() => {}); return; }
+        const input = args[0];
+        if (!input) {
+            const embed = new EmbedBuilder().setDescription('You need to mention a user or provide an ID.').setColor(COLORS.ERROR).setThumbnail(THUMBNAIL_URL);
+            await message.channel.send({ embeds: [embed] });
+            await message.delete().catch(() => {});
+            return;
+        }
+        const result = await getUserFromInput(message.guild, input);
+        if (!result || !result.user) {
+            const embed = new EmbedBuilder().setDescription('User not found.').setColor(COLORS.ERROR).setThumbnail(THUMBNAIL_URL);
+            await message.channel.send({ embeds: [embed] });
+            await message.delete().catch(() => {});
+            return;
+        }
+        const user = result.user;
+        await clearWarnings(message.guild, user, message.author);
+        const embed = new EmbedBuilder().setDescription(`All warnings cleared for ${user.toString()}`).setColor(COLORS.SUCCESS).setThumbnail(THUMBNAIL_URL);
+        await message.channel.send({ embeds: [embed] });
+        await message.delete().catch(() => {});
+        return;
+    }
+
+    if (message.content === `${NATIVE_PREFIX}setup`) {
+        if (!(await canUseSetupCommand(message.member))) return;
+        const config = await getGuildConfig(message.guild.id);
+        const embed = new EmbedBuilder()
+            .setTitle('Setup Panel - PredCord')
+            .setDescription('Configure your server settings by typing `*setup <number>`\n\nExample: `*setup 1 #channel`')
+            .setColor(COLORS.INFO)
+            .setThumbnail(THUMBNAIL_URL)
+            .addFields(
+                { name: '01. Join/Leave Log', value: config.joinLeaveLogChannelId ? `<#${config.joinLeaveLogChannelId}>` : 'Not set', inline: true },
+                { name: '02. Mod Log', value: config.modLogChannelId ? `<#${config.modLogChannelId}>` : 'Not set', inline: true },
+                { name: '03. Message Log', value: config.messageLogChannelId ? `<#${config.messageLogChannelId}>` : 'Not set', inline: true },
+                { name: '04. Transcripts', value: config.transcriptsChannelId ? `<#${config.transcriptsChannelId}>` : 'Not set', inline: true },
+                { name: '05. Staff Role', value: config.staffRoleId ? `<@&${config.staffRoleId}>` : 'Not set', inline: true },
+                { name: '06. Mod Role', value: config.modRoleId ? `<@&${config.modRoleId}>` : 'Not set', inline: true },
+                { name: '07. Admin Role', value: config.adminRoleId ? `<@&${config.adminRoleId}>` : 'Not set', inline: true },
+                { name: '08. Support Category', value: config.supportCategoryId ? `<#${config.supportCategoryId}>` : 'Not set', inline: true },
+                { name: '09. Report Category', value: config.reportCategoryId ? `<#${config.reportCategoryId}>` : 'Not set', inline: true }
+            );
+        await message.reply({ embeds: [embed] });
+        return;
+    }
+
+    if (message.content.startsWith(`${NATIVE_PREFIX}setup `)) {
+        if (!(await canUseSetupCommand(message.member))) return;
+        const num = parseInt(message.content.split(' ')[1]);
+        if (isNaN(num)) return;
+        const settingNames = {
+            1: 'joinLeaveLogChannelId', 2: 'modLogChannelId', 3: 'messageLogChannelId',
+            4: 'transcriptsChannelId', 5: 'staffRoleId', 6: 'modRoleId', 7: 'adminRoleId',
+            8: 'supportCategoryId', 9: 'reportCategoryId'
+        };
+        if (!settingNames[num]) return;
+        const isRoleConfig = (num === 5 || num === 6 || num === 7);
+        const typeText = isRoleConfig ? 'Role' : 'Channel';
+        const embed = new EmbedBuilder()
+            .setTitle('Configuration')
+            .setDescription(`Please send the ${isRoleConfig ? 'role ID or mention the role' : 'channel ID or mention the channel'}.\n\nType \`cancel\` to abort.`)
+            .setColor(COLORS.INFO)
+            .setThumbnail(THUMBNAIL_URL);
+        await message.reply({ embeds: [embed] });
+        const filter = (m) => m.author.id === message.author.id;
+        const collector = message.channel.createMessageCollector({ filter, time: 60000, max: 1 });
+        collector.on('collect', async (msg) => {
+            try {
+                if (msg.content.toLowerCase() === 'cancel') {
+                    const cancelEmbed = new EmbedBuilder().setDescription('Configuration cancelled.').setColor(COLORS.WARNING).setThumbnail(THUMBNAIL_URL);
+                    await msg.reply({ embeds: [cancelEmbed] });
+                    return;
+                }
+                let value = null;
+                const content = msg.content.trim();
+                const channelMentionMatch = content.match(/<#(\d+)>/);
+                const roleMentionMatch = content.match(/<@&(\d+)>/);
+                const idMatch = content.match(/^(\d+)$/);
+                if (channelMentionMatch) value = channelMentionMatch[1];
+                else if (roleMentionMatch) value = roleMentionMatch[1];
+                else if (idMatch) value = idMatch[1];
+                if (!value) {
+                    const errorEmbed = new EmbedBuilder().setDescription('Invalid format. Please send an ID or a valid mention.').setColor(COLORS.ERROR).setThumbnail(THUMBNAIL_URL);
+                    await msg.reply({ embeds: [errorEmbed] });
+                    return;
+                }
+                if (!isRoleConfig) {
+                    const channelExists = message.guild.channels.cache.get(value);
+                    if (!channelExists) {
+                        const errorEmbed = new EmbedBuilder().setDescription(`${typeText} not found.`).setColor(COLORS.ERROR).setThumbnail(THUMBNAIL_URL);
                         await msg.reply({ embeds: [errorEmbed] });
                         return;
                     }
-                    if (!isRoleConfig) {
-                        const channelExists = message.guild.channels.cache.get(value);
-                        if (!channelExists) {
-                            const errorEmbed = new EmbedBuilder().setDescription(`${typeText} not found.`).setColor(COLORS.ERROR).setThumbnail(THUMBNAIL_URL);
-                            await msg.reply({ embeds: [errorEmbed] });
-                            return;
-                        }
-                    } else {
-                        const roleExists = message.guild.roles.cache.get(value);
-                        if (!roleExists) {
-                            const errorEmbed = new EmbedBuilder().setDescription('Role not found.').setColor(COLORS.ERROR).setThumbnail(THUMBNAIL_URL);
-                            await msg.reply({ embeds: [errorEmbed] });
-                            return;
-                        }
+                } else {
+                    const roleExists = message.guild.roles.cache.get(value);
+                    if (!roleExists) {
+                        const errorEmbed = new EmbedBuilder().setDescription('Role not found.').setColor(COLORS.ERROR).setThumbnail(THUMBNAIL_URL);
+                        await msg.reply({ embeds: [errorEmbed] });
+                        return;
                     }
-                    saveConfig(message.guild.id, settingNames[num], value);
-                    const successEmbed = new EmbedBuilder()
-                        .setTitle('Configuration Saved')
-                        .setDescription(`${settingNames[num]} has been successfully configured!`)
-                        .addFields({ name: 'Value', value: isRoleConfig ? `<@&${value}>` : `<#${value}>`, inline: true })
-                        .setColor(COLORS.SUCCESS)
-                        .setThumbnail(THUMBNAIL_URL);
-                    await msg.reply({ embeds: [successEmbed] });
-                } catch (error) {
-                    logCrash('SETUP_COLLECTOR', error);
                 }
-            });
-            collector.on('end', (collected, reason) => {
-                if (collected.size === 0 && reason === 'time') {
-                    const timeoutEmbed = new EmbedBuilder().setDescription('Time expired. Run `*setup` again.').setColor(COLORS.ERROR).setThumbnail(THUMBNAIL_URL);
-                    message.channel.send({ embeds: [timeoutEmbed] }).catch(() => {});
-                }
-            });
-            return;
-        }
+                await saveConfig(message.guild.id, settingNames[num], value);
+                const successEmbed = new EmbedBuilder()
+                    .setTitle('Configuration Saved')
+                    .setDescription(`${settingNames[num]} has been successfully configured!`)
+                    .addFields({ name: 'Value', value: isRoleConfig ? `<@&${value}>` : `<#${value}>`, inline: true })
+                    .setColor(COLORS.SUCCESS)
+                    .setThumbnail(THUMBNAIL_URL);
+                await msg.reply({ embeds: [successEmbed] });
+            } catch (error) {
+                logCrash('SETUP_COLLECTOR', error);
+            }
+        });
+        collector.on('end', (collected, reason) => {
+            if (collected.size === 0 && reason === 'time') {
+                const timeoutEmbed = new EmbedBuilder().setDescription('Time expired. Run `*setup` again.').setColor(COLORS.ERROR).setThumbnail(THUMBNAIL_URL);
+                message.channel.send({ embeds: [timeoutEmbed] }).catch(() => {});
+            }
+        });
+        return;
+    }
 
-        if (command === 'sendticket') {
-            if (!canUseSetupCommand(message.member)) return;
-            const config = getGuildConfig(message.guild.id);
-            if (!config.staffRoleId) {
-                const embed = new EmbedBuilder().setDescription('Staff role not configured. Run `*setup` option 05.').setColor(COLORS.ERROR).setThumbnail(THUMBNAIL_URL);
-                return message.reply({ embeds: [embed] });
-            }
-            if (!config.supportCategoryId) {
-                const embed = new EmbedBuilder().setDescription('Support category not configured. Run `*setup` option 08.').setColor(COLORS.ERROR).setThumbnail(THUMBNAIL_URL);
-                return message.reply({ embeds: [embed] });
-            }
-            if (!config.reportCategoryId) {
-                const embed = new EmbedBuilder().setDescription('Report category not configured. Run `*setup` option 09.').setColor(COLORS.ERROR).setThumbnail(THUMBNAIL_URL);
-                return message.reply({ embeds: [embed] });
-            }
-            const ticketEmbed = new EmbedBuilder()
-                .setTitle('Support and Report')
-                .setDescription('Click the button below to open a ticket.\n\nTicket types available:\n- Support\n- Report Player')
-                .setColor(COLORS.TICKET)
-                .setThumbnail(THUMBNAIL_URL);
-            const row = new ActionRowBuilder().addComponents(
-                new ButtonBuilder().setCustomId('create_ticket').setLabel('Create Ticket').setStyle(ButtonStyle.Primary)
-            );
-            await message.channel.send({ embeds: [ticketEmbed], components: [row] });
-            await message.delete().catch(() => {});
-            return;
+    if (command === 'sendticket') {
+        if (!(await canUseSetupCommand(message.member))) return;
+        const config = await getGuildConfig(message.guild.id);
+        if (!config.staffRoleId) {
+            const embed = new EmbedBuilder().setDescription('Staff role not configured. Run `*setup` option 05.').setColor(COLORS.ERROR).setThumbnail(THUMBNAIL_URL);
+            return message.reply({ embeds: [embed] });
         }
+        if (!config.supportCategoryId) {
+            const embed = new EmbedBuilder().setDescription('Support category not configured. Run `*setup` option 08.').setColor(COLORS.ERROR).setThumbnail(THUMBNAIL_URL);
+            return message.reply({ embeds: [embed] });
+        }
+        if (!config.reportCategoryId) {
+            const embed = new EmbedBuilder().setDescription('Report category not configured. Run `*setup` option 09.').setColor(COLORS.ERROR).setThumbnail(THUMBNAIL_URL);
+            return message.reply({ embeds: [embed] });
+        }
+        const ticketEmbed = new EmbedBuilder()
+            .setTitle('Support and Report')
+            .setDescription('Click the button below to open a ticket.\n\nTicket types available:\n- Support\n- Report Player')
+            .setColor(COLORS.TICKET)
+            .setThumbnail(THUMBNAIL_URL);
+        const row = new ActionRowBuilder().addComponents(
+            new ButtonBuilder().setCustomId('create_ticket').setLabel('Create Ticket').setStyle(ButtonStyle.Primary)
+        );
+        await message.channel.send({ embeds: [ticketEmbed], components: [row] });
+        await message.delete().catch(() => {});
+        return;
+    }
 
-        if (command === 'tickets') {
-            if (!hasStaffPermission(message.member)) return;
-            const embed = new EmbedBuilder().setTitle('Ticket Statistics').setDescription('Feature coming soon!').setColor(COLORS.INFO).setThumbnail(THUMBNAIL_URL);
+    if (command === 'tickets') {
+        if (!(await hasStaffPermission(message.member))) return;
+        const embed = new EmbedBuilder().setTitle('Ticket Statistics').setDescription('Feature coming soon!').setColor(COLORS.INFO).setThumbnail(THUMBNAIL_URL);
+        await message.channel.send({ embeds: [embed] });
+        await message.delete().catch(() => {});
+        return;
+    }
+
+    if (command === 'ban') {
+        if (!(await hasModPerms(message.member))) { await message.delete().catch(() => {}); return; }
+        const input = args[0];
+        if (!input) {
+            const embed = new EmbedBuilder().setDescription('You need to mention a user or provide an ID.').setColor(COLORS.ERROR).setThumbnail(THUMBNAIL_URL);
             await message.channel.send({ embeds: [embed] });
             await message.delete().catch(() => {});
             return;
         }
+        const result = await getUserFromInput(message.guild, input);
+        if (!result || !result.user) {
+            const embed = new EmbedBuilder().setDescription('User not found.').setColor(COLORS.ERROR).setThumbnail(THUMBNAIL_URL);
+            await message.channel.send({ embeds: [embed] });
+            await message.delete().catch(() => {});
+            return;
+        }
+        const user = result.user;
+        const member = result.member;
+        if (await projectedRoleBlock(message, member)) return;
+        const reason = args.slice(1).join(' ') || 'No reason provided';
 
-        if (command === 'ban') {
-            if (!hasModPermsCheck) { await message.delete().catch(() => {}); return; }
-            const input = args[0];
-            if (!input) {
-                const embed = new EmbedBuilder().setDescription('You need to mention a user or provide an ID.').setColor(COLORS.ERROR).setThumbnail(THUMBNAIL_URL);
-                await message.channel.send({ embeds: [embed] });
-                await message.delete().catch(() => {});
-                return;
-            }
-            const result = await getUserFromInput(message.guild, input);
-            if (!result || !result.user) {
-                const embed = new EmbedBuilder().setDescription('User not found.').setColor(COLORS.ERROR).setThumbnail(THUMBNAIL_URL);
-                await message.channel.send({ embeds: [embed] });
-                await message.delete().catch(() => {});
-                return;
-            }
-            const user = result.user;
-            const member = result.member;
-            const reason = args.slice(1).join(' ') || 'No reason provided';
-            if (!member || !member.bannable) {
-                const embed = new EmbedBuilder().setDescription('I cannot ban this user.').setColor(COLORS.ERROR).setThumbnail(THUMBNAIL_URL);
-                await message.channel.send({ embeds: [embed] });
-                await message.delete().catch(() => {});
-                return;
-            }
-            try {
+        try {
+            if (member) {
+                if (!member.bannable) {
+                    const embed = new EmbedBuilder().setDescription('I cant moderate this user.').setColor(COLORS.ERROR).setThumbnail(THUMBNAIL_URL);
+                    await message.channel.send({ embeds: [embed] });
+                    await message.delete().catch(() => {});
+                    return;
+                }
                 await member.ban({ reason });
-                await sendActionDM(user, 'banned', reason, { tag: message.author.tag, guild: message.guild });
-                const embed = new EmbedBuilder().setTitle('User banned').setDescription(`${user.toString()} has been banned`).setColor(COLORS.ERROR).setThumbnail(THUMBNAIL_URL).addFields({ name: 'Reason', value: reason });
-                await message.channel.send({ embeds: [embed] });
-                await saveModLog(message.guild, 'User banned', user, message.author, reason);
-            } catch (error) {
-                const embed = new EmbedBuilder().setDescription('Error during ban.').setColor(COLORS.ERROR).setThumbnail(THUMBNAIL_URL);
-                await message.channel.send({ embeds: [embed] });
-            }
-            await message.delete().catch(() => {});
-            return;
-        }
-
-        if (command === 'unban') {
-            if (!hasModPermsCheck) { await message.delete().catch(() => {}); return; }
-            const userId = args[0];
-            if (!userId) {
-                const embed = new EmbedBuilder().setDescription('You need to specify the user ID to unban.').setColor(COLORS.ERROR).setThumbnail(THUMBNAIL_URL);
-                await message.channel.send({ embeds: [embed] });
-                await message.delete().catch(() => {});
-                return;
-            }
-            try {
-                const bans = await message.guild.bans.fetch();
-                const bannedUser = bans.find(ban => ban.user.id === userId);
-                if (!bannedUser) {
-                    const embed = new EmbedBuilder().setDescription('User not found in bans.').setColor(COLORS.ERROR).setThumbnail(THUMBNAIL_URL);
-                    await message.channel.send({ embeds: [embed] });
-                    await message.delete().catch(() => {});
-                    return;
-                }
-                await message.guild.members.unban(userId);
-                const embed = new EmbedBuilder().setTitle('User unbanned').setDescription(`${bannedUser.user.tag} has been unbanned`).setColor(COLORS.SUCCESS).setThumbnail(THUMBNAIL_URL);
-                await message.channel.send({ embeds: [embed] });
-                await saveModLog(message.guild, 'User unbanned', { id: userId, tag: bannedUser.user.tag }, message.author, 'Unbanned');
-            } catch (error) {
-                const embed = new EmbedBuilder().setDescription('Error during unban.').setColor(COLORS.ERROR).setThumbnail(THUMBNAIL_URL);
-                await message.channel.send({ embeds: [embed] });
-            }
-            await message.delete().catch(() => {});
-            return;
-        }
-
-        if (command === 'kick') {
-            if (!hasModPermsCheck) { await message.delete().catch(() => {}); return; }
-            const input = args[0];
-            if (!input) {
-                const embed = new EmbedBuilder().setDescription('You need to mention a user or provide an ID.').setColor(COLORS.ERROR).setThumbnail(THUMBNAIL_URL);
-                await message.channel.send({ embeds: [embed] });
-                await message.delete().catch(() => {});
-                return;
-            }
-            const result = await getUserFromInput(message.guild, input);
-            if (!result || !result.user) {
-                const embed = new EmbedBuilder().setDescription('User not found.').setColor(COLORS.ERROR).setThumbnail(THUMBNAIL_URL);
-                await message.channel.send({ embeds: [embed] });
-                await message.delete().catch(() => {});
-                return;
-            }
-            const user = result.user;
-            const member = result.member;
-            const reason = args.slice(1).join(' ') || 'No reason provided';
-            if (!member || !member.kickable) {
-                const embed = new EmbedBuilder().setDescription('I cannot kick this user.').setColor(COLORS.ERROR).setThumbnail(THUMBNAIL_URL);
-                await message.channel.send({ embeds: [embed] });
-                await message.delete().catch(() => {});
-                return;
-            }
-            try {
-                await member.kick(reason);
-                await sendActionDM(user, 'kicked', reason, { tag: message.author.tag, guild: message.guild });
-                const embed = new EmbedBuilder().setTitle('User kicked').setDescription(`${user.toString()} has been kicked`).setColor(COLORS.WARNING).setThumbnail(THUMBNAIL_URL).addFields({ name: 'Reason', value: reason });
-                await message.channel.send({ embeds: [embed] });
-                await saveModLog(message.guild, 'User kicked', user, message.author, reason);
-            } catch (error) {
-                const embed = new EmbedBuilder().setDescription('Error during kick.').setColor(COLORS.ERROR).setThumbnail(THUMBNAIL_URL);
-                await message.channel.send({ embeds: [embed] });
-            }
-            await message.delete().catch(() => {});
-            return;
-        }
-
-        if (command === 'mute') {
-            if (!hasModPermsCheck) { await message.delete().catch(() => {}); return; }
-            const input = args[0];
-            if (!input) {
-                const embed = new EmbedBuilder().setDescription('You need to mention a user or provide an ID.').setColor(COLORS.ERROR).setThumbnail(THUMBNAIL_URL);
-                await message.channel.send({ embeds: [embed] });
-                await message.delete().catch(() => {});
-                return;
-            }
-            const result = await getUserFromInput(message.guild, input);
-            if (!result || !result.user) {
-                const embed = new EmbedBuilder().setDescription('User not found.').setColor(COLORS.ERROR).setThumbnail(THUMBNAIL_URL);
-                await message.channel.send({ embeds: [embed] });
-                await message.delete().catch(() => {});
-                return;
-            }
-            const user = result.user;
-            const member = result.member;
-            const duration = parseInt(args[1]);
-            if (isNaN(duration)) {
-                const embed = new EmbedBuilder().setDescription('You need to specify the duration in minutes.').setColor(COLORS.ERROR).setThumbnail(THUMBNAIL_URL);
-                await message.channel.send({ embeds: [embed] });
-                await message.delete().catch(() => {});
-                return;
-            }
-            if (duration < 1 || duration > 40320) {
-                const embed = new EmbedBuilder().setDescription('Duration must be between 1 and 40320 minutes.').setColor(COLORS.ERROR).setThumbnail(THUMBNAIL_URL);
-                await message.channel.send({ embeds: [embed] });
-                await message.delete().catch(() => {});
-                return;
-            }
-            const reason = args.slice(2).join(' ') || 'No reason provided';
-            if (!member || !member.moderatable) {
-                const embed = new EmbedBuilder().setDescription('I cannot mute this user.').setColor(COLORS.ERROR).setThumbnail(THUMBNAIL_URL);
-                await message.channel.send({ embeds: [embed] });
-                await message.delete().catch(() => {});
-                return;
-            }
-            try {
-                await member.timeout(duration * 60 * 1000, reason);
-                const durationText = `${duration} minute${duration !== 1 ? 's' : ''}`;
-                await sendActionDM(user, 'muted', reason, { tag: message.author.tag, guild: message.guild }, durationText);
-                const embed = new EmbedBuilder()
-                    .setTitle('User muted')
-                    .setDescription(`${user.toString()} has been muted for ${durationText}`)
-                    .setColor(COLORS.WARNING)
-                    .setThumbnail(THUMBNAIL_URL)
-                    .addFields(
-                        { name: 'Reason', value: reason, inline: false },
-                        { name: 'Duration', value: durationText, inline: true }
-                    );
-                await message.channel.send({ embeds: [embed] });
-                await saveModLog(message.guild, 'User muted', user, message.author, reason, `${duration} minutes`);
-            } catch (error) {
-                const embed = new EmbedBuilder().setDescription('Error during mute.').setColor(COLORS.ERROR).setThumbnail(THUMBNAIL_URL);
-                await message.channel.send({ embeds: [embed] });
-            }
-            await message.delete().catch(() => {});
-            return;
-        }
-
-        if (command === 'unmute') {
-            if (!hasModPermsCheck) { await message.delete().catch(() => {}); return; }
-            const input = args[0];
-            if (!input) {
-                const embed = new EmbedBuilder().setDescription('You need to mention a user or provide an ID.').setColor(COLORS.ERROR).setThumbnail(THUMBNAIL_URL);
-                await message.channel.send({ embeds: [embed] });
-                await message.delete().catch(() => {});
-                return;
-            }
-            const result = await getUserFromInput(message.guild, input);
-            if (!result || !result.user) {
-                const embed = new EmbedBuilder().setDescription('User not found.').setColor(COLORS.ERROR).setThumbnail(THUMBNAIL_URL);
-                await message.channel.send({ embeds: [embed] });
-                await message.delete().catch(() => {});
-                return;
-            }
-            const user = result.user;
-            const member = result.member;
-            const reason = args.slice(1).join(' ') || 'No reason provided';
-            if (!member || !member.moderatable) {
-                const embed = new EmbedBuilder().setDescription('I cannot unmute this user.').setColor(COLORS.ERROR).setThumbnail(THUMBNAIL_URL);
-                await message.channel.send({ embeds: [embed] });
-                await message.delete().catch(() => {});
-                return;
-            }
-            try {
-                await member.timeout(null, reason);
-                const embed = new EmbedBuilder().setTitle('User unmuted').setDescription(`${user.toString()} has been unmuted`).setColor(COLORS.SUCCESS).setThumbnail(THUMBNAIL_URL).addFields({ name: 'Reason', value: reason });
-                await message.channel.send({ embeds: [embed] });
-                await saveModLog(message.guild, 'User unmuted', user, message.author, reason);
-            } catch (error) {
-                const embed = new EmbedBuilder().setDescription('Error during unmute.').setColor(COLORS.ERROR).setThumbnail(THUMBNAIL_URL);
-                await message.channel.send({ embeds: [embed] });
-            }
-            await message.delete().catch(() => {});
-            return;
-        }
-
-        if (command === 'purge') {
-            if (!hasModPermsCheck) { await message.delete().catch(() => {}); return; }
-            const amount = parseInt(args[0]);
-            if (isNaN(amount) || amount < 1 || amount > 100) {
-                const embed = new EmbedBuilder().setDescription('You need to specify a number between 1 and 100.').setColor(COLORS.ERROR).setThumbnail(THUMBNAIL_URL);
-                await message.channel.send({ embeds: [embed] });
-                await message.delete().catch(() => {});
-                return;
-            }
-            try {
-                await message.delete().catch(() => {});
-                const messages = await message.channel.messages.fetch({ limit: amount });
-                const filtered = messages.filter(msg => Date.now() - msg.createdTimestamp < 1209600000);
-                const deleted = await message.channel.bulkDelete(filtered, true);
-                const embed = new EmbedBuilder().setTitle('Messages purged').setDescription(`Deleted ${deleted.size} messages.`).setColor(COLORS.SUCCESS).setThumbnail(THUMBNAIL_URL);
-                const reply = await message.channel.send({ embeds: [embed] });
-                setTimeout(() => reply.delete().catch(() => {}), 3000);
-                await saveModLog(message.guild, 'Messages purged', { id: 'channel', tag: `#${message.channel.name}` }, message.author, `${deleted.size} messages deleted`);
-            } catch (error) {
-                const embed = new EmbedBuilder().setDescription('Error during purge. Cannot delete messages older than 14 days.').setColor(COLORS.ERROR).setThumbnail(THUMBNAIL_URL);
-                const errorMsg = await message.channel.send({ embeds: [embed] });
-                setTimeout(() => errorMsg.delete().catch(() => {}), 5000);
-            }
-            return;
-        }
-
-        const customCmds = loadCustomCommands();
-        const guildCustoms = customCmds[message.guild.id] || {};
-        if (guildCustoms[command]) {
-            const cmdData = guildCustoms[command];
-
-            if (cmdData.permission === 'admin' && !isAdminSafe(message.member)) {
-                await message.delete().catch(() => {});
-                return;
-            }
-            if (cmdData.permission === 'mod' && !hasModPerms(message.member)) {
-                await message.delete().catch(() => {});
-                return;
-            }
-            if (cmdData.permission === 'staff' && !isStaffSafe(message.member)) {
-                await message.delete().catch(() => {});
-                return;
-            }
-
-            const cmdType = cmdData.type || 'text';
-            const cmdThumbnail = cmdData.thumbnail && isValidUrl(cmdData.thumbnail) ? cmdData.thumbnail : null;
-
-            if (cmdType === 'ban') {
-                if (!hasModPerms(message.member)) { await message.delete().catch(() => {}); return; }
-                const input = args[0];
-                if (!input) {
-                    const embed = new EmbedBuilder().setDescription(`Uso: \`*${command} @utente motivo\``).setColor(COLORS.ERROR).setThumbnail(THUMBNAIL_URL);
-                    await message.channel.send({ embeds: [embed] });
-                    await message.delete().catch(() => {});
-                    return;
-                }
-                const result = await getUserFromInput(message.guild, input);
-                if (!result || !result.user) {
-                    const embed = new EmbedBuilder().setDescription('Utente non trovato.').setColor(COLORS.ERROR).setThumbnail(THUMBNAIL_URL);
-                    await message.channel.send({ embeds: [embed] });
-                    await message.delete().catch(() => {});
-                    return;
-                }
-                const user = result.user;
-                const member = result.member;
-                let reason = args.slice(1).join(' ');
-                if (!reason) {
-                    reason = (cmdData.response || 'Nessun motivo')
-                        .replace(/{user}/g, user.toString())
-                        .replace(/{username}/g, user.username)
-                        .replace(/{server}/g, message.guild.name)
-                        .replace(/{membercount}/g, message.guild.memberCount)
-                        .replace(/{md}/g, formatModerationHistory(user.id, message.guild.id, user.username));
-                } else {
-                    reason = reason
-                        .replace(/{md}/g, formatModerationHistory(user.id, message.guild.id, user.username));
-                }
-                if (!member || !member.bannable) {
-                    const embed = new EmbedBuilder().setDescription('Non posso bannare questo utente.').setColor(COLORS.ERROR).setThumbnail(THUMBNAIL_URL);
-                    await message.channel.send({ embeds: [embed] });
-                    await message.delete().catch(() => {});
-                    return;
-                }
-                try {
-                    await member.ban({ reason });
-                    await sendActionDM(user, 'banned', reason, { tag: message.author.tag, guild: message.guild });
-                    const embed = new EmbedBuilder().setTitle('User banned').setDescription(`${user.toString()} è stato bannato`).setColor(COLORS.ERROR);
-                    if (cmdThumbnail) embed.setThumbnail(cmdThumbnail);
-                    embed.addFields({ name: 'Motivo', value: reason });
-                    await message.channel.send({ embeds: [embed] });
-                    await saveModLog(message.guild, 'User banned', user, message.author, reason);
-                } catch (err) {
-                    await message.channel.send({ embeds: [new EmbedBuilder().setDescription('Errore durante il ban.').setColor(COLORS.ERROR)] });
-                }
-                await message.delete().catch(() => {});
-                return;
-            }
-
-            if (cmdType === 'kick') {
-                if (!hasModPerms(message.member)) { await message.delete().catch(() => {}); return; }
-                const input = args[0];
-                if (!input) {
-                    const embed = new EmbedBuilder().setDescription(`Uso: \`*${command} @utente motivo\``).setColor(COLORS.ERROR).setThumbnail(THUMBNAIL_URL);
-                    await message.channel.send({ embeds: [embed] });
-                    await message.delete().catch(() => {});
-                    return;
-                }
-                const result = await getUserFromInput(message.guild, input);
-                if (!result || !result.user) {
-                    const embed = new EmbedBuilder().setDescription('Utente non trovato.').setColor(COLORS.ERROR).setThumbnail(THUMBNAIL_URL);
-                    await message.channel.send({ embeds: [embed] });
-                    await message.delete().catch(() => {});
-                    return;
-                }
-                const user = result.user;
-                const member = result.member;
-                let reason = args.slice(1).join(' ');
-                if (!reason) {
-                    reason = (cmdData.response || 'Nessun motivo')
-                        .replace(/{user}/g, user.toString())
-                        .replace(/{username}/g, user.username)
-                        .replace(/{server}/g, message.guild.name)
-                        .replace(/{membercount}/g, message.guild.memberCount)
-                        .replace(/{md}/g, formatModerationHistory(user.id, message.guild.id, user.username));
-                } else {
-                    reason = reason
-                        .replace(/{md}/g, formatModerationHistory(user.id, message.guild.id, user.username));
-                }
-                if (!member || !member.kickable) {
-                    const embed = new EmbedBuilder().setDescription('Non posso kickare questo utente.').setColor(COLORS.ERROR).setThumbnail(THUMBNAIL_URL);
-                    await message.channel.send({ embeds: [embed] });
-                    await message.delete().catch(() => {});
-                    return;
-                }
-                try {
-                    await member.kick(reason);
-                    await sendActionDM(user, 'kicked', reason, { tag: message.author.tag, guild: message.guild });
-                    const embed = new EmbedBuilder().setTitle('User kicked').setDescription(`${user.toString()} è stato kickato`).setColor(COLORS.WARNING);
-                    if (cmdThumbnail) embed.setThumbnail(cmdThumbnail);
-                    embed.addFields({ name: 'Motivo', value: reason });
-                    await message.channel.send({ embeds: [embed] });
-                    await saveModLog(message.guild, 'User kicked', user, message.author, reason);
-                } catch (err) {
-                    await message.channel.send({ embeds: [new EmbedBuilder().setDescription('Errore durante il kick.').setColor(COLORS.ERROR)] });
-                }
-                await message.delete().catch(() => {});
-                return;
-            }
-
-            if (cmdType === 'mute') {
-                if (!hasModPerms(message.member)) { await message.delete().catch(() => {}); return; }
-                const input = args[0];
-                if (!input) {
-                    const embed = new EmbedBuilder().setDescription(`Uso: \`*${command} @utente minuti motivo\``).setColor(COLORS.ERROR).setThumbnail(THUMBNAIL_URL);
-                    await message.channel.send({ embeds: [embed] });
-                    await message.delete().catch(() => {});
-                    return;
-                }
-                const result = await getUserFromInput(message.guild, input);
-                if (!result || !result.user) {
-                    const embed = new EmbedBuilder().setDescription('Utente non trovato.').setColor(COLORS.ERROR).setThumbnail(THUMBNAIL_URL);
-                    await message.channel.send({ embeds: [embed] });
-                    await message.delete().catch(() => {});
-                    return;
-                }
-                const user = result.user;
-                const member = result.member;
-                const duration = parseInt(args[1]);
-                if (isNaN(duration) || duration < 1 || duration > 40320) {
-                    const embed = new EmbedBuilder().setDescription(`Uso: \`*${command} @utente minuti motivo\`\nDurata: 1-40320 minuti`).setColor(COLORS.ERROR).setThumbnail(THUMBNAIL_URL);
-                    await message.channel.send({ embeds: [embed] });
-                    await message.delete().catch(() => {});
-                    return;
-                }
-                let reason = args.slice(2).join(' ');
-                if (!reason) {
-                    reason = (cmdData.response || 'Nessun motivo')
-                        .replace(/{user}/g, user.toString())
-                        .replace(/{username}/g, user.username)
-                        .replace(/{server}/g, message.guild.name)
-                        .replace(/{membercount}/g, message.guild.memberCount)
-                        .replace(/{md}/g, formatModerationHistory(user.id, message.guild.id, user.username));
-                } else {
-                    reason = reason
-                        .replace(/{md}/g, formatModerationHistory(user.id, message.guild.id, user.username));
-                }
-                if (!member || !member.moderatable) {
-                    const embed = new EmbedBuilder().setDescription('Non posso mutare questo utente.').setColor(COLORS.ERROR).setThumbnail(THUMBNAIL_URL);
-                    await message.channel.send({ embeds: [embed] });
-                    await message.delete().catch(() => {});
-                    return;
-                }
-                try {
-                    await member.timeout(duration * 60 * 1000, reason);
-                    const durationText = `${duration} minut${duration !== 1 ? 'i' : 'o'}`;
-                    await sendActionDM(user, 'muted', reason, { tag: message.author.tag, guild: message.guild }, durationText);
-                    const embed = new EmbedBuilder().setTitle('User muted').setDescription(`${user.toString()} è stato mutato per ${durationText}`).setColor(COLORS.WARNING);
-                    if (cmdThumbnail) embed.setThumbnail(cmdThumbnail);
-                    embed.addFields({ name: 'Motivo', value: reason });
-                    await message.channel.send({ embeds: [embed] });
-                    await saveModLog(message.guild, 'User muted', user, message.author, reason, durationText);
-                } catch (err) {
-                    await message.channel.send({ embeds: [new EmbedBuilder().setDescription('Errore durante il mute.').setColor(COLORS.ERROR)] });
-                }
-                await message.delete().catch(() => {});
-                return;
-            }
-
-            if (cmdType === 'warn') {
-                if (!hasModPerms(message.member)) { await message.delete().catch(() => {}); return; }
-                const input = args[0];
-                if (!input) {
-                    const embed = new EmbedBuilder().setDescription(`Uso: \`*${command} @utente motivo\``).setColor(COLORS.ERROR).setThumbnail(THUMBNAIL_URL);
-                    await message.channel.send({ embeds: [embed] });
-                    await message.delete().catch(() => {});
-                    return;
-                }
-                const result = await getUserFromInput(message.guild, input);
-                if (!result || !result.user) {
-                    const embed = new EmbedBuilder().setDescription('Utente non trovato.').setColor(COLORS.ERROR).setThumbnail(THUMBNAIL_URL);
-                    await message.channel.send({ embeds: [embed] });
-                    await message.delete().catch(() => {});
-                    return;
-                }
-                const user = result.user;
-                let reason = args.slice(1).join(' ');
-                if (!reason) {
-                    reason = (cmdData.response || 'Nessun motivo')
-                        .replace(/{user}/g, user.toString())
-                        .replace(/{username}/g, user.username)
-                        .replace(/{server}/g, message.guild.name)
-                        .replace(/{membercount}/g, message.guild.memberCount)
-                        .replace(/{md}/g, formatModerationHistory(user.id, message.guild.id, user.username));
-                } else {
-                    reason = reason
-                        .replace(/{md}/g, formatModerationHistory(user.id, message.guild.id, user.username));
-                }
-                try {
-                    const warningId = await addWarning(message.guild, user, message.author, reason);
-                    await sendActionDM(user, 'warned', reason, { tag: message.author.tag, guild: message.guild });
-                    const embed = new EmbedBuilder().setTitle('User warned').setDescription(`${user.toString()} ha ricevuto un warn`).setColor(COLORS.WARNING);
-                    if (cmdThumbnail) embed.setThumbnail(cmdThumbnail);
-                    embed.addFields(
-                        { name: 'Motivo', value: reason, inline: false },
-                        { name: 'Warning ID', value: `#${warningId}`, inline: true }
-                    );
-                    await message.channel.send({ embeds: [embed] });
-                    await saveModLog(message.guild, 'User warned', user, message.author, reason);
-                } catch (err) {
-                    await message.channel.send({ embeds: [new EmbedBuilder().setDescription('Errore durante il warn.').setColor(COLORS.ERROR)] });
-                }
-                await message.delete().catch(() => {});
-                return;
-            }
-
-            if (cmdType === 'purge') {
-                if (!hasModPerms(message.member)) { await message.delete().catch(() => {}); return; }
-                const amount = parseInt(args[0]);
-                if (isNaN(amount) || amount < 1 || amount > 100) {
-                    const embed = new EmbedBuilder().setDescription(`Uso: \`*${command} numero\` (1-100)`).setColor(COLORS.ERROR).setThumbnail(THUMBNAIL_URL);
-                    await message.channel.send({ embeds: [embed] });
-                    await message.delete().catch(() => {});
-                    return;
-                }
-                try {
-                    await message.delete().catch(() => {});
-                    const messages = await message.channel.messages.fetch({ limit: amount });
-                    const filtered = messages.filter(msg => Date.now() - msg.createdTimestamp < 1209600000);
-                    const deleted = await message.channel.bulkDelete(filtered, true);
-                    const embed = new EmbedBuilder().setTitle('Messages purged').setDescription(`Eliminati ${deleted.size} messaggi.`).setColor(COLORS.SUCCESS);
-                    if (cmdThumbnail) embed.setThumbnail(cmdThumbnail);
-                    const reply = await message.channel.send({ embeds: [embed] });
-                    setTimeout(() => reply.delete().catch(() => {}), 3000);
-                    await saveModLog(message.guild, 'Messages purged', { id: 'channel', tag: `#${message.channel.name}` }, message.author, `${deleted.size} messages deleted`);
-                } catch (err) {
-                    const embed = new EmbedBuilder().setDescription('Errore durante il purge.').setColor(COLORS.ERROR).setThumbnail(THUMBNAIL_URL);
-                    await message.channel.send({ embeds: [embed] });
-                }
-                return;
-            }
-
-            const targetInput = args[0];
-            let mdTarget = message.mentions.users.first();
-            if (!mdTarget && targetInput && /^\d+$/.test(targetInput)) {
-                try {
-                    const fetched = await message.guild.members.fetch(targetInput);
-                    mdTarget = fetched.user;
-                } catch { mdTarget = null; }
-            }
-            if (!mdTarget) mdTarget = message.author;
-
-            let replyText = cmdData.response || '';
-            replyText = replyText.replace(/{user}/g, message.author.toString());
-            replyText = replyText.replace(/{username}/g, message.author.username);
-            replyText = replyText.replace(/{server}/g, message.guild.name);
-            replyText = replyText.replace(/{membercount}/g, message.guild.memberCount);
-            replyText = replyText.replace(/{args}/g, args.join(' '));
-            replyText = replyText.replace(/{md}/g, formatModerationHistory(mdTarget.id, message.guild.id, mdTarget.username));
-
-            if (cmdType === 'embed') {
-                const embed = new EmbedBuilder()
-                    .setDescription(replyText)
-                    .setColor(cmdData.color || COLORS.INFO);
-                if (cmdData.title) embed.setTitle(cmdData.title);
-                if (cmdThumbnail) embed.setThumbnail(cmdThumbnail);
-                await message.channel.send({ embeds: [embed] }).catch(() => {});
             } else {
-                await message.channel.send(replyText).catch(() => {});
+                await message.guild.bans.create(user.id, { reason });
             }
 
-            if (cmdData.deleteCommand) await message.delete().catch(() => {});
+            await sendActionDM(user, 'banned', reason, { tag: message.author.tag, guild: message.guild });
+            const embed = new EmbedBuilder()
+                .setDescription(`**${user.username}** (${user.id}) has been banned for the reason **${reason}**`)
+                .setColor(BLACK);
+            await message.channel.send({ embeds: [embed] });
+            await saveModLog(message.guild, 'User banned', { id: user.id, tag: user.tag }, message.author, reason);
+        } catch (error) {
+            const embed = new EmbedBuilder().setDescription('Error during ban: ' + error.message).setColor(COLORS.ERROR);
+            await message.channel.send({ embeds: [embed] });
+        }
+        await message.delete().catch(() => {});
+        return;
+    }
+
+    if (command === 'unban') {
+        if (!(await hasModPerms(message.member))) { await message.delete().catch(() => {}); return; }
+        const userId = args[0];
+        if (!userId) {
+            const embed = new EmbedBuilder().setDescription('You need to specify the user ID to unban.').setColor(COLORS.ERROR).setThumbnail(THUMBNAIL_URL);
+            await message.channel.send({ embeds: [embed] });
+            await message.delete().catch(() => {});
             return;
         }
-    } catch (error) {
-        logCrash('MESSAGE_CREATE_HANDLER', error, { command: message?.content?.slice(0, 50) });
+        try {
+            const bans = await message.guild.bans.fetch();
+            const bannedUser = bans.find(ban => ban.user.id === userId);
+            if (!bannedUser) {
+                const embed = new EmbedBuilder().setDescription('This user is not banned.').setColor(COLORS.ERROR).setThumbnail(THUMBNAIL_URL);
+                await message.channel.send({ embeds: [embed] });
+                await message.delete().catch(() => {});
+                return;
+            }
+            await message.guild.members.unban(userId);
+            await db.removePendingBan(message.guild.id, userId);
+            const embed = new EmbedBuilder()
+                .setDescription(`**${bannedUser.user.username}** (${bannedUser.user.id}) has been unbanned for the reason **Unbanned**`)
+                .setColor(BLACK);
+            await message.channel.send({ embeds: [embed] });
+            await saveModLog(message.guild, 'User unbanned', { id: userId, tag: bannedUser.user.tag }, message.author, 'Unbanned');
+        } catch (error) {
+            const embed = new EmbedBuilder().setDescription('Error during unban.').setColor(COLORS.ERROR).setThumbnail(THUMBNAIL_URL);
+            await message.channel.send({ embeds: [embed] });
+        }
+        await message.delete().catch(() => {});
+        return;
     }
-});
+
+    if (command === 'kick') {
+        if (!(await hasModPerms(message.member))) { await message.delete().catch(() => {}); return; }
+        const input = args[0];
+        if (!input) {
+            const embed = new EmbedBuilder().setDescription('You need to mention a user or provide an ID.').setColor(COLORS.ERROR).setThumbnail(THUMBNAIL_URL);
+            await message.channel.send({ embeds: [embed] });
+            await message.delete().catch(() => {});
+            return;
+        }
+        const result = await getUserFromInput(message.guild, input);
+        if (!result || !result.user) {
+            const embed = new EmbedBuilder().setDescription('User not found.').setColor(COLORS.ERROR).setThumbnail(THUMBNAIL_URL);
+            await message.channel.send({ embeds: [embed] });
+            await message.delete().catch(() => {});
+            return;
+        }
+        const user = result.user;
+        const member = result.member;
+        if (await projectedRoleBlock(message, member)) return;
+        const reason = args.slice(1).join(' ') || 'No reason provided';
+        if (!member || !member.kickable) {
+            const embed = new EmbedBuilder().setDescription('I cannot kick this user.').setColor(COLORS.ERROR).setThumbnail(THUMBNAIL_URL);
+            await message.channel.send({ embeds: [embed] });
+            await message.delete().catch(() => {});
+            return;
+        }
+        try {
+            await member.kick(reason);
+            await sendActionDM(user, 'kicked', reason, { tag: message.author.tag, guild: message.guild });
+            const embed = new EmbedBuilder()
+                .setDescription(`**${user.username}** (${user.id}) has been kicked for the reason **${reason}**`)
+                .setColor(BLACK);
+            await message.channel.send({ embeds: [embed] });
+            await saveModLog(message.guild, 'User kicked', user, message.author, reason);
+        } catch (error) {
+            const embed = new EmbedBuilder().setDescription('Error during kick.').setColor(COLORS.ERROR).setThumbnail(THUMBNAIL_URL);
+            await message.channel.send({ embeds: [embed] });
+        }
+        await message.delete().catch(() => {});
+        return;
+    }
+
+    if (command === 'mute') {
+        if (!(await hasModPerms(message.member))) { await message.delete().catch(() => {}); return; }
+        const input = args[0];
+        if (!input) {
+            const embed = new EmbedBuilder().setDescription('You need to mention a user or provide an ID.').setColor(COLORS.ERROR).setThumbnail(THUMBNAIL_URL);
+            await message.channel.send({ embeds: [embed] });
+            await message.delete().catch(() => {});
+            return;
+        }
+        const result = await getUserFromInput(message.guild, input);
+        if (!result || !result.user) {
+            const embed = new EmbedBuilder().setDescription('User not found.').setColor(COLORS.ERROR).setThumbnail(THUMBNAIL_URL);
+            await message.channel.send({ embeds: [embed] });
+            await message.delete().catch(() => {});
+            return;
+        }
+        const user = result.user;
+        const member = result.member;
+        if (await projectedRoleBlock(message, member)) return;
+        const duration = parseInt(args[1]);
+        if (isNaN(duration)) {
+            const embed = new EmbedBuilder().setDescription('You need to specify the duration in minutes.').setColor(COLORS.ERROR).setThumbnail(THUMBNAIL_URL);
+            await message.channel.send({ embeds: [embed] });
+            await message.delete().catch(() => {});
+            return;
+        }
+        if (duration < 1 || duration > 40320) {
+            const embed = new EmbedBuilder().setDescription('Duration must be between 1 and 40320 minutes.').setColor(COLORS.ERROR).setThumbnail(THUMBNAIL_URL);
+            await message.channel.send({ embeds: [embed] });
+            await message.delete().catch(() => {});
+            return;
+        }
+        const reason = args.slice(2).join(' ') || 'No reason provided';
+        if (!member || !member.moderatable) {
+            const embed = new EmbedBuilder().setDescription('I cannot mute this user.').setColor(COLORS.ERROR).setThumbnail(THUMBNAIL_URL);
+            await message.channel.send({ embeds: [embed] });
+            await message.delete().catch(() => {});
+            return;
+        }
+        try {
+            await member.timeout(duration * 60 * 1000, reason);
+            const durationText = `${duration} minute${duration !== 1 ? 's' : ''}`;
+            await sendActionDM(user, 'muted', reason, { tag: message.author.tag, guild: message.guild }, durationText);
+            const embed = new EmbedBuilder()
+                .setDescription(`**${user.username}** (${user.id}) has been muted for the reason **${reason}**`)
+                .setColor(BLACK);
+            await message.channel.send({ embeds: [embed] });
+            await saveModLog(message.guild, 'User muted', user, message.author, reason, `${duration} minutes`);
+        } catch (error) {
+            const embed = new EmbedBuilder().setDescription('Error during mute.').setColor(COLORS.ERROR).setThumbnail(THUMBNAIL_URL);
+            await message.channel.send({ embeds: [embed] });
+        }
+        await message.delete().catch(() => {});
+        return;
+    }
+
+    if (command === 'unmute') {
+        if (!(await hasModPerms(message.member))) { await message.delete().catch(() => {}); return; }
+        const input = args[0];
+        if (!input) {
+            const embed = new EmbedBuilder().setDescription('You need to mention a user or provide an ID.').setColor(COLORS.ERROR).setThumbnail(THUMBNAIL_URL);
+            await message.channel.send({ embeds: [embed] });
+            await message.delete().catch(() => {});
+            return;
+        }
+        const result = await getUserFromInput(message.guild, input);
+        if (!result || !result.user) {
+            const embed = new EmbedBuilder().setDescription('User not found.').setColor(COLORS.ERROR).setThumbnail(THUMBNAIL_URL);
+            await message.channel.send({ embeds: [embed] });
+            await message.delete().catch(() => {});
+            return;
+        }
+        const user = result.user;
+        const member = result.member;
+        const reason = args.slice(1).join(' ') || 'No reason provided';
+        if (!member || !member.moderatable) {
+            const embed = new EmbedBuilder().setDescription('I cannot unmute this user.').setColor(COLORS.ERROR).setThumbnail(THUMBNAIL_URL);
+            await message.channel.send({ embeds: [embed] });
+            await message.delete().catch(() => {});
+            return;
+        }
+        try {
+            await member.timeout(null, reason);
+            const embed = new EmbedBuilder()
+                .setDescription(`**${user.username}** (${user.id}) has been unmuted for the reason **${reason}**`)
+                .setColor(BLACK);
+            await message.channel.send({ embeds: [embed] });
+            await saveModLog(message.guild, 'User unmuted', user, message.author, reason);
+        } catch (error) {
+            const embed = new EmbedBuilder().setDescription('Error during unmute.').setColor(COLORS.ERROR).setThumbnail(THUMBNAIL_URL);
+            await message.channel.send({ embeds: [embed] });
+        }
+        await message.delete().catch(() => {});
+        return;
+    }
+
+    if (command === 'purge') {
+        if (!(await hasModPerms(message.member))) { await message.delete().catch(() => {}); return; }
+        const amount = parseInt(args[0]);
+        if (isNaN(amount) || amount < 1 || amount > 100) {
+            const embed = new EmbedBuilder().setDescription('You need to specify a number between 1 and 100.').setColor(COLORS.ERROR).setThumbnail(THUMBNAIL_URL);
+            await message.channel.send({ embeds: [embed] });
+            await message.delete().catch(() => {});
+            return;
+        }
+        try {
+            await message.delete().catch(() => {});
+            const messages = await message.channel.messages.fetch({ limit: amount });
+            const filtered = messages.filter(msg => Date.now() - msg.createdTimestamp < 1209600000);
+            const deleted = await message.channel.bulkDelete(filtered, true);
+            const embed = new EmbedBuilder().setTitle('Messages purged').setDescription(`Deleted ${deleted.size} messages.`).setColor(COLORS.SUCCESS).setThumbnail(THUMBNAIL_URL);
+            const reply = await message.channel.send({ embeds: [embed] });
+            setTimeout(() => reply.delete().catch(() => {}), 3000);
+            await saveModLog(message.guild, 'Messages purged', { id: 'channel', tag: `#${message.channel.name}` }, message.author, `${deleted.size} messages deleted`);
+        } catch (error) {
+            const embed = new EmbedBuilder().setDescription('Error during purge. Cannot delete messages older than 14 days.').setColor(COLORS.ERROR).setThumbnail(THUMBNAIL_URL);
+            const errorMsg = await message.channel.send({ embeds: [embed] });
+            setTimeout(() => errorMsg.delete().catch(() => {}), 5000);
+        }
+        return;
+    }
+}
+
+async function handleCustomCommand(message, command, args, cmdData) {
+    const cmdType = cmdData.type || 'text';
+    const cmdThumbnail = cmdData.thumbnail && isValidUrl(cmdData.thumbnail) ? cmdData.thumbnail : null;
+
+    if (cmdType === 'ban') {
+        const input = args[0];
+        if (!input) {
+            const embed = new EmbedBuilder().setDescription(`Usage: \`${cmdData.prefix || '*'}${command} @user reason\``).setColor(COLORS.ERROR).setThumbnail(THUMBNAIL_URL);
+            await message.channel.send({ embeds: [embed] });
+            await message.delete().catch(() => {});
+            return;
+        }
+        const result = await getUserFromInput(message.guild, input);
+        if (!result || !result.user) {
+            const embed = new EmbedBuilder().setDescription('User not found.').setColor(COLORS.ERROR).setThumbnail(THUMBNAIL_URL);
+            await message.channel.send({ embeds: [embed] });
+            await message.delete().catch(() => {});
+            return;
+        }
+        const user = result.user;
+        const member = result.member;
+        if (await projectedRoleBlock(message, member)) return;
+        let reason = args.slice(1).join(' ');
+        if (!reason) {
+            reason = (cmdData.response || 'No reason provided')
+                .replace(/{user}/g, user.toString())
+                .replace(/{username}/g, user.username)
+                .replace(/{server}/g, message.guild.name)
+                .replace(/{membercount}/g, message.guild.memberCount)
+                .replace(/{md}/g, await formatModerationHistory(user.id, message.guild.id, user.username, 1));
+            reason = applyPositionalArgs(reason, args);
+        } else {
+            reason = reason
+                .replace(/{md}/g, await formatModerationHistory(user.id, message.guild.id, user.username, 1));
+        }
+
+        const durationDays = cmdData.duration ? parseInt(cmdData.duration) : null;
+        const isTemporary = durationDays && durationDays > 0;
+
+        try {
+            if (member) {
+                if (!member.bannable) {
+                    const embed = new EmbedBuilder().setDescription('I cannot ban this user.').setColor(COLORS.ERROR).setThumbnail(THUMBNAIL_URL);
+                    await message.channel.send({ embeds: [embed] });
+                    await message.delete().catch(() => {});
+                    return;
+                }
+                await member.ban({ reason });
+            } else {
+                await message.guild.bans.create(user.id, { reason });
+            }
+
+            if (isTemporary) {
+                const expiresAt = new Date(Date.now() + durationDays * 24 * 60 * 60 * 1000);
+                await db.addPendingBan({
+                    guildId: message.guild.id,
+                    userId: user.id,
+                    userTag: user.tag,
+                    moderatorId: message.author.id,
+                    moderatorTag: message.author.tag,
+                    reason: reason,
+                    banDate: new Date(),
+                    expiresAt: expiresAt
+                });
+            }
+
+            await sendActionDM(user, 'banned', reason, { tag: message.author.tag, guild: message.guild });
+            const embed = new EmbedBuilder()
+                .setDescription(`**${user.username}** (${user.id}) has been banned for the reason **${reason}**`)
+                .setColor(BLACK);
+            await message.channel.send({ embeds: [embed] });
+            await saveModLog(message.guild, 'User banned', { id: user.id, tag: user.tag }, message.author, reason, isTemporary ? `${durationDays} days` : null);
+        } catch (err) {
+            await message.channel.send({ embeds: [new EmbedBuilder().setDescription('Error during ban: ' + err.message).setColor(COLORS.ERROR)] });
+        }
+        await message.delete().catch(() => {});
+        return;
+    }
+
+    if (cmdType === 'kick') {
+        const input = args[0];
+        if (!input) {
+            const embed = new EmbedBuilder().setDescription(`Usage: \`${cmdData.prefix || '*'}${command} @user reason\``).setColor(COLORS.ERROR).setThumbnail(THUMBNAIL_URL);
+            await message.channel.send({ embeds: [embed] });
+            await message.delete().catch(() => {});
+            return;
+        }
+        const result = await getUserFromInput(message.guild, input);
+        if (!result || !result.user) {
+            const embed = new EmbedBuilder().setDescription('User not found.').setColor(COLORS.ERROR).setThumbnail(THUMBNAIL_URL);
+            await message.channel.send({ embeds: [embed] });
+            await message.delete().catch(() => {});
+            return;
+        }
+        const user = result.user;
+        const member = result.member;
+        if (await projectedRoleBlock(message, member)) return;
+        let reason = args.slice(1).join(' ');
+        if (!reason) {
+            reason = (cmdData.response || 'No reason provided')
+                .replace(/{user}/g, user.toString())
+                .replace(/{username}/g, user.username)
+                .replace(/{server}/g, message.guild.name)
+                .replace(/{membercount}/g, message.guild.memberCount)
+                .replace(/{md}/g, await formatModerationHistory(user.id, message.guild.id, user.username, 1));
+            reason = applyPositionalArgs(reason, args);
+        } else {
+            reason = reason
+                .replace(/{md}/g, await formatModerationHistory(user.id, message.guild.id, user.username, 1));
+        }
+        if (!member || !member.kickable) {
+            const embed = new EmbedBuilder().setDescription('I cannot kick this user.').setColor(COLORS.ERROR).setThumbnail(THUMBNAIL_URL);
+            await message.channel.send({ embeds: [embed] });
+            await message.delete().catch(() => {});
+            return;
+        }
+        try {
+            await member.kick(reason);
+            await sendActionDM(user, 'kicked', reason, { tag: message.author.tag, guild: message.guild });
+            const embed = new EmbedBuilder()
+                .setDescription(`**${user.username}** (${user.id}) has been kicked for the reason **${reason}**`)
+                .setColor(BLACK);
+            await message.channel.send({ embeds: [embed] });
+            await saveModLog(message.guild, 'User kicked', user, message.author, reason);
+        } catch (err) {
+            await message.channel.send({ embeds: [new EmbedBuilder().setDescription('Error during kick.').setColor(COLORS.ERROR)] });
+        }
+        await message.delete().catch(() => {});
+        return;
+    }
+
+    if (cmdType === 'mute') {
+        const input = args[0];
+        if (!input) {
+            const embed = new EmbedBuilder().setDescription(`Usage: \`${cmdData.prefix || '*'}${command} @user reason\``).setColor(COLORS.ERROR).setThumbnail(THUMBNAIL_URL);
+            await message.channel.send({ embeds: [embed] });
+            await message.delete().catch(() => {});
+            return;
+        }
+        const result = await getUserFromInput(message.guild, input);
+        if (!result || !result.user) {
+            const embed = new EmbedBuilder().setDescription('User not found.').setColor(COLORS.ERROR).setThumbnail(THUMBNAIL_URL);
+            await message.channel.send({ embeds: [embed] });
+            await message.delete().catch(() => {});
+            return;
+        }
+        const user = result.user;
+        const member = result.member;
+        if (await projectedRoleBlock(message, member)) return;
+
+        let durationDays = cmdData.duration ? parseInt(cmdData.duration) : 28;
+        if (isNaN(durationDays) || durationDays < 1) durationDays = 28;
+        if (durationDays > 28) durationDays = 28;
+
+        const durationMs = durationDays * 24 * 60 * 60 * 1000;
+
+        let reason = args.slice(1).join(' ');
+        if (!reason) {
+            reason = (cmdData.response || 'No reason provided')
+                .replace(/{user}/g, user.toString())
+                .replace(/{username}/g, user.username)
+                .replace(/{server}/g, message.guild.name)
+                .replace(/{membercount}/g, message.guild.memberCount)
+                .replace(/{md}/g, await formatModerationHistory(user.id, message.guild.id, user.username, 1));
+            reason = applyPositionalArgs(reason, args);
+        } else {
+            reason = reason
+                .replace(/{md}/g, await formatModerationHistory(user.id, message.guild.id, user.username, 1));
+        }
+
+        if (!member || !member.moderatable) {
+            const embed = new EmbedBuilder().setDescription('I cannot mute this user.').setColor(COLORS.ERROR).setThumbnail(THUMBNAIL_URL);
+            await message.channel.send({ embeds: [embed] });
+            await message.delete().catch(() => {});
+            return;
+        }
+        try {
+            await member.timeout(durationMs, reason);
+            const durationText = `${durationDays} day${durationDays === 1 ? '' : 's'}`;
+            await sendActionDM(user, 'muted', reason, { tag: message.author.tag, guild: message.guild }, durationText);
+            const embed = new EmbedBuilder()
+                .setDescription(`**${user.username}** (${user.id}) has been muted for the reason **${reason}**`)
+                .setColor(BLACK);
+            await message.channel.send({ embeds: [embed] });
+            await saveModLog(message.guild, 'User muted', user, message.author, reason, durationText);
+        } catch (err) {
+            await message.channel.send({ embeds: [new EmbedBuilder().setDescription('Error during mute.').setColor(COLORS.ERROR)] });
+        }
+        await message.delete().catch(() => {});
+        return;
+    }
+
+    if (cmdType === 'warn') {
+        const input = args[0];
+        if (!input) {
+            const embed = new EmbedBuilder().setDescription(`Usage: \`${cmdData.prefix || '*'}${command} @user reason\``).setColor(COLORS.ERROR).setThumbnail(THUMBNAIL_URL);
+            await message.channel.send({ embeds: [embed] });
+            await message.delete().catch(() => {});
+            return;
+        }
+        const result = await getUserFromInput(message.guild, input);
+        if (!result || !result.user) {
+            const embed = new EmbedBuilder().setDescription('User not found.').setColor(COLORS.ERROR).setThumbnail(THUMBNAIL_URL);
+            await message.channel.send({ embeds: [embed] });
+            await message.delete().catch(() => {});
+            return;
+        }
+        const user = result.user;
+        const member = result.member;
+        if (await projectedRoleBlock(message, member)) return;
+        let reason = args.slice(1).join(' ');
+        if (!reason) {
+            reason = (cmdData.response || 'No reason provided')
+                .replace(/{user}/g, user.toString())
+                .replace(/{username}/g, user.username)
+                .replace(/{server}/g, message.guild.name)
+                .replace(/{membercount}/g, message.guild.memberCount)
+                .replace(/{md}/g, await formatModerationHistory(user.id, message.guild.id, user.username, 1));
+            reason = applyPositionalArgs(reason, args);
+        } else {
+            reason = reason
+                .replace(/{md}/g, await formatModerationHistory(user.id, message.guild.id, user.username, 1));
+        }
+        try {
+            await addWarning(message.guild, user, message.author, reason);
+            await sendActionDM(user, 'warned', reason, { tag: message.author.tag, guild: message.guild });
+            const embed = new EmbedBuilder()
+                .setDescription(`**${user.username}** (${user.id}) has been warned for the reason **${reason}**`)
+                .setColor(BLACK);
+            await message.channel.send({ embeds: [embed] });
+            await saveModLog(message.guild, 'User warned', user, message.author, reason);
+        } catch (err) {
+            await message.channel.send({ embeds: [new EmbedBuilder().setDescription('Error during warn.').setColor(COLORS.ERROR)] });
+        }
+        await message.delete().catch(() => {});
+        return;
+    }
+
+    const targetInput = args[0];
+    let mdTarget = message.mentions.users.first();
+    if (!mdTarget && targetInput && /^\d+$/.test(targetInput)) {
+        try {
+            const fetched = await message.guild.members.fetch(targetInput);
+            mdTarget = fetched.user;
+        } catch {
+            try {
+                mdTarget = await client.users.fetch(targetInput);
+            } catch { mdTarget = null; }
+        }
+    }
+    if (!mdTarget) mdTarget = message.author;
+
+    let replyText = cmdData.response || '';
+    replyText = replyText.replace(/{user}/g, message.author.toString());
+    replyText = replyText.replace(/{username}/g, message.author.username);
+    replyText = replyText.replace(/{server}/g, message.guild.name);
+    replyText = replyText.replace(/{membercount}/g, message.guild.memberCount);
+    replyText = replyText.replace(/{args}/g, args.join(' '));
+    replyText = replyText.replace(/{md}/g, await formatModerationHistory(mdTarget.id, message.guild.id, mdTarget.username, 1));
+    replyText = applyPositionalArgs(replyText, args);
+
+    const cmdImage = cmdData.image && isValidUrl(cmdData.image) ? cmdData.image : null;
+
+    if (cmdType === 'embed') {
+        const embed = new EmbedBuilder()
+            .setDescription(replyText)
+            .setColor(cmdData.color || COLORS.INFO);
+        if (cmdData.title) embed.setTitle(cmdData.title);
+        if (cmdThumbnail) embed.setThumbnail(cmdThumbnail);
+        if (cmdImage) embed.setImage(cmdImage);
+        await message.channel.send({ embeds: [embed] }).catch(() => {});
+    } else if (cmdImage) {
+        const embed = new EmbedBuilder()
+            .setDescription(replyText)
+            .setImage(cmdImage);
+        await message.channel.send({ embeds: [embed] }).catch(() => {});
+    } else {
+        await message.channel.send(replyText).catch(() => {});
+    }
+
+    if (cmdData.deleteCommand) await message.delete().catch(() => {});
+}
 
 client.on('interactionCreate', async (interaction) => {
     try {
@@ -1792,10 +1798,10 @@ client.on('interactionCreate', async (interaction) => {
             return;
         }
         if (interaction.isButton() && interaction.customId === 'claim_ticket') {
-            const config = getGuildConfig(interaction.guild.id);
+            const config = await getGuildConfig(interaction.guild.id);
             const staffRoleId = config.staffRoleId;
             const isStaffMember = staffRoleId && interaction.member.roles.cache.has(staffRoleId);
-            if (!isStaffMember && !isAdmin(interaction.member) && !isModerator(interaction.member)) {
+            if (!isStaffMember && !(await isAdminSafe(interaction.member)) && !(await isModeratorSafe(interaction.member))) {
                 return interaction.reply({ content: 'Only staff team members can claim tickets.', flags: 64 });
             }
             const ticketOwnerId = interaction.channel.topic;
@@ -1828,10 +1834,10 @@ client.on('interactionCreate', async (interaction) => {
             return;
         }
         if (interaction.isButton() && interaction.customId === 'close_ticket') {
-            const config = getGuildConfig(interaction.guild.id);
+            const config = await getGuildConfig(interaction.guild.id);
             const staffRoleId = config.staffRoleId;
             const isStaffMember = staffRoleId && interaction.member.roles.cache.has(staffRoleId);
-            if (!isStaffMember && !isAdmin(interaction.member) && !isModerator(interaction.member)) {
+            if (!isStaffMember && !(await isAdminSafe(interaction.member)) && !(await isModeratorSafe(interaction.member))) {
                 return interaction.reply({ content: 'Only staff team members can close tickets.', flags: 64 });
             }
             await generateTicketTranscript(interaction.channel, interaction.user);
@@ -1860,14 +1866,32 @@ client.on('interactionCreate', async (interaction) => {
     }
 });
 
-setInterval(() => {
-    try { saveData(); } catch (e) { logCrash('AUTO_SAVE', e); }
-}, 300000);
+setInterval(async () => {
+    try {
+        const expired = await db.getExpiredBans();
+        for (const ban of expired) {
+            try {
+                const guild = client.guilds.cache.get(ban.guildId);
+                if (!guild) {
+                    await db.removePendingBan(ban.guildId, ban.userId);
+                    continue;
+                }
+                await guild.members.unban(ban.userId, 'Temporary ban expired');
+                await db.removePendingBan(ban.guildId, ban.userId);
+                await saveModLog(guild, 'User unbanned (auto)', { id: ban.userId, tag: ban.userTag }, client.user, 'Temporary ban expired');
+                console.log(`[AUTO-UNBAN] Unbanned ${ban.userTag} (${ban.userId}) from ${guild.name}`);
+            } catch (err) {
+                console.error(`[AUTO-UNBAN] Error on ${ban.userId}:`, err.message);
+                await db.removePendingBan(ban.guildId, ban.userId);
+            }
+        }
+    } catch (error) {
+        logCrash('AUTO_UNBAN_SCHEDULER', error);
+    }
+}, 60000);
 
-process.on('SIGINT', () => { try { saveData(); } catch {} process.exit(); });
-process.on('SIGTERM', () => { try { saveData(); } catch {} process.exit(); });
-
-loadData();
+process.on('SIGINT', () => { process.exit(); });
+process.on('SIGTERM', () => { process.exit(); });
 
 if (!process.env.DISCORD_TOKEN) {
     console.error('DISCORD_TOKEN mancante nel file .env!');
