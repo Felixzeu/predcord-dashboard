@@ -2014,5 +2014,7 @@ aside h3 {
 }
 
 .form-toast-icon {
-    font-size: 18px;
+    font-size: 14px;
+    color: #ef4444;
+    font-weight: 700;
 }
