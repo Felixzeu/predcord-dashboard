@@ -670,7 +670,7 @@ function updateTypeUI() {
     } else {
         responseLabel.textContent = 'Response';
         response.placeholder = 'Variables: {user} {username} {server} {membercount} {args} {md}';
-        response.required = true;
+        response.required = false;
     }
 
     updatePreview();
@@ -925,13 +925,6 @@ async function saveCommand(e) {
     if (!name || !/^[a-z0-9_-]{1,32}$/i.test(name)) {
         markFieldInvalid(nameInput);
         invalid = true;
-    }
-
-    if (!isPurge) {
-        if (!responseInput.value.trim()) {
-            markFieldInvalid(responseInput);
-            invalid = true;
-        }
     }
 
     if (invalid) {
