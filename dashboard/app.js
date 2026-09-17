@@ -417,13 +417,11 @@ function renderCommands() {
 
         const cardClass = cmd.isBase ? 'command-card base-command' : 'command-card';
 
-        const typeLabel = cmd.type === 'embed' ? 'Embed' : cmd.type;
         return `
         <div class="${cardClass}">
             <div class="command-info">
                 <h4>${escapeHtml(name)}</h4>
                 <div class="command-badges">${badge}${baseBadge}</div>
-                <p>${escapeHtml(typeLabel)} - ${escapeHtml(truncate(cmd.response || '', 70))}</p>
             </div>
             <div class="command-actions">
                 <button class="btn-edit" data-name="${escapeAttr(name)}">Edit</button>
