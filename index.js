@@ -1964,101 +1964,144 @@ client.on('interactionCreate', async (interaction) => {
             return;
         }
 
-        if (interaction.isButton() && interaction.customId === 'claim_ticket') {
-            await interaction.deferUpdate();
-
-            const config = await getGuildConfig(interaction.guild.id);
-            const staffRole = config.staffRoleId ? interaction.guild.roles.cache.get(config.staffRoleId) : null;
-            const adminRole = config.adminRoleId ? interaction.guild.roles.cache.get(config.adminRoleId) : null;
-
-            const isStaff = staffRole && interaction.member.roles.cache.has(staffRole.id);
-            const isAdmin = adminRole && interaction.member.roles.cache.has(adminRole.id);
-
-            if (!isStaff && !isAdmin) {
-                return interaction.followUp({
-                    content: '❌ Only staff members can claim tickets.',
-                    flags: 64
-                });
-            }
-
-            const ticketOwnerId = interaction.channel.topic;
-            if (!ticketOwnerId) {
-                return interaction.followUp({ content: '❌ Could not find ticket owner.', flags: 64 });
-            }
-
-            const newOverwrites = [
-                {
-                    id: interaction.guild.id,
-                    deny: [PermissionsBitField.Flags.ViewChannel]
-                },
-                {
-                    id: ticketOwnerId,
-                    allow: [
-                        PermissionsBitField.Flags.ViewChannel,
-                        PermissionsBitField.Flags.SendMessages,
-                        PermissionsBitField.Flags.EmbedLinks,
-                        PermissionsBitField.Flags.AttachFiles,
-                        PermissionsBitField.Flags.ReadMessageHistory
-                    ]
-                },
-                {
-                    id: interaction.user.id,
-                    allow: [
-                        PermissionsBitField.Flags.ViewChannel,
-                        PermissionsBitField.Flags.SendMessages,
-                        PermissionsBitField.Flags.EmbedLinks,
-                        PermissionsBitField.Flags.AttachFiles,
-                        PermissionsBitField.Flags.ReadMessageHistory,
-                        PermissionsBitField.Flags.UseExternalEmojis,
-                        PermissionsBitField.Flags.AddReactions,
-                        PermissionsBitField.Flags.UseApplicationCommands,
-                        PermissionsBitField.Flags.UseExternalStickers
-                    ]
+            if (interaction.isButton() && interaction.customId === 'claim_ticket') {
+                await interaction.deferUpdate();
+            
+                const config = await getGuildConfig(interaction.guild.id);
+                const staffRole = config.staffRoleId ? interaction.guild.roles.cache.get(config.staffRoleId) : null;
+                const adminRole = config.adminRoleId ? interaction.guild.roles.cache.get(config.adminRoleId) : null;
+            
+                const isStaff = staffRole && interaction.member.roles.cache.has(staffRole.id);
+                const isAdmin = adminRole && interaction.member.roles.cache.has(adminRole.id);
+            
+                if (!isStaff && !isAdmin) {
+                    return interaction.followUp({
+                        content: '❌ Only staff members can claim tickets.',
+                        flags: 64
+                    });
                 }
-            ];
-
-            if (adminRole) {
-                newOverwrites.push({
-                    id: adminRole.id,
-                    allow: [
-                        PermissionsBitField.Flags.ManageChannels,
-                        PermissionsBitField.Flags.ManageRoles,
-                        PermissionsBitField.Flags.ViewChannel,
-                        PermissionsBitField.Flags.SendMessages,
-                        PermissionsBitField.Flags.ManageMessages,
-                        PermissionsBitField.Flags.EmbedLinks,
-                        PermissionsBitField.Flags.AttachFiles,
-                        PermissionsBitField.Flags.ReadMessageHistory,
-                        PermissionsBitField.Flags.UseExternalEmojis,
-                        PermissionsBitField.Flags.AddReactions,
-                        PermissionsBitField.Flags.UseApplicationCommands,
-                        PermissionsBitField.Flags.UseExternalStickers
-                    ]
-                });
+            
+                const ticketOwnerId = interaction.channel.topic;
+                if (!ticketOwnerId) {
+                    return interaction.followUp({ content: '❌ Could not find ticket owner.', flags: 64 });
+                }
+            
+                const newOverwrites = [
+                    {
+                        id: interaction.guild.id,
+                        deny: [PermissionsBitField.Flags.ViewChannel]
+                    },
+                    {
+                        id: ticketOwnerId,
+                        allow: [
+                            PermissionsBitField.Flags.ViewChannel,
+                            PermissionsBitField.Flags.SendMessages,
+                            PermissionsBitField.Flags.EmbedLinks,
+                            PermissionsBitField.Flags.AttachFiles,
+                            PermissionsBitField.Flags.ReadMessageHistory
+                        ]
+                    },
+                    {
+                        id: interaction.user.id,
+                        allow: [
+                            PermissionsBitField.Flags.ViewChannel,
+                            PermissionsBitField.Flags.SendMessages,
+                            PermissionsBitField.Flags.EmbedLinks,
+                            PermissionsBitField.Flags.AttachFiles,
+                            PermissionsBitField.Flags.ReadMessageHistory,
+                            PermissionsBitField.Flags.UseExternalEmojis,
+                            PermissionsBitField.Flags.AddReactions,
+                            PermissionsBitField.Flags.UseApplicationCommands,
+                            PermissionsBitField.Flags.UseExternalStickers
+                        ]
+                    }
+                ];
+            
+                if (adminRole) {
+                    newOverwrites.push({
+                        id: adminRole.id,
+                        allow: [
+                            PermissionsBitField.Flags.ManageChannels,
+                            PermissionsBitField.Flags.ManageRoles,
+                            PermissionsBitField.Flags.ViewChannel,
+                            PermissionsBitField.Flags.SendMessages,
+                            PermissionsBitField.Flags.ManageMessages,
+                            PermissionsBitField.Flags.EmbedLinks,
+                            PermissionsBitField.Flags.AttachFiles,
+                            PermissionsBitField.Flags.ReadMessageHistory,
+                            PermissionsBitField.Flags.UseExternalEmojis,
+                            PermissionsBitField.Flags.AddReactions,
+                            PermissionsBitField.Flags.UseApplicationCommands,
+                            PermissionsBitField.Flags.UseExternalStickers
+                        ]
+                    });
+                }
+            
+                await interaction.channel.permissionOverwrites.set(newOverwrites);
+            
+                try {
+                    const messages = await interaction.channel.messages.fetch({ limit: 20 });
+                    const botMessage = messages.find(m =>
+                        m.author.id === client.user.id &&
+                        m.components.length > 0 &&
+                        m.embeds.length > 0
+                    );
+                    if (botMessage) {
+                        await botMessage.edit({ components: [] });
+                    }
+                } catch (error) {
+                    console.error('[CLAIM] Error removing buttons:', error);
+                }
+            
+                const embed = new EmbedBuilder()
+                    .setTitle('Ticket Claimed')
+                    .setDescription(`This ticket has been claimed by ${interaction.user.toString()}, he will assist you with your request.`)
+                    .setColor(GOLD);
+            
+                const closeRow = new ActionRowBuilder().addComponents(
+                    new ButtonBuilder()
+                        .setCustomId('close_ticket')
+                        .setLabel('Close Ticket')
+                        .setStyle(ButtonStyle.Danger)
+                );
+            
+                await interaction.channel.send({ embeds: [embed], components: [closeRow] });
+                return;
             }
-
-            await interaction.channel.permissionOverwrites.set(newOverwrites);
-
-            try {
-                const noButtonsRow = new ActionRowBuilder();
-                await interaction.message.edit({ components: [noButtonsRow] });
-            } catch (error) {}
-
-            const embed = new EmbedBuilder()
-                .setTitle('Ticket Claimed')
-                .setDescription(`This ticket has been claimed by ${interaction.user.toString()}, he will assist you with your request.`)
-                .setColor(GOLD);
-
-            const closeRow = new ActionRowBuilder().addComponents(
-                new ButtonBuilder()
-                    .setCustomId('close_ticket')
-                    .setLabel('Close Ticket')
-                    .setStyle(ButtonStyle.Danger)
-            );
-
-            await interaction.channel.send({ embeds: [embed], components: [closeRow] });
-            return;
-        }
+            
+            if (interaction.isButton() && interaction.customId === 'close_ticket') {
+                await interaction.deferUpdate();
+            
+                const config = await getGuildConfig(interaction.guild.id);
+                const staffRole = config.staffRoleId ? interaction.guild.roles.cache.get(config.staffRoleId) : null;
+                const adminRole = config.adminRoleId ? interaction.guild.roles.cache.get(config.adminRoleId) : null;
+            
+                const isStaff = staffRole && interaction.member.roles.cache.has(staffRole.id);
+                const isAdmin = adminRole && interaction.member.roles.cache.has(adminRole.id);
+            
+                if (!isStaff && !isAdmin) {
+                    return interaction.followUp({
+                        content: '❌ Only staff members can close tickets.',
+                        flags: 64
+                    });
+                }
+            
+                const embed = new EmbedBuilder()
+                    .setTitle('Ticket Closed')
+                    .setDescription('This ticket has been closed, the channel will be deleted in 5 seconds....')
+                    .setColor(RED);
+            
+                await interaction.channel.send({ embeds: [embed] });
+            
+                setTimeout(async () => {
+                    try {
+                        if (interaction.channel && interaction.channel.deletable) {
+                            await interaction.channel.delete();
+                        }
+                    } catch (error) {}
+                }, 5000);
+                return;
+            }
 
         if (interaction.isButton() && interaction.customId === 'close_ticket') {
             await interaction.deferUpdate();
