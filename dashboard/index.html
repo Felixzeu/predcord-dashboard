@@ -15,7 +15,28 @@
     <div class="logo">
         <span class="logo-accent">PredCord</span> <span class="logo-sub">Dashboard</span>
     </div>
-    <button id="logoutBtn" class="btn-logout">Logout</button>
+    <div class="header-right">
+        <div class="user-menu" id="userMenu">
+            <button class="user-avatar-btn" id="userAvatarBtn">
+                <img src="" alt="" class="user-avatar-img" id="userAvatarImg">
+            </button>
+            <div class="user-dropdown hidden" id="userDropdown">
+                <div class="user-dropdown-header">
+                    <img src="" alt="" class="user-dropdown-avatar" id="userDropdownAvatar">
+                    <div class="user-dropdown-names">
+                        <div class="user-dropdown-displayname" id="userDropdownDisplayName">—</div>
+                        <div class="user-dropdown-username" id="userDropdownUsername" title="Click to copy ID">—</div>
+                    </div>
+                </div>
+                <div class="user-dropdown-divider"></div>
+                <div class="user-dropdown-section-title">Roles</div>
+                <div class="user-dropdown-roles" id="userDropdownRoles">
+                    <span class="loading-text">Loading...</span>
+                </div>
+            </div>
+        </div>
+        <button id="logoutBtn" class="btn-logout">Logout</button>
+    </div>
 </header>
 
 <main>
