@@ -970,37 +970,70 @@ async function loadModlogs() {
     }
 }
 
+function logLine(log) {
+    const user = `<span class="log-user">${escapeHtml(log.userTag || 'Unknown')}</span>`;
+    const target = `<span class="log-user">${escapeHtml(log.targetTag || 'Unknown')}</span>`;
+    switch (log.action) {
+        case 'ticket_created': return `Ticket created by ${user}`;
+        case 'ticket_claimed': return `Ticket claimed by ${user}`;
+        case 'ticket_closed': return `Ticket closed by ${user}`;
+        case 'report_created': return `Report created by ${user}`;
+        case 'user_banned': case 'user_banned_auto': return `${target} has been banned`;
+        case 'user_unbanned': case 'user_unbanned_auto': return `${target} has been unbanned`;
+        case 'user_kicked': case 'user_kicked_auto': return `${target} has been kicked`;
+        case 'user_muted': case 'user_muted_auto': return `${target} has been muted`;
+        case 'user_unmuted': return `${target} has been unmuted`;
+        case 'user_warned': return `${target} has been warned`;
+        case 'messages_purged': return `${user} purged messages`;
+        case 'custom_command_used': case 'native_command_used': return `${user} used a command`;
+        default: return `${user} — ${escapeHtml(log.details || log.action || '')}`;
+    }
+}
+
 function renderModlogs(logs) {
     const list = document.getElementById('modlogsList');
     if (!logs || logs.length === 0) {
         list.innerHTML = '<div class="empty-state"><h3>No actions</h3><p>No logs recorded</p></div>';
         return;
     }
-    list.innerHTML = logs.map(log => {
-        const type = (log.type || 'generic').toLowerCase();
-        const action = log.action || log.type || 'N/A';
-        const target = log.targetTag || log.targetId || log.userTag || 'System';
-        const reason = log.reason || log.details || 'No details';
-        const date = log.dateFormatted || (log.date ? new Date(log.date).toLocaleString('en-US') : '');
-        const mod = log.moderatorTag || log.userTag || 'Bot';
+    list.innerHTML = logs.map((log, i) => {
+        const action = log.action || log.type || 'generic';
+        const date = log.date ? new Date(log.date).toLocaleString('en-US') : '';
+        const extra = log.extra || {};
+
+        const rows = [];
+        if (log.reason) rows.push(`<div><b>Reason:</b> ${escapeHtml(log.reason)}</div>`);
+        if (log.details) rows.push(`<div><b>Details:</b> ${escapeHtml(log.details)}</div>`);
+        if (extra.channelName) rows.push(`<div><b>Channel:</b> ${escapeHtml(extra.channelName)}</div>`);
+        if (extra.ticketOwnerTag) rows.push(`<div><b>Ticket owner:</b> ${escapeHtml(extra.ticketOwnerTag)}</div>`);
+        if (extra.claimedByTag) rows.push(`<div><b>Claimed by:</b> ${escapeHtml(extra.claimedByTag)}</div>`);
+        rows.push(`<div><b>Date:</b> ${escapeHtml(date)}</div>`);
 
         const transcriptBtn = log.transcriptId
             ? `<a class="modlog-transcript-btn" href="/transcript/${escapeAttr(log.transcriptId)}" target="_blank" rel="noopener">Transcript</a>`
             : '';
 
         return `
-        <div class="modlog-card">
-            <div class="modlog-header">
-                <span class="modlog-badge ${escapeAttr(type)}">${escapeHtml(action)}</span>
-                <span class="modlog-target">${escapeHtml(target)}</span>
-                ${transcriptBtn}
+        <div class="modlog-card" data-idx="${i}">
+            <div class="modlog-row">
+                <span class="modlog-badge ${escapeAttr(action)}">${escapeHtml(action.replace(/_/g, ' '))}</span>
+                <span class="modlog-line">${logLine(log)}</span>
+                <button class="modlog-arrow" type="button" aria-label="Details">&#9662;</button>
             </div>
-            <div class="modlog-reason">${escapeHtml(reason)}</div>
-            <div class="modlog-meta">
-                ${escapeHtml(mod)} — ${escapeHtml(date)}
+            <div class="modlog-details">
+                <div class="modlog-details-inner">
+                    ${rows.join('')}
+                    ${transcriptBtn}
+                </div>
             </div>
         </div>`;
     }).join('');
+
+    list.querySelectorAll('.modlog-card').forEach(card => {
+        card.querySelector('.modlog-row').addEventListener('click', () => {
+            card.classList.toggle('open');
+        });
+    });
 }
 
 async function loadPermissionsSection() {
