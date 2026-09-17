@@ -2,7 +2,7 @@
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
 
-:root {
+:root  {
     --primary: #E67E22;
     --primary-dark: #d36a15;
     --primary-light: #ffa754;
