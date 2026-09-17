@@ -391,23 +391,18 @@ app.post('/api/guildconfig/:guildId', requireAuth, async (req, res) => {
             messageLogChannelId,
             transcriptsChannelId,
             staffRoleId,
-            modRoleId,
             adminRoleId,
-            supportCategoryId,
-            reportCategoryId
+            supportCategoryId
         } = req.body;
 
-        const updates = {
-            joinLeaveLogChannelId: joinLeaveLogChannelId || null,
-            modLogChannelId: modLogChannelId || null,
-            messageLogChannelId: messageLogChannelId || null,
-            transcriptsChannelId: transcriptsChannelId || null,
-            staffRoleId: staffRoleId || null,
-            modRoleId: modRoleId || null,
-            adminRoleId: adminRoleId || null,
-            supportCategoryId: supportCategoryId || null,
-            reportCategoryId: reportCategoryId || null
-        };
+        const updates = {};
+        if (joinLeaveLogChannelId !== undefined) updates.joinLeaveLogChannelId = joinLeaveLogChannelId || null;
+        if (modLogChannelId !== undefined) updates.modLogChannelId = modLogChannelId || null;
+        if (messageLogChannelId !== undefined) updates.messageLogChannelId = messageLogChannelId || null;
+        if (transcriptsChannelId !== undefined) updates.transcriptsChannelId = transcriptsChannelId || null;
+        if (staffRoleId !== undefined) updates.staffRoleId = staffRoleId || null;
+        if (adminRoleId !== undefined) updates.adminRoleId = adminRoleId || null;
+        if (supportCategoryId !== undefined) updates.supportCategoryId = supportCategoryId || null;
 
         for (const [key, value] of Object.entries(updates)) {
             await db.saveGuildConfigDB(guildId, key, value);
