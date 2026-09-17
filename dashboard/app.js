@@ -38,7 +38,7 @@ function showToast(message, type = 'success') {
     toast.className = `toast ${type}`;
     toast.textContent = message;
     document.body.appendChild(toast);
-    setTimeout(() => toast.remove(), 3500);
+    setTimeout(() => toast.remove(), 3000);
 }
 
 function showAccessDenied() {
@@ -181,14 +181,12 @@ async function loadUserMenu() {
     const ddRoles = document.getElementById('userDropdownRoles');
 
     try {
-        const res = await fetch('/api/me', { credentials: 'same-origin' });
-        if (!res.ok) throw new Error('Errore caricamento utente');
-        const raw = await res.json();
-
-        const me = raw.user || raw;
+        const meRes = await fetch('/api/me', { credentials: 'same-origin' });
+        if (!meRes.ok) throw new Error('Errore caricamento utente');
+        const meRaw = await meRes.json();
+        const me = meRaw.user || meRaw;
 
         let avatarUrl = defaultAvatar;
-
         if (me.avatar) {
             if (typeof me.avatar === 'string' && me.avatar.startsWith('http')) {
                 avatarUrl = me.avatar;
@@ -214,47 +212,68 @@ async function loadUserMenu() {
             ddAvatar.onerror = () => { ddAvatar.src = defaultAvatar; };
         }
 
-        const displayName = me.displayName || me.global_name || me.username || 'Utente';
+        let displayName = me.displayName || me.global_name || me.username || 'Utente';
         const username = me.username || '';
 
         if (ddDisplayName) ddDisplayName.textContent = displayName;
         if (ddUsername) {
             ddUsername.textContent = username || (me.id ? `ID: ${me.id}` : '—');
-            ddUsername.title = me.id ? `ID: ${me.id} — click per copiare` : '';
+            ddUsername.title = me.id ? `ID: ${me.id}` : '';
             if (me.id) {
                 ddUsername.style.cursor = 'pointer';
                 ddUsername.onclick = () => {
                     navigator.clipboard.writeText(me.id).then(() => {
-                        showToast('ID copiato negli appunti');
+                        showToast('User ID copied');
                     }).catch(() => {});
                 };
             }
         }
 
         if (ddRoles) {
-            const roles = Array.isArray(me.roles) ? me.roles : [];
+            ddRoles.innerHTML = '<span class="loading-text">Loading...</span>';
+        }
 
-            if (roles.length === 0) {
-                const effectiveRole = raw.role || me.role;
-                let roleBadge = 'Nessun ruolo';
+        try {
+            const fullRes = await fetch('/api/me/full', { credentials: 'same-origin' });
+            if (fullRes.ok) {
+                const full = await fullRes.json();
 
-                if (effectiveRole === 'owner') {
-                    roleBadge = 'Owner';
-                } else if (raw.isAdmin || me.isAdmin) {
-                    roleBadge = 'Admin';
-                } else if (effectiveRole === 'moderator') {
-                    roleBadge = 'Moderator';
+                if (full.avatar) {
+                    const fullAvatar = full.avatar;
+                    if (avatarBtnImg) {
+                        avatarBtnImg.src = fullAvatar;
+                        avatarBtnImg.onerror = () => { avatarBtnImg.src = defaultAvatar; };
+                    }
+                    if (ddAvatar) {
+                        ddAvatar.src = fullAvatar;
+                        ddAvatar.onerror = () => { ddAvatar.src = defaultAvatar; };
+                    }
                 }
 
-                ddRoles.innerHTML = `<span class="user-role-badge">${roleBadge}</span>`;
-            } else {
-                ddRoles.innerHTML = roles.map(r => {
-                    const name = typeof r === 'string' ? r : (r.name || 'Ruolo');
-                    const color = (typeof r === 'object' && r.color) ? r.color : null;
-                    const style = color ? `style="color:#${color.toString(16).padStart(6, '0')};"` : '';
-                    return `<span class="user-role-badge" ${style}>${escapeHtml(name)}</span>`;
-                }).join('');
+                if (full.displayName) {
+                    displayName = full.displayName;
+                    if (ddDisplayName) ddDisplayName.textContent = displayName;
+                }
+
+                if (ddRoles) {
+                    const roles = Array.isArray(full.roles) ? full.roles : [];
+                    if (roles.length === 0) {
+                        ddRoles.innerHTML = '<span class="loading-text">No roles</span>';
+                    } else {
+                        ddRoles.innerHTML = roles.map(r => {
+                            const color = r.color;
+                            const hasColor = typeof color === 'string' && color !== '#000000' && color !== '#000';
+                            const style = hasColor ? `style="color:${color}; border-color:${color}33;"` : '';
+                            return `<span class="user-role-badge" ${style}>${escapeHtml(r.name)}</span>`;
+                        }).join('');
+                    }
+                }
+            } else if (ddRoles) {
+                ddRoles.innerHTML = '<span class="loading-text">No roles</span>';
             }
+        } catch (err) {
+            console.error('[ME-FULL]', err);
+            if (ddRoles) ddRoles.innerHTML = '<span class="loading-text">Errore</span>';
         }
     } catch (e) {
         console.error('[USER-MENU] Errore:', e);
