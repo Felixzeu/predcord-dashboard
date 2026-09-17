@@ -1974,12 +1974,11 @@ aside h3 {
 }
 
 @keyframes shakeModal {
-    25%, 75% { transform: translateX(-1px); }
-    50% { transform: translateX(1px); }
+    50% { transform: translateX(-1px); }
 }
 
 .modal-content.shake {
-    animation: shakeModal 0.3s ease-in-out both;
+    animation: shakeModal 0.25s ease-in-out both;
 }
 
 .form-toast {
