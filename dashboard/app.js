@@ -144,6 +144,8 @@ async function init() {
         await loadMyPermissions();
         await loadGuilds();
         setupEvents();
+        setupUserMenu();
+        await loadUserMenu();
         updatePreview();
         updatePermissionsTabVisibility();
     } catch (e) {
