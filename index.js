@@ -1797,7 +1797,31 @@ async function handleCustomCommand(message, command, args, cmdData) {
         if (cmdData.title) embed.setTitle(cmdData.title);
         if (cmdThumbnail) embed.setThumbnail(cmdThumbnail);
         if (cmdImage) embed.setImage(cmdImage);
-        await message.channel.send({ embeds: [embed] }).catch(() => {});
+
+        const embeds = [embed];
+
+        if (Array.isArray(cmdData.extraEmbeds)) {
+            for (const extra of cmdData.extraEmbeds.slice(0, 9)) {
+                let extraText = extra.response || '';
+                extraText = extraText.replace(/{user}/g, message.author.toString());
+                extraText = extraText.replace(/{username}/g, message.author.username);
+                extraText = extraText.replace(/{server}/g, message.guild.name);
+                extraText = extraText.replace(/{membercount}/g, message.guild.memberCount);
+                extraText = extraText.replace(/{args}/g, args.join(' '));
+                extraText = extraText.replace(/{md}/g, await formatModerationHistory(mdTarget.id, message.guild.id, mdTarget.username, 1));
+                extraText = applyPositionalArgs(extraText, args);
+
+                const extraEmbed = new EmbedBuilder()
+                    .setDescription(extraText)
+                    .setColor(extra.color || COLORS.INFO);
+                if (extra.title) extraEmbed.setTitle(extra.title);
+                if (extra.thumbnail && isValidUrl(extra.thumbnail)) extraEmbed.setThumbnail(extra.thumbnail);
+                if (extra.image && isValidUrl(extra.image)) extraEmbed.setImage(extra.image);
+                embeds.push(extraEmbed);
+            }
+        }
+
+        await message.channel.send({ embeds }).catch(() => {});
     } else if (cmdImage) {
         const embed = new EmbedBuilder()
             .setDescription(replyText)
