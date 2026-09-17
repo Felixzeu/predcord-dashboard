@@ -259,6 +259,65 @@ app.get('/api/me', requireAuth, (req, res) => {
     });
 });
 
+app.get('/api/me/full', requireAuth, async (req, res) => {
+    try {
+        const { client } = global.PredCord;
+
+        if (!req.session.user || !req.session.user.isDiscord) {
+            return res.json({
+                id: req.session.user?.id || null,
+                username: req.session.user?.username || 'Admin',
+                displayName: req.session.user?.username || 'Admin',
+                discriminator: '0000',
+                tag: req.session.user?.username || 'Admin',
+                avatar: null,
+                roles: []
+            });
+        }
+
+        const guild = client.guilds.cache.get(MAIN_GUILD_ID);
+        if (!guild) return res.status(404).json({ error: 'Server non trovato' });
+
+        let member;
+        try {
+            member = await guild.members.fetch(req.session.user.id);
+        } catch {
+            return res.json({
+                id: req.session.user.id,
+                username: req.session.user.username,
+                displayName: req.session.user.username,
+                discriminator: req.session.user.discriminator || '0000',
+                tag: req.session.user.username,
+                avatar: req.session.user.avatar,
+                roles: []
+            });
+        }
+
+        const roles = member.roles.cache
+            .filter(r => r.id !== guild.id)
+            .sort((a, b) => b.position - a.position)
+            .map(r => ({
+                id: r.id,
+                name: r.name,
+                color: r.hexColor
+            }));
+
+        const avatarUrl = member.user.displayAvatarURL({ dynamic: true, size: 128 });
+
+        res.json({
+            id: member.user.id,
+            username: member.user.username,
+            displayName: member.displayName,
+            discriminator: member.user.discriminator || '0000',
+            tag: member.user.tag,
+            avatar: avatarUrl,
+            roles: roles
+        });
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
 app.get('/api/my-permissions', requireAuth, async (req, res) => {
     try {
         const role = getUserRole(req);
