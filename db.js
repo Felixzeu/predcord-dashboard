@@ -11,7 +11,12 @@ async function connectDB() {
     }
     try {
         await mongoose.connect(uri, {
-            serverSelectionTimeoutMS: 10000
+            serverSelectionTimeoutMS: 15000,
+            socketTimeoutMS: 45000,
+            connectTimeoutMS: 15000,
+            heartbeatFrequencyMS: 10000,
+            maxPoolSize: 10,
+            retryWrites: true
         });
         connected = true;
         console.log('[DB] Connected to MongoDB');
@@ -21,6 +26,20 @@ async function connectDB() {
         return false;
     }
 }
+
+mongoose.connection.on('disconnected', () => {
+    connected = false;
+    console.error('[DB] Disconnected');
+});
+
+mongoose.connection.on('reconnected', () => {
+    connected = true;
+    console.log('[DB] Reconnected');
+});
+
+mongoose.connection.on('error', (err) => {
+    console.error('[DB] Connection error:', err.message);
+});
 
 const ModLogSchema = new mongoose.Schema({
     guildId: { type: String, required: true, index: true },
