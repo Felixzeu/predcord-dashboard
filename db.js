@@ -110,6 +110,16 @@ const CustomCommandSchema = new mongoose.Schema({
     deleteCommand: { type: Boolean, default: true },
     thumbnail: { type: String, default: null },
     image: { type: String, default: null },
+    extraEmbeds: {
+        type: [{
+            title: { type: String, default: '' },
+            response: { type: String, default: '' },
+            color: { type: Number, default: 0x7289DA },
+            thumbnail: { type: String, default: null },
+            image: { type: String, default: null }
+        }],
+        default: []
+    },
     allowedRoles: { type: [String], default: [] },
     duration: { type: Number, default: null },
     isBase: { type: Boolean, default: false },
