@@ -53,7 +53,15 @@ function showAccessDenied() {
     }, 2000);
 }
 
-function showFormToast(message = 'Fill in all fields') {
+function shakeModal() {
+    const modalContent = document.querySelector('#modal .modal-content');
+    if (!modalContent) return;
+    modalContent.classList.remove('shake');
+    void modalContent.offsetWidth;
+    modalContent.classList.add('shake');
+}
+
+function showFormToast(message = 'Fill all fields') {
     const toast = document.getElementById('formToast');
     if (!toast) return;
     const textEl = toast.querySelector('.form-toast-text');
@@ -694,8 +702,10 @@ function addEmbedBlock(data = {}) {
         <label>Image URL (opzionale)</label>
         <input type="url" class="ee-image" value="${escapeAttr(data.image || '')}">
     `;
-    block.querySelector('.extra-embed-remove').onclick = () => block.remove();
+    block.querySelector('.extra-embed-remove').onclick = () => { block.remove(); updatePreview(); };
+    block.querySelectorAll('input, textarea').forEach(el => el.addEventListener('input', updatePreview));
     list.appendChild(block);
+    updatePreview();
 }
 
 function clearExtraEmbeds() {
@@ -734,6 +744,26 @@ function toggleMoreOptions() {
     }
 }
 
+function renderPreviewEmbed(title, colorHex, thumbnail, responseRaw, text, image) {
+    let html = `<div class="discord-embed" style="border-left-color: ${escapeAttr(colorHex)};">`;
+    if (thumbnail) {
+        html += `<img class="discord-embed-thumb" src="${escapeAttr(thumbnail)}" alt="" onerror="this.style.display='none'">`;
+    }
+    if (title) {
+        html += `<div class="discord-embed-title">${escapeHtml(title)}</div>`;
+    }
+    if (responseRaw.trim()) {
+        html += `<div class="discord-embed-desc">${escapeHtml(text)}</div>`;
+    } else {
+        html += `<div class="discord-embed-desc preview-empty">Fill in the Response field to see the text.</div>`;
+    }
+    if (image) {
+        html += `<img class="discord-embed-image" src="${escapeAttr(image)}" alt="" onerror="this.style.display='none'">`;
+    }
+    html += `</div>`;
+    return html;
+}
+
 function updatePreview() {
     const preview = document.getElementById('previewContent');
     const avatar = document.getElementById('previewAvatar');
@@ -763,22 +793,25 @@ function updatePreview() {
         .replace(/\$(\d+)/g, (match, num) => `[arg${num}]`);
 
     if (isEmbed) {
-        let html = `<div class="discord-embed" style="border-left-color: ${escapeAttr(colorHex)};">`;
-        if (thumbnail) {
-            html += `<img class="discord-embed-thumb" src="${escapeAttr(thumbnail)}" alt="" onerror="this.style.display='none'">`;
-        }
-        if (title) {
-            html += `<div class="discord-embed-title">${escapeHtml(title)}</div>`;
-        }
-        if (response.trim()) {
-            html += `<div class="discord-embed-desc">${escapeHtml(text)}</div>`;
-        } else {
-            html += `<div class="discord-embed-desc preview-empty">Fill in the Response field to see the text.</div>`;
-        }
-        if (image) {
-            html += `<img class="discord-embed-image" src="${escapeAttr(image)}" alt="" onerror="this.style.display='none'">`;
-        }
-        html += `</div>`;
+        let html = renderPreviewEmbed(title, colorHex, thumbnail, response, text, image);
+
+        document.querySelectorAll('#extraEmbedsList .extra-embed-block').forEach(block => {
+            const eTitle = block.querySelector('.ee-title').value || '';
+            const eColor = block.querySelector('.ee-color').value || '#7289da';
+            const eThumb = block.querySelector('.ee-thumbnail').value || '';
+            const eImage = block.querySelector('.ee-image').value || '';
+            const eResponse = block.querySelector('.ee-response').value || '';
+            const eText = eResponse
+                .replace(/{user}/g, '@Mario')
+                .replace(/{username}/g, 'Mario')
+                .replace(/{server}/g, 'PredCord')
+                .replace(/{membercount}/g, '42')
+                .replace(/{args}/g, 'example args')
+                .replace(/{md}/g, '[modlogs placeholder]')
+                .replace(/\$(\d+)/g, (match, num) => `[arg${num}]`);
+            html += renderPreviewEmbed(eTitle, eColor, eThumb, eResponse, eText, eImage);
+        });
+
         preview.innerHTML = html;
         return;
     }
@@ -902,7 +935,8 @@ async function saveCommand(e) {
     }
 
     if (invalid) {
-        showFormToast('Fill in all fields');
+        showFormToast('Fill all fields');
+        shakeModal();
         return;
     }
 
