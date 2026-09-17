@@ -1,101 +1,410 @@
-<div id="tab-config" class="tab-content hidden">
-    <div class="panel-header">
-        <h2>Configurazione</h2>
-        <button id="saveConfigBtn" class="btn-primary">Salva Configurazione</button>
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PredCord Dashboard</title>
+<link rel="icon" type="image/png" href="/favicon.png">
+<link rel="shortcut icon" type="image/png" href="/favicon.png">
+<link rel="apple-touch-icon" href="/favicon.png">
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+
+<header class="topbar">
+    <div class="logo">
+        <span class="logo-accent">PredCord</span> <span class="logo-sub">Dashboard</span>
     </div>
+    <button id="logoutBtn" class="btn-logout">Logout</button>
+</header>
 
-    <h2 class="section-title">Canali Log</h2>
-    <div class="permissions-grid">
-        <div class="permission-card">
-            <h3>Join/Leave Log</h3>
-            <p class="permission-desc">Canale per i log di ingresso/uscita</p>
-            <div id="cfgJoinLeaveList" class="roles-list">
-                <p class="loading-text">Caricamento...</p>
-            </div>
-        </div>
-        <div class="permission-card">
-            <h3>Mod Log</h3>
-            <p class="permission-desc">Canale per i log di moderazione</p>
-            <div id="cfgModLogList" class="roles-list">
-                <p class="loading-text">Caricamento...</p>
-            </div>
-        </div>
-        <div class="permission-card">
-            <h3>Message Log</h3>
-            <p class="permission-desc">Canale per i log dei messaggi (edit/delete)</p>
-            <div id="cfgMessageLogList" class="roles-list">
-                <p class="loading-text">Caricamento...</p>
-            </div>
-        </div>
-        <div class="permission-card">
-            <h3>Transcripts</h3>
-            <p class="permission-desc">Canale per i transcript dei ticket</p>
-            <div id="cfgTranscriptsList" class="roles-list">
-                <p class="loading-text">Caricamento...</p>
-            </div>
-        </div>
-    </div>
+<main>
+    <aside>
+        <h3>Sezioni</h3>
+        <nav class="nav-tabs">
+            <button class="nav-tab active" data-tab="commands">Comandi Custom</button>
+            <button class="nav-tab hidden" data-tab="permissions" id="navTabPermissions">Permessi</button>
+            <button class="nav-tab hidden" data-tab="config" id="navTabConfig">Configurazione</button>
+            <button class="nav-tab hidden" data-tab="tickets" id="navTabTickets">Tickets</button>
+            <button class="nav-tab" data-tab="logs">Logs</button>
+        </nav>
+    </aside>
 
-    <div class="divider-thick"></div>
+    <section class="content">
+        <div id="tab-commands" class="tab-content">
+            <div class="panel-header">
+                <h2>Comandi Custom</h2>
+                <button id="newCmdBtn" class="btn-primary">+ Nuovo Comando</button>
+            </div>
+            <div id="commandsList" class="commands-list">
+                <div class="loading">Caricamento</div>
+            </div>
+        </div>
 
-    <h2 class="section-title">Ruoli</h2>
-    <div class="permissions-grid">
-        <div class="permission-card">
-            <h3>Staff Role</h3>
-            <p class="permission-desc">Ruolo dello staff (accesso ai ticket)</p>
-            <div id="cfgStaffRoleList" class="roles-list">
-                <p class="loading-text">Caricamento...</p>
+        <div id="tab-permissions" class="tab-content hidden">
+            <div class="panel-header">
+                <h2>Permessi</h2>
+                <button id="savePermissionsBtn" class="btn-primary">Salva Permessi</button>
+            </div>
+
+            <p class="permissions-info">
+                Seleziona i ruoli che possono eseguire ciascuna azione nella dashboard.
+                Se non selezioni nessun ruolo per una categoria, <strong>nessuno</strong> potrà eseguire quell'azione.
+                <br><br>
+                Nella sezione <strong>Utenti Speciali</strong> puoi aggiungere ID Discord specifici che bypassano i controlli dei ruoli.
+            </p>
+
+            <div class="permissions-grid">
+                <div class="permission-card">
+                    <h3>Creare Comandi</h3>
+                    <p class="permission-desc">Chi può creare nuovi comandi custom</p>
+                    <div id="createRolesList" class="roles-list">
+                        <p class="loading-text">Caricamento...</p>
+                    </div>
+                </div>
+
+                <div class="permission-card">
+                    <h3>Modificare Comandi</h3>
+                    <p class="permission-desc">Chi può modificare i comandi esistenti</p>
+                    <div id="editRolesList" class="roles-list">
+                        <p class="loading-text">Caricamento...</p>
+                    </div>
+                </div>
+
+                <div class="permission-card">
+                    <h3>Eliminare Comandi</h3>
+                    <p class="permission-desc">Chi può eliminare i comandi</p>
+                    <div id="deleteRolesList" class="roles-list">
+                        <p class="loading-text">Caricamento...</p>
+                    </div>
+                </div>
+
+                <div class="permission-card">
+                    <h3>Vedere i Logs</h3>
+                    <p class="permission-desc">Chi può vedere lo storico moderazione</p>
+                    <div id="viewLogsRolesList" class="roles-list">
+                        <p class="loading-text">Caricamento...</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="divider-thick"></div>
+
+            <h2 class="section-title">Utenti Speciali</h2>
+            <p class="permissions-info">
+                Aggiungi ID Discord specifici per dare accesso diretto senza dover configurare ruoli.
+                <br><br>
+                <strong>Admin</strong>: può creare, modificare, eliminare comandi e vedere i logs (ma NON gestire i permessi).<br>
+                <strong>Owner</strong>: può fare tutto, compreso gestire questa sezione Permessi.
+            </p>
+
+            <div class="permissions-grid">
+                <div class="permission-card">
+                    <h3>Admin</h3>
+                    <p class="permission-desc">Utenti con permessi admin (bypass ruoli)</p>
+
+                    <div class="special-user-input">
+                        <input type="text" id="adminUserInput" placeholder="Incolla ID Discord..." maxlength="32">
+                        <button type="button" id="adminUserAdd" class="btn-add-user">Aggiungi</button>
+                    </div>
+
+                    <div id="adminUsersList" class="special-users-list">
+                        <p class="loading-text">Nessun utente.</p>
+                    </div>
+                </div>
+
+                <div class="permission-card">
+                    <h3>Owner</h3>
+                    <p class="permission-desc">Utenti con permessi owner (accesso completo)</p>
+
+                    <div class="special-user-input">
+                        <input type="text" id="ownerUserInput" placeholder="Incolla ID Discord..." maxlength="32">
+                        <button type="button" id="ownerUserAdd" class="btn-add-user">Aggiungi</button>
+                    </div>
+
+                    <div id="ownerUsersList" class="special-users-list">
+                        <p class="loading-text">Nessun utente.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="divider-thick"></div>
+
+            <h2 class="section-title">Projected Roles</h2>
+            <p class="permissions-info">
+                Seleziona i ruoli protetti. Gli utenti con uno di questi ruoli <strong>non potranno essere bannati, mutati, warnati o kickati</strong> da nessun moderatore (nemmeno dall'Owner).
+                <br><br>
+                Se qualcuno prova a moderare un utente con un Projected Role, il bot risponderà con un embed rosso di errore.
+            </p>
+
+            <div class="permissions-grid">
+                <div class="permission-card" style="grid-column: 1 / -1;">
+                    <h3>Ruoli Protetti</h3>
+                    <p class="permission-desc">Gli utenti con questi ruoli non possono essere moderati</p>
+                    <div id="projectedRolesList" class="roles-list">
+                        <p class="loading-text">Caricamento...</p>
+                    </div>
+                </div>
             </div>
         </div>
-        <div class="permission-card">
-            <h3>Admin Role</h3>
-            <p class="permission-desc">Ruolo amministratore</p>
-            <div id="cfgAdminRoleList" class="roles-list">
-                <p class="loading-text">Caricamento...</p>
+
+        <div id="tab-config" class="tab-content hidden">
+            <div class="panel-header">
+                <h2>Configurazione</h2>
+                <button id="saveConfigBtn" class="btn-primary">Salva Configurazione</button>
+            </div>
+
+            <h2 class="section-title">Canali Log</h2>
+            <div class="permissions-grid">
+                <div class="permission-card">
+                    <h3>Join/Leave Log</h3>
+                    <p class="permission-desc">Canale per i log di ingresso/uscita</p>
+                    <div id="cfgJoinLeaveList" class="roles-list">
+                        <p class="loading-text">Caricamento...</p>
+                    </div>
+                </div>
+                <div class="permission-card">
+                    <h3>Mod Log</h3>
+                    <p class="permission-desc">Canale per i log di moderazione</p>
+                    <div id="cfgModLogList" class="roles-list">
+                        <p class="loading-text">Caricamento...</p>
+                    </div>
+                </div>
+                <div class="permission-card">
+                    <h3>Message Log</h3>
+                    <p class="permission-desc">Canale per i log dei messaggi (edit/delete)</p>
+                    <div id="cfgMessageLogList" class="roles-list">
+                        <p class="loading-text">Caricamento...</p>
+                    </div>
+                </div>
+                <div class="permission-card">
+                    <h3>Transcripts</h3>
+                    <p class="permission-desc">Canale per i transcript dei ticket</p>
+                    <div id="cfgTranscriptsList" class="roles-list">
+                        <p class="loading-text">Caricamento...</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="divider-thick"></div>
+
+            <h2 class="section-title">Ruoli</h2>
+            <div class="permissions-grid">
+                <div class="permission-card">
+                    <h3>Staff Role</h3>
+                    <p class="permission-desc">Ruolo dello staff (accesso ai ticket)</p>
+                    <div id="cfgStaffRoleList" class="roles-list">
+                        <p class="loading-text">Caricamento...</p>
+                    </div>
+                </div>
+                <div class="permission-card">
+                    <h3>Admin Role</h3>
+                    <p class="permission-desc">Ruolo amministratore</p>
+                    <div id="cfgAdminRoleList" class="roles-list">
+                        <p class="loading-text">Caricamento...</p>
+                    </div>
+                </div>
             </div>
         </div>
+
+        <div id="tab-tickets" class="tab-content hidden">
+            <div class="panel-header">
+                <h2>Ticket Configuration</h2>
+                <button id="saveTicketsBtn" class="btn-primary">Save Configuration</button>
+            </div>
+
+            <p class="permissions-info">
+                Configure the ticket system. These settings are used by the <strong>/panel</strong> command to create ticket channels.
+            </p>
+
+            <h2 class="section-title">Ticket Settings</h2>
+            <div class="permissions-grid">
+                <div class="permission-card">
+                    <h3>Tickets Category</h3>
+                    <p class="permission-desc">Category where ticket channels will be created</p>
+                    <div id="ticketCategoryList" class="roles-list">
+                        <p class="loading-text">Loading...</p>
+                    </div>
+                </div>
+                <div class="permission-card">
+                    <h3>Ticket Logs</h3>
+                    <p class="permission-desc">Channel where ticket logs will be sent</p>
+                    <div id="ticketLogsList" class="roles-list">
+                        <p class="loading-text">Loading...</p>
+                    </div>
+                </div>
+                <div class="permission-card">
+                    <h3>Staff Role</h3>
+                    <p class="permission-desc">Role pinged on new tickets and allowed to claim/close them</p>
+                    <div id="ticketStaffRoleList" class="roles-list">
+                        <p class="loading-text">Loading...</p>
+                    </div>
+                </div>
+                <div class="permission-card">
+                    <h3>Admin Role</h3>
+                    <p class="permission-desc">Role with full ticket permissions (claim, close, manage)</p>
+                    <div id="ticketAdminRoleList" class="roles-list">
+                        <p class="loading-text">Loading...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="tab-logs" class="tab-content hidden">
+            <div class="panel-header">
+                <h2>Logs</h2>
+            </div>
+
+            <div class="logs-container">
+                <div id="modlogsList" class="modlogs-list">
+                    <div class="loading">Caricamento</div>
+                </div>
+            </div>
+        </div>
+    </section>
+</main>
+
+<div id="modal" class="modal hidden">
+    <div class="modal-content">
+        <h2 id="modalTitle">Nuovo Comando</h2>
+        <form id="cmdForm" novalidate>
+            <label>Nome comando (senza prefix)</label>
+            <input type="text" id="cmdName" placeholder="es: regole" pattern="[a-zA-Z0-9_-]{1,32}">
+
+            <label>Prefix</label>
+            <input type="text" id="cmdPrefix" maxlength="1" placeholder="es: *" value="*">
+
+            <label>Tipo comando</label>
+            <select id="cmdType">
+                <option value="text">Message Content - Normal</option>
+                <option value="embed">Embed</option>
+                <option value="ban">Ban</option>
+                <option value="kick">Kick</option>
+                <option value="mute">Mute</option>
+                <option value="warn">Warn</option>
+                <option value="purge" id="purgeOption" class="hidden">Purge</option>
+            </select>
+
+            <div id="labelTitle" style="display:none;">
+                <label>Titolo (solo embed)</label>
+                <input type="text" id="cmdTitle" placeholder="es: Regole del Server">
+            </div>
+
+            <label class="toggle-row">
+                <span class="toggle-text">Elimina automaticamente il messaggio del comando</span>
+                <input type="checkbox" id="cmdDelete" class="toggle-input" checked>
+                <span class="toggle-switch"></span>
+            </label>
+
+            <div id="labelResponse">
+                <div class="label-with-more">
+                    <label id="responseLabelText">Risposta</label>
+                    <button type="button" id="moreBtn" class="more-btn">More</button>
+                </div>
+                <textarea id="cmdResponse" rows="6" placeholder="Variabili: {user} {username} {server} {membercount} {args} {md}"></textarea>
+                <p id="responseHint" style="color: var(--text-dim); font-size: 12px; margin-top: 8px; line-height: 1.5;"></p>
+            </div>
+
+            <div id="moreOptions" class="more-options hidden">
+                <div id="labelThumbnail" style="display:none;">
+                    <label>Thumbnail URL (opzionale)</label>
+                    <input type="url" id="cmdThumbnail" placeholder="https://...">
+                </div>
+
+                <div id="labelImage">
+                    <label>Image URL (opzionale)</label>
+                    <input type="url" id="cmdImage" placeholder="https://...">
+                </div>
+            </div>
+
+            <div id="labelDuration" style="display:none;">
+                <label id="durationLabelText">Duration (giorni)</label>
+                <input type="number" id="cmdDuration" min="1" placeholder="es: 7">
+                <p id="durationHint" style="color: var(--text-dim); font-size: 12px; margin-top: 8px; line-height: 1.5;"></p>
+            </div>
+
+            <div id="labelColor" style="display:none;">
+                <label>Colore Embed</label>
+                <input type="color" id="cmdColor" value="#E67E22">
+            </div>
+
+            <div id="baseToggleWrap" class="base-toggle-wrap hidden">
+                <label class="toggle-row base-toggle-row">
+                    <span class="toggle-text base-toggle-text">Imposta come comando <strong>Base</strong> (solo Owner)</span>
+                    <input type="checkbox" id="cmdIsBase" class="toggle-input">
+                    <span class="toggle-switch base-toggle-switch"></span>
+                </label>
+            </div>
+
+            <hr class="divider">
+
+            <button type="button" id="permissionsBtn" class="permissions-btn">
+                Permessi comando
+            </button>
+
+            <div class="preview-section" id="previewSection">
+                <h3 class="preview-title">Anteprima</h3>
+                <div class="discord-preview">
+                    <div class="discord-message">
+                        <img class="discord-avatar" src="https://images-ext-1.discordapp.net/external/Lir9nmM9QUd1ClFMcchk0JDU4CPNed97Iui2Sm_rfOk/%3Fsize%3D1024/https/cdn.discordapp.com/avatars/1510639493642850355/9774661e36e8458550112734ce78dc14.webp?format=webp&width=320&height=320" alt="" id="previewAvatar">
+                        <div class="discord-message-body">
+                            <div class="discord-message-header">
+                                <span class="discord-username">PredCord Utilities</span>
+                                <span class="discord-bot-tag">BOT</span>
+                            </div>
+                            <div class="discord-message-content" id="previewContent">
+                                <p class="preview-empty">Compila il campo Risposta per vedere l'anteprima.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal-actions">
+                <button type="button" id="cancelBtn" class="btn-secondary">Annulla</button>
+                <button type="submit" class="btn-primary">Salva Comando</button>
+            </div>
+        </form>
     </div>
 </div>
 
-<div id="tab-tickets" class="tab-content hidden">
-    <div class="panel-header">
-        <h2>Ticket Configuration</h2>
-        <button id="saveTicketsBtn" class="btn-primary">Save Configuration</button>
+<div id="permissionsBox" class="permissions-box hidden">
+    <div class="permissions-box-header">
+        <h3>Permessi comando</h3>
+        <button type="button" id="permissionsClose" class="permissions-close">&times;</button>
     </div>
-
-    <p class="permissions-info">
-        Configure the ticket system. These settings are used by the <strong>/panel</strong> command to create ticket channels.
+    <p class="permissions-box-hint">
+        Seleziona i ruoli che possono usare questo comando nel bot.
+        Se non selezioni nessun ruolo, <strong>nessuno</strong> potrà usarlo.
     </p>
+    <div id="rolesList" class="roles-list">
+        <p class="loading-text">Caricamento ruoli...</p>
+    </div>
+</div>
 
-    <h2 class="section-title">Ticket Settings</h2>
-    <div class="permissions-grid">
-        <div class="permission-card">
-            <h3>Tickets Category</h3>
-            <p class="permission-desc">Category where ticket channels will be created</p>
-            <div id="ticketCategoryList" class="roles-list">
-                <p class="loading-text">Loading...</p>
-            </div>
-        </div>
-        <div class="permission-card">
-            <h3>Ticket Logs</h3>
-            <p class="permission-desc">Channel where ticket logs will be sent</p>
-            <div id="ticketLogsList" class="roles-list">
-                <p class="loading-text">Loading...</p>
-            </div>
-        </div>
-        <div class="permission-card">
-            <h3>Staff Role</h3>
-            <p class="permission-desc">Role pinged on new tickets and allowed to claim/close them</p>
-            <div id="ticketStaffRoleList" class="roles-list">
-                <p class="loading-text">Loading...</p>
-            </div>
-        </div>
-        <div class="permission-card">
-            <h3>Admin Role</h3>
-            <p class="permission-desc">Role with full ticket permissions (claim, close, manage)</p>
-            <div id="ticketAdminRoleList" class="roles-list">
-                <p class="loading-text">Loading...</p>
-            </div>
+<div id="confirmModal" class="modal hidden">
+    <div class="modal-content confirm-modal-content">
+        <div class="confirm-modal-icon">&#9888;</div>
+        <h2 id="confirmModalTitle">Conferma eliminazione</h2>
+        <p id="confirmModalText" class="confirm-modal-text">Sei sicuro?</p>
+        <div class="confirm-modal-actions">
+            <button type="button" id="confirmCancelBtn" class="btn-secondary">Annulla</button>
+            <button type="button" id="confirmOkBtn" class="btn-danger">Elimina</button>
         </div>
     </div>
 </div>
+
+<div id="accessDeniedToast" class="access-denied-toast hidden">
+    <span class="access-denied-icon">&#10006;</span>
+    <span class="access-denied-text">Access Denied</span>
+</div>
+
+<div id="formToast" class="form-toast hidden">
+    <span class="form-toast-icon">⚠️</span>
+    <span class="form-toast-text">Compila tutti i campi</span>
+</div>
+
+<script src="/app.js"></script>
+
+</body>
+</html>
