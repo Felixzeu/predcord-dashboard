@@ -291,6 +291,16 @@ async function addWarning(guild, user, moderator, reason) {
                 await member.ban({ reason: 'Auto-ban: 10 warnings' }).catch(() => {});
                 await sendActionDM(user, 'banned', '10 warnings accumulated', { tag: 'Auto-Mod', guild: guild });
                 await saveModLog(guild, 'User banned (auto)', user, client.user, '10 warnings accumulated', null);
+                await db.saveDashboardLogDB(guild.id, {
+                    type: 'auto_mod',
+                    action: 'user_banned_auto',
+                    userId: client.user.id,
+                    userTag: client.user.tag,
+                    targetId: user.id,
+                    targetTag: user.tag,
+                    reason: '10 warnings accumulated',
+                    details: 'Auto-ban triggered after 10 warnings'
+                });
             }
         } else if (warningCount >= 5) {
             if (await hasProjectedRole(member, guild.id)) {
@@ -299,6 +309,16 @@ async function addWarning(guild, user, moderator, reason) {
                 await member.kick('Auto-kick: 5 warnings').catch(() => {});
                 await sendActionDM(user, 'kicked', '5 warnings accumulated', { tag: 'Auto-Mod', guild: guild });
                 await saveModLog(guild, 'User kicked (auto)', user, client.user, '5 warnings accumulated', null);
+                await db.saveDashboardLogDB(guild.id, {
+                    type: 'auto_mod',
+                    action: 'user_kicked_auto',
+                    userId: client.user.id,
+                    userTag: client.user.tag,
+                    targetId: user.id,
+                    targetTag: user.tag,
+                    reason: '5 warnings accumulated',
+                    details: 'Auto-kick triggered after 5 warnings'
+                });
             }
         } else if (warningCount >= 3) {
             if (await hasProjectedRole(member, guild.id)) {
@@ -307,6 +327,16 @@ async function addWarning(guild, user, moderator, reason) {
                 await member.timeout(28 * 24 * 60 * 60 * 1000, 'Auto-mute: 3 warnings').catch(() => {});
                 await sendActionDM(user, 'muted', '3 warnings accumulated', { tag: 'Auto-Mod', guild: guild }, '28 days');
                 await saveModLog(guild, 'User muted (auto)', user, client.user, '3 warnings accumulated', '28 days');
+                await db.saveDashboardLogDB(guild.id, {
+                    type: 'auto_mod',
+                    action: 'user_muted_auto',
+                    userId: client.user.id,
+                    userTag: client.user.tag,
+                    targetId: user.id,
+                    targetTag: user.tag,
+                    reason: '3 warnings accumulated',
+                    details: 'Auto-mute triggered after 3 warnings (28 days)'
+                });
             }
         }
     }
@@ -632,6 +662,7 @@ client.once('clientReady', async () => {
         saveModLog,
         formatModerationHistory,
         getProjectedRolesDB: async (guildId) => await db.getProjectedRolesDB(guildId),
+        saveDashboardLogDB: async (guildId, data) => await db.saveDashboardLogDB(guildId, data),
         db
     };
     console.log('[DASHBOARD] global.PredCord API exposed');
@@ -766,6 +797,16 @@ client.on('messageCreate', async (message) => {
                         return;
                     }
                     await db.setCommandCooldownDB(message.author.id, message.guild.id, `custom_${command}`, COMMAND_COOLDOWN_SECONDS);
+
+                    await db.saveDashboardLogDB(message.guild.id, {
+                        type: 'command',
+                        action: 'custom_command_used',
+                        userId: message.author.id,
+                        userTag: message.author.tag,
+                        details: `Command: ${cmdPrefix}${command}`,
+                        channelId: message.channel.id
+                    });
+
                     await handleCustomCommand(message, command, args, cmdData);
                     return;
                 } else {
@@ -787,6 +828,16 @@ client.on('messageCreate', async (message) => {
                 return;
             }
             await db.setCommandCooldownDB(message.author.id, message.guild.id, `native_${command}`, COMMAND_COOLDOWN_SECONDS);
+
+            await db.saveDashboardLogDB(message.guild.id, {
+                type: 'command',
+                action: 'native_command_used',
+                userId: message.author.id,
+                userTag: message.author.tag,
+                details: `Command: ${NATIVE_PREFIX}${command}`,
+                channelId: message.channel.id
+            });
+
             await handleNativeCommand(message, command, args);
             return;
         }
@@ -1072,6 +1123,19 @@ async function handleNativeCommand(message, command, args) {
                 .setColor(BLACK);
             await message.channel.send({ embeds: [embed] });
             await saveModLog(message.guild, 'User banned', { id: user.id, tag: user.tag }, message.author, reason);
+
+            await db.saveDashboardLogDB(message.guild.id, {
+                type: 'moderation',
+                action: 'user_banned',
+                userId: message.author.id,
+                userTag: message.author.tag,
+                targetId: user.id,
+                targetTag: user.tag,
+                moderatorId: message.author.id,
+                moderatorTag: message.author.tag,
+                reason: reason,
+                channelId: message.channel.id
+            });
         } catch (error) {
             const embed = new EmbedBuilder().setDescription('Error during ban: ' + error.message).setColor(COLORS.ERROR);
             await message.channel.send({ embeds: [embed] });
@@ -1105,6 +1169,19 @@ async function handleNativeCommand(message, command, args) {
                 .setColor(BLACK);
             await message.channel.send({ embeds: [embed] });
             await saveModLog(message.guild, 'User unbanned', { id: userId, tag: bannedUser.user.tag }, message.author, 'Unbanned');
+
+            await db.saveDashboardLogDB(message.guild.id, {
+                type: 'moderation',
+                action: 'user_unbanned',
+                userId: message.author.id,
+                userTag: message.author.tag,
+                targetId: userId,
+                targetTag: bannedUser.user.tag,
+                moderatorId: message.author.id,
+                moderatorTag: message.author.tag,
+                reason: 'Unbanned',
+                channelId: message.channel.id
+            });
         } catch (error) {
             const embed = new EmbedBuilder().setDescription('Error during unban.').setColor(COLORS.ERROR).setThumbnail(THUMBNAIL_URL);
             await message.channel.send({ embeds: [embed] });
@@ -1147,6 +1224,19 @@ async function handleNativeCommand(message, command, args) {
                 .setColor(BLACK);
             await message.channel.send({ embeds: [embed] });
             await saveModLog(message.guild, 'User kicked', user, message.author, reason);
+
+            await db.saveDashboardLogDB(message.guild.id, {
+                type: 'moderation',
+                action: 'user_kicked',
+                userId: message.author.id,
+                userTag: message.author.tag,
+                targetId: user.id,
+                targetTag: user.tag,
+                moderatorId: message.author.id,
+                moderatorTag: message.author.tag,
+                reason: reason,
+                channelId: message.channel.id
+            });
         } catch (error) {
             const embed = new EmbedBuilder().setDescription('Error during kick.').setColor(COLORS.ERROR).setThumbnail(THUMBNAIL_URL);
             await message.channel.send({ embeds: [embed] });
@@ -1203,6 +1293,20 @@ async function handleNativeCommand(message, command, args) {
                 .setColor(BLACK);
             await message.channel.send({ embeds: [embed] });
             await saveModLog(message.guild, 'User muted', user, message.author, reason, `${duration} minutes`);
+
+            await db.saveDashboardLogDB(message.guild.id, {
+                type: 'moderation',
+                action: 'user_muted',
+                userId: message.author.id,
+                userTag: message.author.tag,
+                targetId: user.id,
+                targetTag: user.tag,
+                moderatorId: message.author.id,
+                moderatorTag: message.author.tag,
+                reason: reason,
+                details: `${duration} minutes`,
+                channelId: message.channel.id
+            });
         } catch (error) {
             const embed = new EmbedBuilder().setDescription('Error during mute.').setColor(COLORS.ERROR).setThumbnail(THUMBNAIL_URL);
             await message.channel.send({ embeds: [embed] });
@@ -1243,6 +1347,19 @@ async function handleNativeCommand(message, command, args) {
                 .setColor(BLACK);
             await message.channel.send({ embeds: [embed] });
             await saveModLog(message.guild, 'User unmuted', user, message.author, reason);
+
+            await db.saveDashboardLogDB(message.guild.id, {
+                type: 'moderation',
+                action: 'user_unmuted',
+                userId: message.author.id,
+                userTag: message.author.tag,
+                targetId: user.id,
+                targetTag: user.tag,
+                moderatorId: message.author.id,
+                moderatorTag: message.author.tag,
+                reason: reason,
+                channelId: message.channel.id
+            });
         } catch (error) {
             const embed = new EmbedBuilder().setDescription('Error during unmute.').setColor(COLORS.ERROR).setThumbnail(THUMBNAIL_URL);
             await message.channel.send({ embeds: [embed] });
@@ -1269,6 +1386,17 @@ async function handleNativeCommand(message, command, args) {
             const reply = await message.channel.send({ embeds: [embed] });
             setTimeout(() => reply.delete().catch(() => {}), 3000);
             await saveModLog(message.guild, 'Messages purged', { id: 'channel', tag: `#${message.channel.name}` }, message.author, `${deleted.size} messages deleted`);
+
+            await db.saveDashboardLogDB(message.guild.id, {
+                type: 'moderation',
+                action: 'messages_purged',
+                userId: message.author.id,
+                userTag: message.author.tag,
+                moderatorId: message.author.id,
+                moderatorTag: message.author.tag,
+                reason: `${deleted.size} messages deleted`,
+                channelId: message.channel.id
+            });
         } catch (error) {
             const embed = new EmbedBuilder().setDescription('Error during purge. Cannot delete messages older than 14 days.').setColor(COLORS.ERROR).setThumbnail(THUMBNAIL_URL);
             const errorMsg = await message.channel.send({ embeds: [embed] });
@@ -1350,6 +1478,20 @@ async function handleCustomCommand(message, command, args, cmdData) {
                 .setColor(BLACK);
             await message.channel.send({ embeds: [embed] });
             await saveModLog(message.guild, 'User banned', { id: user.id, tag: user.tag }, message.author, reason, isTemporary ? `${durationDays} days` : null);
+
+            await db.saveDashboardLogDB(message.guild.id, {
+                type: 'moderation',
+                action: 'user_banned',
+                userId: message.author.id,
+                userTag: message.author.tag,
+                targetId: user.id,
+                targetTag: user.tag,
+                moderatorId: message.author.id,
+                moderatorTag: message.author.tag,
+                reason: reason,
+                details: `Custom command: ${cmdData.prefix || '*'}${command}${isTemporary ? ` (${durationDays} days)` : ''}`,
+                channelId: message.channel.id
+            });
         } catch (err) {
             await message.channel.send({ embeds: [new EmbedBuilder().setDescription('Error during ban: ' + err.message).setColor(COLORS.ERROR)] });
         }
@@ -1402,6 +1544,20 @@ async function handleCustomCommand(message, command, args, cmdData) {
                 .setColor(BLACK);
             await message.channel.send({ embeds: [embed] });
             await saveModLog(message.guild, 'User kicked', user, message.author, reason);
+
+            await db.saveDashboardLogDB(message.guild.id, {
+                type: 'moderation',
+                action: 'user_kicked',
+                userId: message.author.id,
+                userTag: message.author.tag,
+                targetId: user.id,
+                targetTag: user.tag,
+                moderatorId: message.author.id,
+                moderatorTag: message.author.tag,
+                reason: reason,
+                details: `Custom command: ${cmdData.prefix || '*'}${command}`,
+                channelId: message.channel.id
+            });
         } catch (err) {
             await message.channel.send({ embeds: [new EmbedBuilder().setDescription('Error during kick.').setColor(COLORS.ERROR)] });
         }
@@ -1463,6 +1619,20 @@ async function handleCustomCommand(message, command, args, cmdData) {
                 .setColor(BLACK);
             await message.channel.send({ embeds: [embed] });
             await saveModLog(message.guild, 'User muted', user, message.author, reason, durationText);
+
+            await db.saveDashboardLogDB(message.guild.id, {
+                type: 'moderation',
+                action: 'user_muted',
+                userId: message.author.id,
+                userTag: message.author.tag,
+                targetId: user.id,
+                targetTag: user.tag,
+                moderatorId: message.author.id,
+                moderatorTag: message.author.tag,
+                reason: reason,
+                details: `Custom command: ${cmdData.prefix || '*'}${command} (${durationText})`,
+                channelId: message.channel.id
+            });
         } catch (err) {
             await message.channel.send({ embeds: [new EmbedBuilder().setDescription('Error during mute.').setColor(COLORS.ERROR)] });
         }
@@ -1509,6 +1679,20 @@ async function handleCustomCommand(message, command, args, cmdData) {
                 .setColor(BLACK);
             await message.channel.send({ embeds: [embed] });
             await saveModLog(message.guild, 'User warned', user, message.author, reason);
+
+            await db.saveDashboardLogDB(message.guild.id, {
+                type: 'moderation',
+                action: 'user_warned',
+                userId: message.author.id,
+                userTag: message.author.tag,
+                targetId: user.id,
+                targetTag: user.tag,
+                moderatorId: message.author.id,
+                moderatorTag: message.author.tag,
+                reason: reason,
+                details: `Custom command: ${cmdData.prefix || '*'}${command}`,
+                channelId: message.channel.id
+            });
         } catch (err) {
             await message.channel.send({ embeds: [new EmbedBuilder().setDescription('Error during warn.').setColor(COLORS.ERROR)] });
         }
@@ -1805,6 +1989,15 @@ client.on('interactionCreate', async (interaction) => {
                 content: `Your ticket has been created - Ticket Channel: ${ticketChannel}`,
                 flags: 64
             });
+
+            await db.saveDashboardLogDB(interaction.guild.id, {
+                type: 'ticket',
+                action: 'ticket_created',
+                userId: interaction.user.id,
+                userTag: interaction.user.tag,
+                details: `Support ticket (${typeName}) created in ${ticketChannel.name}`,
+                channelId: ticketChannel.id
+            });
             return;
         }
 
@@ -1961,147 +2154,133 @@ client.on('interactionCreate', async (interaction) => {
                 content: `Your ticket has been created - Ticket Channel: ${ticketChannel}`,
                 flags: 64
             });
+
+            await db.saveDashboardLogDB(interaction.guild.id, {
+                type: 'ticket',
+                action: 'report_created',
+                userId: interaction.user.id,
+                userTag: interaction.user.tag,
+                targetId: reportedUser.id,
+                targetTag: reportedUser.tag,
+                details: `Report ticket created in ${ticketChannel.name}`,
+                channelId: ticketChannel.id
+            });
             return;
         }
 
-            if (interaction.isButton() && interaction.customId === 'claim_ticket') {
-                await interaction.deferUpdate();
-            
-                const config = await getGuildConfig(interaction.guild.id);
-                const staffRole = config.staffRoleId ? interaction.guild.roles.cache.get(config.staffRoleId) : null;
-                const adminRole = config.adminRoleId ? interaction.guild.roles.cache.get(config.adminRoleId) : null;
-            
-                const isStaff = staffRole && interaction.member.roles.cache.has(staffRole.id);
-                const isAdmin = adminRole && interaction.member.roles.cache.has(adminRole.id);
-            
-                if (!isStaff && !isAdmin) {
-                    return interaction.followUp({
-                        content: 'Missing Permissions',
-                        flags: 64
-                    });
+        if (interaction.isButton() && interaction.customId === 'claim_ticket') {
+            await interaction.deferUpdate();
+
+            const config = await getGuildConfig(interaction.guild.id);
+            const staffRole = config.staffRoleId ? interaction.guild.roles.cache.get(config.staffRoleId) : null;
+            const adminRole = config.adminRoleId ? interaction.guild.roles.cache.get(config.adminRoleId) : null;
+
+            const isStaff = staffRole && interaction.member.roles.cache.has(staffRole.id);
+            const isAdmin = adminRole && interaction.member.roles.cache.has(adminRole.id);
+
+            if (!isStaff && !isAdmin) {
+                return interaction.followUp({
+                    content: 'Missing Permissions',
+                    flags: 64
+                });
+            }
+
+            const ticketOwnerId = interaction.channel.topic;
+            if (!ticketOwnerId) {
+                return interaction.followUp({ content: 'Error', flags: 64 });
+            }
+
+            const newOverwrites = [
+                {
+                    id: interaction.guild.id,
+                    deny: [PermissionsBitField.Flags.ViewChannel]
+                },
+                {
+                    id: ticketOwnerId,
+                    allow: [
+                        PermissionsBitField.Flags.ViewChannel,
+                        PermissionsBitField.Flags.SendMessages,
+                        PermissionsBitField.Flags.EmbedLinks,
+                        PermissionsBitField.Flags.AttachFiles,
+                        PermissionsBitField.Flags.ReadMessageHistory
+                    ]
+                },
+                {
+                    id: interaction.user.id,
+                    allow: [
+                        PermissionsBitField.Flags.ViewChannel,
+                        PermissionsBitField.Flags.SendMessages,
+                        PermissionsBitField.Flags.EmbedLinks,
+                        PermissionsBitField.Flags.AttachFiles,
+                        PermissionsBitField.Flags.ReadMessageHistory,
+                        PermissionsBitField.Flags.UseExternalEmojis,
+                        PermissionsBitField.Flags.AddReactions,
+                        PermissionsBitField.Flags.UseApplicationCommands,
+                        PermissionsBitField.Flags.UseExternalStickers
+                    ]
                 }
-            
-                const ticketOwnerId = interaction.channel.topic;
-                if (!ticketOwnerId) {
-                    return interaction.followUp({ content: 'Error', flags: 64 });
-                }
-            
-                const newOverwrites = [
-                    {
-                        id: interaction.guild.id,
-                        deny: [PermissionsBitField.Flags.ViewChannel]
-                    },
-                    {
-                        id: ticketOwnerId,
-                        allow: [
-                            PermissionsBitField.Flags.ViewChannel,
-                            PermissionsBitField.Flags.SendMessages,
-                            PermissionsBitField.Flags.EmbedLinks,
-                            PermissionsBitField.Flags.AttachFiles,
-                            PermissionsBitField.Flags.ReadMessageHistory
-                        ]
-                    },
-                    {
-                        id: interaction.user.id,
-                        allow: [
-                            PermissionsBitField.Flags.ViewChannel,
-                            PermissionsBitField.Flags.SendMessages,
-                            PermissionsBitField.Flags.EmbedLinks,
-                            PermissionsBitField.Flags.AttachFiles,
-                            PermissionsBitField.Flags.ReadMessageHistory,
-                            PermissionsBitField.Flags.UseExternalEmojis,
-                            PermissionsBitField.Flags.AddReactions,
-                            PermissionsBitField.Flags.UseApplicationCommands,
-                            PermissionsBitField.Flags.UseExternalStickers
-                        ]
-                    }
-                ];
-            
-                if (adminRole) {
-                    newOverwrites.push({
-                        id: adminRole.id,
-                        allow: [
-                            PermissionsBitField.Flags.ManageChannels,
-                            PermissionsBitField.Flags.ManageRoles,
-                            PermissionsBitField.Flags.ViewChannel,
-                            PermissionsBitField.Flags.SendMessages,
-                            PermissionsBitField.Flags.ManageMessages,
-                            PermissionsBitField.Flags.EmbedLinks,
-                            PermissionsBitField.Flags.AttachFiles,
-                            PermissionsBitField.Flags.ReadMessageHistory,
-                            PermissionsBitField.Flags.UseExternalEmojis,
-                            PermissionsBitField.Flags.AddReactions,
-                            PermissionsBitField.Flags.UseApplicationCommands,
-                            PermissionsBitField.Flags.UseExternalStickers
-                        ]
-                    });
-                }
-            
-                await interaction.channel.permissionOverwrites.set(newOverwrites);
-            
-                try {
-                    const messages = await interaction.channel.messages.fetch({ limit: 20 });
-                    const botMessage = messages.find(m =>
-                        m.author.id === client.user.id &&
-                        m.components.length > 0 &&
-                        m.embeds.length > 0
-                    );
-                    if (botMessage) {
-                        await botMessage.edit({ components: [] });
-                    }
-                } catch (error) {
-                    console.error('[CLAIM] Error removing buttons:', error);
-                }
-            
-                const embed = new EmbedBuilder()
-                    .setTitle('Ticket Claimed')
-                    .setDescription(`This ticket has been claimed by ${interaction.user.toString()}, he will assist you with your request.`)
-                    .setColor(GOLD);
-            
-                const closeRow = new ActionRowBuilder().addComponents(
-                    new ButtonBuilder()
-                        .setCustomId('close_ticket')
-                        .setLabel('Close Ticket')
-                        .setStyle(ButtonStyle.Danger)
+            ];
+
+            if (adminRole) {
+                newOverwrites.push({
+                    id: adminRole.id,
+                    allow: [
+                        PermissionsBitField.Flags.ManageChannels,
+                        PermissionsBitField.Flags.ManageRoles,
+                        PermissionsBitField.Flags.ViewChannel,
+                        PermissionsBitField.Flags.SendMessages,
+                        PermissionsBitField.Flags.ManageMessages,
+                        PermissionsBitField.Flags.EmbedLinks,
+                        PermissionsBitField.Flags.AttachFiles,
+                        PermissionsBitField.Flags.ReadMessageHistory,
+                        PermissionsBitField.Flags.UseExternalEmojis,
+                        PermissionsBitField.Flags.AddReactions,
+                        PermissionsBitField.Flags.UseApplicationCommands,
+                        PermissionsBitField.Flags.UseExternalStickers
+                    ]
+                });
+            }
+
+            await interaction.channel.permissionOverwrites.set(newOverwrites);
+
+            try {
+                const messages = await interaction.channel.messages.fetch({ limit: 20 });
+                const botMessage = messages.find(m =>
+                    m.author.id === client.user.id &&
+                    m.components.length > 0 &&
+                    m.embeds.length > 0
                 );
-            
-                await interaction.channel.send({ embeds: [embed], components: [closeRow] });
-                return;
-            }
-            
-            if (interaction.isButton() && interaction.customId === 'close_ticket') {
-                await interaction.deferUpdate();
-            
-                const config = await getGuildConfig(interaction.guild.id);
-                const staffRole = config.staffRoleId ? interaction.guild.roles.cache.get(config.staffRoleId) : null;
-                const adminRole = config.adminRoleId ? interaction.guild.roles.cache.get(config.adminRoleId) : null;
-            
-                const isStaff = staffRole && interaction.member.roles.cache.has(staffRole.id);
-                const isAdmin = adminRole && interaction.member.roles.cache.has(adminRole.id);
-            
-                if (!isStaff && !isAdmin) {
-                    return interaction.followUp({
-                        content: '❌ Only staff members can close tickets.',
-                        flags: 64
-                    });
+                if (botMessage) {
+                    await botMessage.edit({ components: [] });
                 }
-            
-                const embed = new EmbedBuilder()
-                    .setTitle('Ticket Closed')
-                    .setDescription('This ticket has been closed, the channel will be deleted in 5 seconds....')
-                    .setColor(RED);
-            
-                await interaction.channel.send({ embeds: [embed] });
-            
-                setTimeout(async () => {
-                    try {
-                        if (interaction.channel && interaction.channel.deletable) {
-                            await interaction.channel.delete();
-                        }
-                    } catch (error) {}
-                }, 5000);
-                return;
+            } catch (error) {
+                console.error('[CLAIM] Error removing buttons:', error);
             }
+
+            const embed = new EmbedBuilder()
+                .setTitle('Ticket Claimed')
+                .setDescription(`This ticket has been claimed by ${interaction.user.toString()}, he will assist you with your request.`)
+                .setColor(GOLD);
+
+            const closeRow = new ActionRowBuilder().addComponents(
+                new ButtonBuilder()
+                    .setCustomId('close_ticket')
+                    .setLabel('Close Ticket')
+                    .setStyle(ButtonStyle.Danger)
+            );
+
+            await interaction.channel.send({ embeds: [embed], components: [closeRow] });
+
+            await db.saveDashboardLogDB(interaction.guild.id, {
+                type: 'ticket',
+                action: 'ticket_claimed',
+                userId: interaction.user.id,
+                userTag: interaction.user.tag,
+                details: `Ticket ${interaction.channel.name} claimed`,
+                channelId: interaction.channel.id
+            });
+            return;
+        }
 
         if (interaction.isButton() && interaction.customId === 'close_ticket') {
             await interaction.deferUpdate();
@@ -2131,6 +2310,15 @@ client.on('interactionCreate', async (interaction) => {
             } catch (error) {}
 
             await interaction.channel.send({ embeds: [embed] });
+
+            await db.saveDashboardLogDB(interaction.guild.id, {
+                type: 'ticket',
+                action: 'ticket_closed',
+                userId: interaction.user.id,
+                userTag: interaction.user.tag,
+                details: `Ticket ${interaction.channel.name} closed`,
+                channelId: interaction.channel.id
+            });
 
             setTimeout(async () => {
                 try {
@@ -2169,6 +2357,18 @@ setInterval(async () => {
                 await guild.members.unban(ban.userId, 'Temporary ban expired');
                 await db.removePendingBan(ban.guildId, ban.userId);
                 await saveModLog(guild, 'User unbanned (auto)', { id: ban.userId, tag: ban.userTag }, client.user, 'Temporary ban expired');
+
+                await db.saveDashboardLogDB(guild.id, {
+                    type: 'auto_mod',
+                    action: 'user_unbanned_auto',
+                    userId: client.user.id,
+                    userTag: client.user.tag,
+                    targetId: ban.userId,
+                    targetTag: ban.userTag,
+                    reason: 'Temporary ban expired',
+                    details: 'Auto-unban after temporary ban expired'
+                });
+
                 console.log(`[AUTO-UNBAN] Unbanned ${ban.userTag} (${ban.userId}) from ${guild.name}`);
             } catch (err) {
                 console.error(`[AUTO-UNBAN] Error on ${ban.userId}:`, err.message);
