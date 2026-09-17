@@ -1571,7 +1571,7 @@ client.on('interactionCreate', async (interaction) => {
 
                 await sendSupportPanel(interaction.channel);
 
-                await interaction.reply({ content: '✅ Support panel created.', flags: 64 });
+                await interaction.reply({ content: 'Ticket Panel Sent', flags: 64 });
                 return;
             }
             return;
@@ -1579,7 +1579,7 @@ client.on('interactionCreate', async (interaction) => {
 
         if (interaction.isButton() && interaction.customId === 'open_ticket_panel') {
             await sendSupportPanel(interaction.channel);
-            await interaction.reply({ content: '✅ Support panel created.', flags: 64 });
+            await interaction.reply({ content: 'Ticket Panel Sent', flags: 64 });
             return;
         }
 
@@ -1673,7 +1673,7 @@ client.on('interactionCreate', async (interaction) => {
 
             if (!config.supportCategoryId || !config.staffRoleId) {
                 return interaction.reply({
-                    content: '❌ Ticket system is not configured. Please contact an administrator.',
+                    content: 'Ticket System is currently off, please contact an administrator.',
                     flags: 64
                 });
             }
@@ -1681,7 +1681,7 @@ client.on('interactionCreate', async (interaction) => {
             const category = interaction.guild.channels.cache.get(config.supportCategoryId);
             if (!category) {
                 return interaction.reply({
-                    content: '❌ Ticket category not found. Please contact an administrator.',
+                    content: 'Ticket Category issue. Please contact an administrator.',
                     flags: 64
                 });
             }
@@ -1767,7 +1767,7 @@ client.on('interactionCreate', async (interaction) => {
                 } catch (err) {
                     logCrash('TICKET_CREATE_ERROR', err);
                     return interaction.reply({
-                        content: '❌ Error creating the ticket. Please try again later.',
+                        content: 'Error while creating your ticket, please contact an administrator.',
                         flags: 64
                     });
                 }
@@ -1802,7 +1802,7 @@ client.on('interactionCreate', async (interaction) => {
             });
 
             await interaction.reply({
-                content: `✅ Your **${typeName}** request has been received. Ticket created: ${ticketChannel}`,
+                content: `Your ticket has been created - Ticket Channel: ${ticketChannel}`,
                 flags: 64
             });
             return;
@@ -1814,7 +1814,7 @@ client.on('interactionCreate', async (interaction) => {
 
             if (!reportedUser || reportedUser.bot) {
                 await interaction.reply({
-                    content: '❌ You cannot report a bot. Please select a real player.',
+                    content: 'Invalid user selected. You cant report a bot.',
                     flags: 64
                 });
                 return;
@@ -1827,7 +1827,7 @@ client.on('interactionCreate', async (interaction) => {
 
             if (!config.supportCategoryId || !config.staffRoleId) {
                 return interaction.reply({
-                    content: '❌ Ticket system is not configured. Please contact an administrator.',
+                    content: 'Ticket System is currently off, please contact an administrator.',
                     flags: 64
                 });
             }
@@ -1835,7 +1835,7 @@ client.on('interactionCreate', async (interaction) => {
             const category = interaction.guild.channels.cache.get(config.supportCategoryId);
             if (!category) {
                 return interaction.reply({
-                    content: '❌ Ticket category not found. Please contact an administrator.',
+                    content: 'Ticket Category issue. Please contact an administrator.',
                     flags: 64
                 });
             }
@@ -1919,7 +1919,7 @@ client.on('interactionCreate', async (interaction) => {
                 } catch (err) {
                     logCrash('TICKET_CREATE_ERROR', err);
                     return interaction.reply({
-                        content: '❌ Error creating the ticket. Please try again later.',
+                        content: 'Error while creating your ticket, please contact an administrator.',
                         flags: 64
                     });
                 }
@@ -1958,7 +1958,7 @@ client.on('interactionCreate', async (interaction) => {
             });
 
             await interaction.reply({
-                content: `✅ Your report has been received. Ticket created: ${ticketChannel}`,
+                content: `Your ticket has been created - Ticket Channel: ${ticketChannel}`,
                 flags: 64
             });
             return;
@@ -1976,14 +1976,14 @@ client.on('interactionCreate', async (interaction) => {
             
                 if (!isStaff && !isAdmin) {
                     return interaction.followUp({
-                        content: '❌ Only staff members can claim tickets.',
+                        content: 'Missing Permissions',
                         flags: 64
                     });
                 }
             
                 const ticketOwnerId = interaction.channel.topic;
                 if (!ticketOwnerId) {
-                    return interaction.followUp({ content: '❌ Could not find ticket owner.', flags: 64 });
+                    return interaction.followUp({ content: 'Error', flags: 64 });
                 }
             
                 const newOverwrites = [
