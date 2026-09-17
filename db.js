@@ -345,6 +345,7 @@ async function loadCustomCommandsDB(guildId) {
             deleteCommand: doc.deleteCommand,
             thumbnail: doc.thumbnail,
             image: doc.image,
+            extraEmbeds: doc.extraEmbeds || [],
             allowedRoles: doc.allowedRoles || [],
             duration: doc.duration || null,
             isBase: doc.isBase || false,
