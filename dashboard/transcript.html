@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Transcript • PredCord</title>
+<link rel="icon" type="image/png" href="/favicon.png">
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<header class="topbar">
+    <div class="logo">
+        <img src="/favicon.png" alt="PredCord" class="logo-img">
+        <span class="logo-accent">PredCord</span>
+        <span class="logo-sub">Transcript</span>
+    </div>
+    <div class="header-right">
+        <a href="/" class="btn-logout" style="text-decoration:none;">← Back to Dashboard</a>
+    </div>
+</header>
+
+<main style="display:block; max-width: 900px; margin: 0 auto; padding: 28px;">
+    <section class="content">
+        <div id="transcriptMeta" class="transcript-meta"></div>
+        <div id="transcriptMessages" class="transcript-messages">
+            <div class="loading">Loading transcript</div>
+        </div>
+    </section>
+</main>
+
+<script>
+const pathParts = window.location.pathname.split('/');
+const transcriptId = pathParts[pathParts.length - 1];
+
+async function loadTranscript() {
+    const metaEl = document.getElementById('transcriptMeta');
+    const messagesEl = document.getElementById('transcriptMessages');
+
+    try {
+        const meRes = await fetch('/api/me', { credentials: 'same-origin' });
+        if (!meRes.ok) { window.location.href = '/login'; return; }
+        const me = await meRes.json();
+
+        const guildsRes = await fetch('/api/guilds', { credentials: 'same-origin' });
+        if (!guildsRes.ok) throw new Error('Failed to load guilds');
+        const guilds = await guildsRes.json();
+        if (!guilds.length) throw new Error('No guilds');
+
+        let transcript = null;
+        for (const g of guilds) {
+            const res = await fetch(`/api/transcripts/${g.id}/${transcriptId}`, { credentials: 'same-origin' });
+            if (res.ok) { transcript = await res.json(); break; }
+        }
+
+        if (!transcript) {
+            messagesEl.innerHTML = '<div class="empty-state"><h3>Transcript not found</h3></div>';
+            return;
+        }
+
+        const fmtDate = (d) => new Date(d).toLocaleString('en-US', { dateStyle: 'full', timeStyle: 'short' });
+
+        metaEl.innerHTML = `
+            <div class="transcript-header">
+                <h2 class="transcript-title">Ticket Transcript</h2>
+                <div class="transcript-info-grid">
+                    <div class="transcript-info-item">
+                        <span class="transcript-info-label">Created By</span>
+                        <span class="transcript-info-value">${transcript.createdByTag || 'Unknown'}</span>
+                    </div>
+                    <div class="transcript-info-item">
+                        <span class="transcript-info-label">Date</span>
+                        <span class="transcript-info-value">${fmtDate(transcript.createdAt)}</span>
+                    </div>
+                    <div class="transcript-info-item">
+                        <span class="transcript-info-label">Claimed By</span>
+                        <span class="transcript-info-value">${transcript.claimedByTag || 'Not claimed'}</span>
+                    </div>
+                    <div class="transcript-info-item">
+                        <span class="transcript-info-label">Closed By</span>
+                        <span class="transcript-info-value">${transcript.closedByTag || 'Unknown'}</span>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        if (!transcript.messages || transcript.messages.length === 0) {
+            messagesEl.innerHTML = '<div class="empty-state"><h3>No messages</h3></div>';
+            return;
+        }
+
+        messagesEl.innerHTML = transcript.messages.map(msg => {
+            const time = new Date(msg.timestamp).toLocaleString('en-US', { dateStyle: 'short', timeStyle: 'short' });
+            let attachmentsHtml = '';
+            if (msg.attachments && msg.attachments.length > 0) {
+                attachmentsHtml = msg.attachments.map(a => {
+                    if (a.contentType && a.contentType.startsWith('image/')) {
+                        return `<img class="transcript-attachment-img" src="${a.url}" alt="${a.name}">`;
+                    }
+                    return `<a class="transcript-attachment-link" href="${a.url}" target="_blank">📎 ${a.name}</a>`;
+                }).join('');
+            }
+
+            let embedsHtml = '';
+            if (msg.embeds && msg.embeds.length > 0) {
+                embedsHtml = msg.embeds.map(e => {
+                    let color = '#E67E22';
+                    if (e.color) color = '#' + e.color.toString(16).padStart(6, '0');
+                    let fieldsHtml = '';
+                    if (e.fields && e.fields.length) {
+                        fieldsHtml = `<div class="transcript-embed-fields">${e.fields.map(f => `<div class="transcript-embed-field"><div class="transcript-embed-field-name">${f.name}</div><div class="transcript-embed-field-value">${f.value}</div></div>`).join('')}</div>`;
+                    }
+                    return `<div class="transcript-embed" style="border-left-color: ${color};">
+                        ${e.title ? `<div class="transcript-embed-title">${e.title}</div>` : ''}
+                        ${e.description ? `<div class="transcript-embed-desc">${e.description}</div>` : ''}
+                        ${fieldsHtml}
+                        ${e.image ? `<img class="transcript-embed-img" src="${e.image}">` : ''}
+                    </div>`;
+                }).join('');
+            }
+
+            const authorName = msg.authorTag || msg.authorUsername || 'Unknown';
+            const avatar = msg.authorAvatar || 'https://cdn.discordapp.com/embed/avatars/0.png';
+            const botTag = msg.bot ? '<span class="discord-bot-tag">BOT</span>' : '';
+
+            return `
+                <div class="transcript-msg">
+                    <img class="transcript-avatar" src="${avatar}" alt="">
+                    <div class="transcript-msg-body">
+                        <div class="transcript-msg-header">
+                            <span class="transcript-author">${authorName}</span>
+                            ${botTag}
+                            <span class="transcript-time">${time}</span>
+                        </div>
+                        ${msg.content ? `<div class="transcript-content">${msg.content.replace(/\n/g, '<br>')}</div>` : ''}
+                        ${embedsHtml}
+                        ${attachmentsHtml}
+                    </div>
+                </div>
+            `;
+        }).join('');
+
+    } catch (e) {
+        console.error('[TRANSCRIPT]', e);
+        messagesEl.innerHTML = `<div class="empty-state"><h3>Error</h3><p>${e.message}</p></div>`;
+    }
+}
+
+loadTranscript();
+</script>
+</body>
+</html>
