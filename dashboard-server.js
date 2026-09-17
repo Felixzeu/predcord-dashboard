@@ -18,7 +18,7 @@ function waitForBot(timeout = 60000) {
             if (global.PredCord && global.PredCord.client && global.PredCord.client.isReady()) {
                 resolve();
             } else if (Date.now() - start > timeout) {
-                reject(new Error('Timeout bot'));
+                reject(new Error('Bot timeout'));
             } else {
                 setTimeout(check, 1000);
             }
@@ -81,19 +81,19 @@ passport.use(new DiscordStrategy({
 }, async (accessToken, refreshToken, profile, done) => {
     try {
         if (!MAIN_GUILD_ID) {
-            return done(null, false, { message: 'MAIN_GUILD_ID non configurato' });
+            return done(null, false, { message: 'MAIN_GUILD_ID not configured' });
         }
 
         const guild = global.PredCord.client.guilds.cache.get(MAIN_GUILD_ID);
         if (!guild) {
-            return done(null, false, { message: 'Il bot non è nel server principale' });
+            return done(null, false, { message: 'The bot is not in the main server' });
         }
 
         let member;
         try {
             member = await guild.members.fetch(profile.id);
         } catch {
-            return done(null, false, { message: 'Non sei membro del server principale' });
+            return done(null, false, { message: 'You are not a member of the main server' });
         }
 
         const specialUsers = await global.PredCord.db.getDashboardSpecialUsersDB(MAIN_GUILD_ID);
@@ -128,12 +128,12 @@ passport.use(new DiscordStrategy({
         ];
 
         if (allAllowed.length === 0) {
-            return done(null, false, { message: 'Nessun ruolo autorizzato configurato' });
+            return done(null, false, { message: 'No authorized roles configured' });
         }
 
         const hasAnyRole = allAllowed.some(roleId => userRoles.includes(roleId));
         if (!hasAnyRole) {
-            return done(null, false, { message: 'Non hai i ruoli autorizzati' });
+            return done(null, false, { message: 'You do not have the authorized roles' });
         }
 
         return done(null, {
@@ -158,7 +158,7 @@ app.use(express.static(DASHBOARD_DIR));
 
 function requireAuth(req, res, next) {
     if (req.session.user || (req.user && req.user.isDiscord)) return next();
-    if (req.path.startsWith('/api/')) return res.status(401).json({ error: 'Non autenticato' });
+    if (req.path.startsWith('/api/')) return res.status(401).json({ error: 'Not authenticated' });
     res.redirect('/login');
 }
 
@@ -229,12 +229,12 @@ app.get('/auth/discord/callback',
 
 app.post('/api/login', async (req, res) => {
     const { username, password } = req.body;
-    if (username !== ADMIN_USERNAME) return res.status(401).json({ error: 'Credenziali errate' });
+    if (username !== ADMIN_USERNAME) return res.status(401).json({ error: 'Invalid credentials' });
     const ok = await bcrypt.compare(password, ADMIN_PASSWORD_HASH);
-    if (!ok) return res.status(401).json({ error: 'Credenziali errate' });
+    if (!ok) return res.status(401).json({ error: 'Invalid credentials' });
     req.session.user = { username, isDiscord: false, role: 'owner' };
     req.session.save((err) => {
-        if (err) return res.status(500).json({ error: 'Errore sessione' });
+        if (err) return res.status(500).json({ error: 'Session error' });
         res.json({ success: true, isAdmin: true });
     });
 });
@@ -276,7 +276,7 @@ app.get('/api/me/full', requireAuth, async (req, res) => {
         }
 
         const guild = client.guilds.cache.get(MAIN_GUILD_ID);
-        if (!guild) return res.status(404).json({ error: 'Server non trovato' });
+        if (!guild) return res.status(404).json({ error: 'Server not found' });
 
         let member;
         try {
@@ -321,7 +321,7 @@ app.get('/api/me/full', requireAuth, async (req, res) => {
 app.get('/api/me/guild-info', requireAuth, async (req, res) => {
     try {
         if (!req.session.user || !req.session.user.isDiscord) {
-            return res.status(403).json({ error: 'Solo utenti Discord' });
+            return res.status(403).json({ error: 'Discord users only' });
         }
 
         const { client } = global.PredCord;
@@ -428,7 +428,7 @@ app.get('/api/roles/:guildId', requireAuth, (req, res) => {
     try {
         const { client } = global.PredCord;
         const guild = client.guilds.cache.get(req.params.guildId);
-        if (!guild) return res.status(404).json({ error: 'Server non trovato' });
+        if (!guild) return res.status(404).json({ error: 'Server not found' });
 
         const roles = guild.roles.cache
             .filter(r => r.id !== guild.id)
@@ -451,7 +451,7 @@ app.get('/api/channels/:guildId', requireAuth, (req, res) => {
     try {
         const { client } = global.PredCord;
         const guild = client.guilds.cache.get(req.params.guildId);
-        if (!guild) return res.status(404).json({ error: 'Server non trovato' });
+        if (!guild) return res.status(404).json({ error: 'Server not found' });
 
         const channels = guild.channels.cache
             .filter(c => c.type === ChannelType.GuildText || c.type === ChannelType.GuildCategory)
@@ -569,7 +569,7 @@ app.get('/api/user-info/:userId', requireAuth, async (req, res) => {
     try {
         const { client } = global.PredCord;
         const guild = client.guilds.cache.get(MAIN_GUILD_ID);
-        if (!guild) return res.status(404).json({ error: 'Server non trovato' });
+        if (!guild) return res.status(404).json({ error: 'Server not found' });
 
         try {
             const member = await guild.members.fetch(req.params.userId);
@@ -591,7 +591,7 @@ app.get('/api/user-info/:userId', requireAuth, async (req, res) => {
                     avatar: user.displayAvatarURL({ dynamic: true, size: 64 })
                 });
             } catch {
-                res.status(404).json({ error: 'Utente non trovato' });
+                res.status(404).json({ error: 'User not found' });
             }
         }
     } catch (e) {
@@ -625,7 +625,7 @@ app.post('/api/commands/:guildId', requireAuth, async (req, res) => {
         const { name, data } = req.body;
 
         if (!name || !/^[a-z0-9_-]{1,32}$/i.test(name)) {
-            return res.status(400).json({ error: 'Nome comando non valido' });
+            return res.status(400).json({ error: 'Invalid command name' });
         }
 
         let prefix = typeof data.prefix === 'string' ? data.prefix.trim() : '*';
@@ -635,7 +635,7 @@ app.post('/api/commands/:guildId', requireAuth, async (req, res) => {
         const existing = await db.CustomCommand.findOne({ guildId, name: lowerName }).lean();
 
         if (existing && existing.isBase) {
-            return res.status(403).json({ error: 'Questo comando è Base e non può essere modificato' });
+            return res.status(403).json({ error: 'This command is Base and cannot be modified' });
         }
 
         let allowedRoles = [];
@@ -677,7 +677,7 @@ app.post('/api/commands/:guildId/:name/setbase', requireAuth, async (req, res) =
         const { db } = global.PredCord;
 
         if (!isOwner(req)) {
-            return res.status(403).json({ error: 'Solo l\'Owner può gestire i comandi Base' });
+            return res.status(403).json({ error: 'Only the Owner can manage Base commands' });
         }
 
         const { guildId, name } = req.params;
@@ -685,13 +685,13 @@ app.post('/api/commands/:guildId/:name/setbase', requireAuth, async (req, res) =
 
         const command = await db.CustomCommand.findOne({ guildId, name: name.toLowerCase() }).lean();
         if (!command) {
-            return res.status(404).json({ error: 'Comando non trovato' });
+            return res.status(404).json({ error: 'Command not found' });
         }
 
         if (isBase) {
             const currentCount = await db.getBaseCommandsCount(guildId);
             if (!command.isBase && currentCount >= MAX_BASE_COMMANDS) {
-                return res.status(400).json({ error: `Massimo ${MAX_BASE_COMMANDS} comandi Base raggiunti` });
+                return res.status(400).json({ error: `Maximum ${MAX_BASE_COMMANDS} Base commands reached` });
             }
         }
 
@@ -715,18 +715,18 @@ app.delete('/api/commands/:guildId/:name', requireAuth, async (req, res) => {
 
         const command = await db.CustomCommand.findOne({ guildId, name: name.toLowerCase() }).lean();
         if (!command) {
-            return res.status(404).json({ error: 'Comando non trovato' });
+            return res.status(404).json({ error: 'Command not found' });
         }
 
         if (command.isBase) {
-            return res.status(403).json({ error: 'Questo comando è Base: rimuovi prima il flag Base per eliminarlo' });
+            return res.status(403).json({ error: 'This command is Base: remove the Base flag first to delete it' });
         }
 
         const deleted = await db.deleteCustomCommandDB(guildId, name);
         if (deleted) {
             return res.json({ success: true });
         }
-        res.status(404).json({ error: 'Comando non trovato' });
+        res.status(404).json({ error: 'Command not found' });
     } catch (e) {
         res.status(500).json({ error: e.message });
     }
@@ -736,14 +736,14 @@ app.get('/api/members/:guildId', requireAuth, async (req, res) => {
     try {
         const { client } = global.PredCord;
         const guild = client.guilds.cache.get(req.params.guildId);
-        if (!guild) return res.status(404).json({ error: 'Server non trovato' });
+        if (!guild) return res.status(404).json({ error: 'Server not found' });
 
         let members = guild.members.cache;
         if (members.size <= 1) {
             try {
                 members = await guild.members.fetch();
             } catch (fetchErr) {
-                console.error('Fetch members fallito:', fetchErr.message);
+                console.error('Fetch members failed:', fetchErr.message);
             }
         }
 
@@ -792,6 +792,21 @@ app.get('/api/modlogs/:guildId/:userId', requireAuth, async (req, res) => {
     }
 });
 
+app.get('/api/dashboard-logs/:guildId', requireAuth, async (req, res) => {
+    try {
+        const hasPerm = await userHasPermission(req, 'viewLogsRoles');
+        if (!hasPerm) {
+            return res.status(403).json({ error: 'Access Denied' });
+        }
+
+        const { db } = global.PredCord;
+        const logs = await db.getDashboardLogsDB(req.params.guildId, 200);
+        res.json(logs);
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
 app.get('/api/warnings/:guildId/:userId', requireAuth, async (req, res) => {
     try {
         const { db } = global.PredCord;
@@ -806,68 +821,68 @@ app.post('/api/moderation/:guildId', requireAuth, async (req, res) => {
     try {
         const { client, saveModLog, addWarning, db } = global.PredCord;
         const guild = client.guilds.cache.get(req.params.guildId);
-        if (!guild) return res.status(404).json({ error: 'Server non trovato' });
+        if (!guild) return res.status(404).json({ error: 'Server not found' });
 
         const { action, userId, reason, duration } = req.body;
-        if (!action || !userId) return res.status(400).json({ error: 'Parametri mancanti' });
+        if (!action || !userId) return res.status(400).json({ error: 'Missing parameters' });
 
         let member;
         try {
             member = await guild.members.fetch(userId);
         } catch {
             if (action !== 'unban') {
-                return res.status(404).json({ error: 'Utente non trovato nel server' });
+                return res.status(404).json({ error: 'User not found in server' });
             }
         }
 
         const moderator = client.user;
-        const cleanReason = reason || 'Azione dalla dashboard';
+        const cleanReason = reason || 'Action from dashboard';
         let actionLabel = '';
         let durationText = null;
 
         if (action === 'warn') {
-            if (!member) return res.status(404).json({ error: 'Utente non trovato' });
+            if (!member) return res.status(404).json({ error: 'User not found' });
             await addWarning(guild, member.user, moderator, cleanReason);
             actionLabel = 'User warned';
         } else if (action === 'mute') {
-            if (!member) return res.status(404).json({ error: 'Utente non trovato' });
+            if (!member) return res.status(404).json({ error: 'User not found' });
             let days = parseInt(duration);
             if (isNaN(days) || days < 1) days = 28;
             if (days > 28) days = 28;
-            if (!member.moderatable) return res.status(400).json({ error: 'Non posso mutare questo utente' });
+            if (!member.moderatable) return res.status(400).json({ error: 'Cannot mute this user' });
             await member.timeout(days * 24 * 60 * 60 * 1000, cleanReason);
             actionLabel = 'User muted';
-            durationText = `${days} giorn${days === 1 ? 'o' : 'i'}`;
+            durationText = `${days} day${days === 1 ? '' : 's'}`;
         } else if (action === 'kick') {
-            if (!member) return res.status(404).json({ error: 'Utente non trovato' });
-            if (!member.kickable) return res.status(400).json({ error: 'Non posso kickare questo utente' });
+            if (!member) return res.status(404).json({ error: 'User not found' });
+            if (!member.kickable) return res.status(400).json({ error: 'Cannot kick this user' });
             await member.kick(cleanReason);
             actionLabel = 'User kicked';
         } else if (action === 'ban') {
-            if (!member) return res.status(404).json({ error: 'Utente non trovato' });
-            if (!member.bannable) return res.status(400).json({ error: 'Non posso bannare questo utente' });
+            if (!member) return res.status(404).json({ error: 'User not found' });
+            if (!member.bannable) return res.status(400).json({ error: 'Cannot ban this user' });
             await member.ban({ reason: cleanReason });
             actionLabel = 'User banned';
         } else if (action === 'unban') {
             try {
                 const bans = await guild.bans.fetch();
                 const bannedUser = bans.find(b => b.user.id === userId);
-                if (!bannedUser) return res.status(404).json({ error: 'Utente non trovato nei ban' });
+                if (!bannedUser) return res.status(404).json({ error: 'User not found in bans' });
                 await guild.members.unban(userId, cleanReason);
                 await db.removePendingBan(guild.id, userId);
                 actionLabel = 'User unbanned';
                 await saveModLog(guild, actionLabel, { id: userId, tag: bannedUser.user.tag }, moderator, cleanReason, null);
                 return res.json({ success: true, username: bannedUser.user.tag });
             } catch (err) {
-                return res.status(400).json({ error: 'Errore durante unban: ' + err.message });
+                return res.status(400).json({ error: 'Error during unban: ' + err.message });
             }
         } else if (action === 'unmute') {
-            if (!member) return res.status(404).json({ error: 'Utente non trovato' });
-            if (!member.moderatable) return res.status(400).json({ error: 'Non posso smutare questo utente' });
+            if (!member) return res.status(404).json({ error: 'User not found' });
+            if (!member.moderatable) return res.status(400).json({ error: 'Cannot unmute this user' });
             await member.timeout(null, cleanReason);
             actionLabel = 'User unmuted';
         } else {
-            return res.status(400).json({ error: 'Azione non valida' });
+            return res.status(400).json({ error: 'Invalid action' });
         }
 
         await saveModLog(guild, actionLabel, member.user, moderator, cleanReason, durationText);
@@ -885,9 +900,9 @@ app.get('/', requireAuth, (req, res) => {
 
 waitForBot().then(() => {
     app.listen(PORT, '0.0.0.0', () => {
-        console.log(`Dashboard attiva su http://0.0.0.0:${PORT}`);
+        console.log(`Dashboard running on http://0.0.0.0:${PORT}`);
     });
 }).catch((err) => {
-    console.error('Errore avvio:', err.message);
+    console.error('Startup error:', err.message);
     process.exit(1);
 });
