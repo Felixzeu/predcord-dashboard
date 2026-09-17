@@ -626,7 +626,7 @@ app.post('/api/commands/:guildId', requireAuth, async (req, res) => {
         const lowerName = name.toLowerCase();
         const existing = await db.CustomCommand.findOne({ guildId, name: lowerName }).lean();
 
-        if (existing && existing.isBase) {
+        if (existing && existing.isBase && !isOwner(req)) {
             return res.status(403).json({ error: 'This command is Base and cannot be modified' });
         }
 
