@@ -1,11 +1,10 @@
 const express = require('express');
 const session = require('express-session');
-const FileStore = require('session-file-store')(session);
+const MongoStore = require('connect-mongo');
 const bcrypt = require('bcryptjs');
 const passport = require('passport');
 const DiscordStrategy = require('passport-discord').Strategy;
 const path = require('path');
-const fs = require('fs');
 const { ChannelType } = require('discord.js');
 require('dotenv').config();
 
@@ -41,23 +40,16 @@ const MAX_BASE_COMMANDS = 10;
 const app = express();
 const PORT = process.env.PORT || 10000;
 const DASHBOARD_DIR = path.join(__dirname, 'dashboard');
-const SESSIONS_DIR = path.join(__dirname, 'sessions');
-
-if (!fs.existsSync(SESSIONS_DIR)) {
-    fs.mkdirSync(SESSIONS_DIR, { recursive: true });
-}
 
 app.set('trust proxy', 1);
 
 app.use(express.json({ limit: '1mb' }));
 app.use(express.urlencoded({ extended: true }));
 app.use(session({
-    store: new FileStore({
-        path: SESSIONS_DIR,
+    store: MongoStore.create({
+        mongoUrl: process.env.MONGODB_URI,
         ttl: 60 * 60 * 24 * 7,
-        retries: 0,
-        reapInterval: 3600,
-        logFn: () => {}
+        collectionName: 'sessions'
     }),
     secret: process.env.SESSION_SECRET || 'predcord-secret',
     resave: false,
