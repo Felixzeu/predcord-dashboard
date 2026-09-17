@@ -984,11 +984,16 @@ function renderModlogs(logs) {
         const date = log.dateFormatted || (log.date ? new Date(log.date).toLocaleString('en-US') : '');
         const mod = log.moderatorTag || log.userTag || 'Bot';
 
+        const transcriptBtn = log.transcriptId
+            ? `<a class="modlog-transcript-btn" href="/transcript/${escapeAttr(log.transcriptId)}" target="_blank" rel="noopener">Transcript</a>`
+            : '';
+
         return `
         <div class="modlog-card">
             <div class="modlog-header">
                 <span class="modlog-badge ${escapeAttr(type)}">${escapeHtml(action)}</span>
                 <span class="modlog-target">${escapeHtml(target)}</span>
+                ${transcriptBtn}
             </div>
             <div class="modlog-reason">${escapeHtml(reason)}</div>
             <div class="modlog-meta">
