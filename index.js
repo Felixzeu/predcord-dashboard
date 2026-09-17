@@ -875,6 +875,12 @@ client.on('messageCreate', async (message) => {
                     await handleCustomCommand(message, command, args, cmdData);
                     return;
                 } else {
+                    const embed = new EmbedBuilder()
+                        .setDescription('You don\'t have permission to use this command.')
+                        .setColor(COLORS.ERROR);
+                    const msg = await message.channel.send({ embeds: [embed] });
+                    setTimeout(() => msg.delete().catch(() => {}), 4000);
+                    await message.delete().catch(() => {});
                     return;
                 }
             }
