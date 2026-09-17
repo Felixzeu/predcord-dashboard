@@ -6,6 +6,7 @@ const passport = require('passport');
 const DiscordStrategy = require('passport-discord').Strategy;
 const path = require('path');
 const fs = require('fs');
+const { ChannelType } = require('discord.js');
 require('dotenv').config();
 
 require('./index.js');
@@ -339,6 +340,80 @@ app.get('/api/roles/:guildId', requireAuth, (req, res) => {
             }));
 
         res.json(roles);
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
+app.get('/api/channels/:guildId', requireAuth, (req, res) => {
+    try {
+        const { client } = global.PredCord;
+        const guild = client.guilds.cache.get(req.params.guildId);
+        if (!guild) return res.status(404).json({ error: 'Server non trovato' });
+
+        const channels = guild.channels.cache
+            .filter(c => c.type === ChannelType.GuildText || c.type === ChannelType.GuildCategory)
+            .sort((a, b) => a.position - b.position)
+            .map(c => ({
+                id: c.id,
+                name: c.name,
+                type: c.type === ChannelType.GuildCategory ? 'category' : 'text',
+                parentId: c.parentId || null
+            }));
+
+        res.json(channels);
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
+app.get('/api/guildconfig/:guildId', requireAuth, async (req, res) => {
+    try {
+        const { db } = global.PredCord;
+        const config = await db.getGuildConfigDB(req.params.guildId);
+        res.json(config);
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
+app.post('/api/guildconfig/:guildId', requireAuth, async (req, res) => {
+    try {
+        if (!isOwner(req) && !isDashboardAdmin(req)) {
+            return res.status(403).json({ error: 'Access Denied' });
+        }
+
+        const { db } = global.PredCord;
+        const { guildId } = req.params;
+        const {
+            joinLeaveLogChannelId,
+            modLogChannelId,
+            messageLogChannelId,
+            transcriptsChannelId,
+            staffRoleId,
+            modRoleId,
+            adminRoleId,
+            supportCategoryId,
+            reportCategoryId
+        } = req.body;
+
+        const updates = {
+            joinLeaveLogChannelId: joinLeaveLogChannelId || null,
+            modLogChannelId: modLogChannelId || null,
+            messageLogChannelId: messageLogChannelId || null,
+            transcriptsChannelId: transcriptsChannelId || null,
+            staffRoleId: staffRoleId || null,
+            modRoleId: modRoleId || null,
+            adminRoleId: adminRoleId || null,
+            supportCategoryId: supportCategoryId || null,
+            reportCategoryId: reportCategoryId || null
+        };
+
+        for (const [key, value] of Object.entries(updates)) {
+            await db.saveGuildConfigDB(guildId, key, value);
+        }
+
+        res.json({ success: true });
     } catch (e) {
         res.status(500).json({ error: e.message });
     }
@@ -703,16 +778,6 @@ app.post('/api/moderation/:guildId', requireAuth, async (req, res) => {
         res.json({ success: true, username: member.user.tag });
     } catch (e) {
         console.error('Moderation error:', e);
-        res.status(500).json({ error: e.message });
-    }
-});
-
-app.get('/api/guildconfig/:guildId', requireAuth, async (req, res) => {
-    try {
-        const { db } = global.PredCord;
-        const config = await db.getGuildConfigDB(req.params.guildId);
-        res.json(config);
-    } catch (e) {
         res.status(500).json({ error: e.message });
     }
 });
