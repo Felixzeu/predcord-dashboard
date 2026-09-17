@@ -722,8 +722,8 @@ app.get('/', requireAuth, (req, res) => {
 });
 
 waitForBot().then(() => {
-    app.listen(PORT, () => {
-        console.log(`Dashboard attiva su http://localhost:${PORT}`);
+    app.listen(PORT, '0.0.0.0', () => {
+        console.log(`Dashboard attiva su http://0.0.0.0:${PORT}`);
     });
 }).catch((err) => {
     console.error('Errore avvio:', err.message);
