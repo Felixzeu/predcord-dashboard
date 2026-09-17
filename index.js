@@ -969,7 +969,8 @@ async function handleNativeCommand(message, command, args) {
         }
 
         const text = await formatModerationHistory(userId, message.guild.id, username, pageArg);
-        await message.channel.send(text);
+        const embed = new EmbedBuilder().setDescription(text).setColor(COLORS.INFO);
+        await message.channel.send({ embeds: [embed] });
         await message.delete().catch(() => {});
         return;
     }
