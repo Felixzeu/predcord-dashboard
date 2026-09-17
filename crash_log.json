@@ -13,5 +13,416 @@
       "arrayBuffers": 141346
     },
     "uptime": 8.379741219
+  },
+  {
+    "timestamp": "2026-09-16T13:12:50.034Z",
+    "type": "AUTO_UNBAN_SCHEDULER",
+    "message": "connection <monitor> to 65.62.227.217:27017 timed out",
+    "stack": "MongoServerSelectionError: connection <monitor> to 65.62.227.217:27017 timed out\n    at Topology.selectServer (C:\\Users\\andri\\Desktop\\Negro\\node_modules\\mongodb\\lib\\sdam\\topology.js:327:38)\n    at async tryOperation (C:\\Users\\andri\\Desktop\\Negro\\node_modules\\mongodb\\lib\\operations\\execute_operation.js:196:22)\n    at async executeOperation (C:\\Users\\andri\\Desktop\\Negro\\node_modules\\mongodb\\lib\\operations\\execute_operation.js:78:16)\n    at async FindCursor._initialize (C:\\Users\\andri\\Desktop\\Negro\\node_modules\\mongodb\\lib\\cursor\\find_cursor.js:62:26)\n    at async FindCursor.cursorInit (C:\\Users\\andri\\Desktop\\Negro\\node_modules\\mongodb\\lib\\cursor\\abstract_cursor.js:632:27)\n    at async FindCursor.fetchBatch (C:\\Users\\andri\\Desktop\\Negro\\node_modules\\mongodb\\lib\\cursor\\abstract_cursor.js:666:13)\n    at async FindCursor.next (C:\\Users\\andri\\Desktop\\Negro\\node_modules\\mongodb\\lib\\cursor\\abstract_cursor.js:342:17)\n    at async [Symbol.asyncIterator] (C:\\Users\\andri\\Desktop\\Negro\\node_modules\\mongodb\\lib\\cursor\\abstract_cursor.js:250:34)\n    at async FindCursor.toArray (C:\\Users\\andri\\Desktop\\Negro\\node_modules\\mongodb\\lib\\cursor\\abstract_cursor.js:422:26)\n    at async model.Query._find (C:\\Users\\andri\\Desktop\\Negro\\node_modules\\mongoose\\lib\\query.js:2430:14)",
+    "context": {},
+    "memory": {
+      "rss": 102281216,
+      "heapTotal": 41857024,
+      "heapUsed": 39922048,
+      "external": 25487797,
+      "arrayBuffers": 21264886
+    },
+    "uptime": 3747.740667
+  },
+  {
+    "timestamp": "2026-09-16T15:01:49.308Z",
+    "type": "AUTO_UNBAN_SCHEDULER",
+    "message": "connection <monitor> to 65.62.227.217:27017 timed out",
+    "stack": "MongoServerSelectionError: connection <monitor> to 65.62.227.217:27017 timed out\n    at Topology.selectServer (C:\\Users\\andri\\Desktop\\Negro\\node_modules\\mongodb\\lib\\sdam\\topology.js:327:38)\n    at async tryOperation (C:\\Users\\andri\\Desktop\\Negro\\node_modules\\mongodb\\lib\\operations\\execute_operation.js:196:22)\n    at async executeOperation (C:\\Users\\andri\\Desktop\\Negro\\node_modules\\mongodb\\lib\\operations\\execute_operation.js:78:16)\n    at async FindCursor._initialize (C:\\Users\\andri\\Desktop\\Negro\\node_modules\\mongodb\\lib\\cursor\\find_cursor.js:62:26)\n    at async FindCursor.cursorInit (C:\\Users\\andri\\Desktop\\Negro\\node_modules\\mongodb\\lib\\cursor\\abstract_cursor.js:632:27)\n    at async FindCursor.fetchBatch (C:\\Users\\andri\\Desktop\\Negro\\node_modules\\mongodb\\lib\\cursor\\abstract_cursor.js:666:13)\n    at async FindCursor.next (C:\\Users\\andri\\Desktop\\Negro\\node_modules\\mongodb\\lib\\cursor\\abstract_cursor.js:342:17)\n    at async [Symbol.asyncIterator] (C:\\Users\\andri\\Desktop\\Negro\\node_modules\\mongodb\\lib\\cursor\\abstract_cursor.js:250:34)\n    at async FindCursor.toArray (C:\\Users\\andri\\Desktop\\Negro\\node_modules\\mongodb\\lib\\cursor\\abstract_cursor.js:422:26)\n    at async model.Query._find (C:\\Users\\andri\\Desktop\\Negro\\node_modules\\mongoose\\lib\\query.js:2430:14)",
+    "context": {},
+    "memory": {
+      "rss": 102096896,
+      "heapTotal": 42119168,
+      "heapUsed": 39304960,
+      "external": 24106760,
+      "arrayBuffers": 19881571
+    },
+    "uptime": 10287.0139716
+  },
+  {
+    "timestamp": "2026-09-16T15:02:34.536Z",
+    "type": "AUTO_UNBAN_SCHEDULER",
+    "message": "getaddrinfo ENOTFOUND ac-mphtqxm-shard-00-01.krvefui.mongodb.net",
+    "stack": "MongoServerSelectionError: getaddrinfo ENOTFOUND ac-mphtqxm-shard-00-01.krvefui.mongodb.net\n    at Topology.selectServer (C:\\Users\\andri\\Desktop\\Negro\\node_modules\\mongodb\\lib\\sdam\\topology.js:327:38)\n    at async tryOperation (C:\\Users\\andri\\Desktop\\Negro\\node_modules\\mongodb\\lib\\operations\\execute_operation.js:148:18)\n    at async executeOperation (C:\\Users\\andri\\Desktop\\Negro\\node_modules\\mongodb\\lib\\operations\\execute_operation.js:78:16)\n    at async FindCursor._initialize (C:\\Users\\andri\\Desktop\\Negro\\node_modules\\mongodb\\lib\\cursor\\find_cursor.js:62:26)\n    at async FindCursor.cursorInit (C:\\Users\\andri\\Desktop\\Negro\\node_modules\\mongodb\\lib\\cursor\\abstract_cursor.js:632:27)\n    at async FindCursor.fetchBatch (C:\\Users\\andri\\Desktop\\Negro\\node_modules\\mongodb\\lib\\cursor\\abstract_cursor.js:666:13)\n    at async FindCursor.next (C:\\Users\\andri\\Desktop\\Negro\\node_modules\\mongodb\\lib\\cursor\\abstract_cursor.js:342:17)\n    at async [Symbol.asyncIterator] (C:\\Users\\andri\\Desktop\\Negro\\node_modules\\mongodb\\lib\\cursor\\abstract_cursor.js:250:34)\n    at async FindCursor.toArray (C:\\Users\\andri\\Desktop\\Negro\\node_modules\\mongodb\\lib\\cursor\\abstract_cursor.js:422:26)\n    at async model.Query._find (C:\\Users\\andri\\Desktop\\Negro\\node_modules\\mongoose\\lib\\query.js:2430:14)",
+    "context": {},
+    "memory": {
+      "rss": 102285312,
+      "heapTotal": 42381312,
+      "heapUsed": 39479168,
+      "external": 24115602,
+      "arrayBuffers": 19885007
+    },
+    "uptime": 10332.2429021
+  },
+  {
+    "timestamp": "2026-09-16T15:03:45.601Z",
+    "type": "AUTO_UNBAN_SCHEDULER",
+    "message": "connection <monitor> to 65.62.227.217:27017 timed out",
+    "stack": "MongoServerSelectionError: connection <monitor> to 65.62.227.217:27017 timed out\n    at Topology.selectServer (C:\\Users\\andri\\Desktop\\Negro\\node_modules\\mongodb\\lib\\sdam\\topology.js:327:38)\n    at async tryOperation (C:\\Users\\andri\\Desktop\\Negro\\node_modules\\mongodb\\lib\\operations\\execute_operation.js:196:22)\n    at async executeOperation (C:\\Users\\andri\\Desktop\\Negro\\node_modules\\mongodb\\lib\\operations\\execute_operation.js:78:16)\n    at async FindCursor._initialize (C:\\Users\\andri\\Desktop\\Negro\\node_modules\\mongodb\\lib\\cursor\\find_cursor.js:62:26)\n    at async FindCursor.cursorInit (C:\\Users\\andri\\Desktop\\Negro\\node_modules\\mongodb\\lib\\cursor\\abstract_cursor.js:632:27)\n    at async FindCursor.fetchBatch (C:\\Users\\andri\\Desktop\\Negro\\node_modules\\mongodb\\lib\\cursor\\abstract_cursor.js:666:13)\n    at async FindCursor.next (C:\\Users\\andri\\Desktop\\Negro\\node_modules\\mongodb\\lib\\cursor\\abstract_cursor.js:342:17)\n    at async [Symbol.asyncIterator] (C:\\Users\\andri\\Desktop\\Negro\\node_modules\\mongodb\\lib\\cursor\\abstract_cursor.js:250:34)\n    at async FindCursor.toArray (C:\\Users\\andri\\Desktop\\Negro\\node_modules\\mongodb\\lib\\cursor\\abstract_cursor.js:422:26)\n    at async model.Query._find (C:\\Users\\andri\\Desktop\\Negro\\node_modules\\mongoose\\lib\\query.js:2430:14)",
+    "context": {},
+    "memory": {
+      "rss": 102694912,
+      "heapTotal": 42643456,
+      "heapUsed": 39501192,
+      "external": 24106814,
+      "arrayBuffers": 19881609
+    },
+    "uptime": 10403.3068714
+  },
+  {
+    "timestamp": "2026-09-16T15:06:44.315Z",
+    "type": "AUTO_UNBAN_SCHEDULER",
+    "message": "connection <monitor> to 65.62.227.233:27017 closed",
+    "stack": "MongoServerSelectionError: connection <monitor> to 65.62.227.233:27017 closed\n    at Topology.selectServer (C:\\Users\\andri\\Desktop\\Negro\\node_modules\\mongodb\\lib\\sdam\\topology.js:327:38)\n    at async tryOperation (C:\\Users\\andri\\Desktop\\Negro\\node_modules\\mongodb\\lib\\operations\\execute_operation.js:196:22)\n    at async executeOperation (C:\\Users\\andri\\Desktop\\Negro\\node_modules\\mongodb\\lib\\operations\\execute_operation.js:78:16)\n    at async FindCursor._initialize (C:\\Users\\andri\\Desktop\\Negro\\node_modules\\mongodb\\lib\\cursor\\find_cursor.js:62:26)\n    at async FindCursor.cursorInit (C:\\Users\\andri\\Desktop\\Negro\\node_modules\\mongodb\\lib\\cursor\\abstract_cursor.js:632:27)\n    at async FindCursor.fetchBatch (C:\\Users\\andri\\Desktop\\Negro\\node_modules\\mongodb\\lib\\cursor\\abstract_cursor.js:666:13)\n    at async FindCursor.next (C:\\Users\\andri\\Desktop\\Negro\\node_modules\\mongodb\\lib\\cursor\\abstract_cursor.js:342:17)\n    at async [Symbol.asyncIterator] (C:\\Users\\andri\\Desktop\\Negro\\node_modules\\mongodb\\lib\\cursor\\abstract_cursor.js:250:34)\n    at async FindCursor.toArray (C:\\Users\\andri\\Desktop\\Negro\\node_modules\\mongodb\\lib\\cursor\\abstract_cursor.js:422:26)\n    at async model.Query._find (C:\\Users\\andri\\Desktop\\Negro\\node_modules\\mongoose\\lib\\query.js:2430:14)",
+    "context": {},
+    "memory": {
+      "rss": 102547456,
+      "heapTotal": 42381312,
+      "heapUsed": 39865328,
+      "external": 24178117,
+      "arrayBuffers": 19947245
+    },
+    "uptime": 10582.0213864
+  },
+  {
+    "timestamp": "2026-09-16T15:08:53.813Z",
+    "type": "AUTO_UNBAN_SCHEDULER",
+    "message": "connection <monitor> to 65.62.227.209:27017 timed out",
+    "stack": "MongoServerSelectionError: connection <monitor> to 65.62.227.209:27017 timed out\n    at Topology.selectServer (C:\\Users\\andri\\Desktop\\Negro\\node_modules\\mongodb\\lib\\sdam\\topology.js:327:38)\n    at async tryOperation (C:\\Users\\andri\\Desktop\\Negro\\node_modules\\mongodb\\lib\\operations\\execute_operation.js:196:22)\n    at async executeOperation (C:\\Users\\andri\\Desktop\\Negro\\node_modules\\mongodb\\lib\\operations\\execute_operation.js:78:16)\n    at async FindCursor._initialize (C:\\Users\\andri\\Desktop\\Negro\\node_modules\\mongodb\\lib\\cursor\\find_cursor.js:62:26)\n    at async FindCursor.cursorInit (C:\\Users\\andri\\Desktop\\Negro\\node_modules\\mongodb\\lib\\cursor\\abstract_cursor.js:632:27)\n    at async FindCursor.fetchBatch (C:\\Users\\andri\\Desktop\\Negro\\node_modules\\mongodb\\lib\\cursor\\abstract_cursor.js:666:13)\n    at async FindCursor.next (C:\\Users\\andri\\Desktop\\Negro\\node_modules\\mongodb\\lib\\cursor\\abstract_cursor.js:342:17)\n    at async [Symbol.asyncIterator] (C:\\Users\\andri\\Desktop\\Negro\\node_modules\\mongodb\\lib\\cursor\\abstract_cursor.js:250:34)\n    at async FindCursor.toArray (C:\\Users\\andri\\Desktop\\Negro\\node_modules\\mongodb\\lib\\cursor\\abstract_cursor.js:422:26)\n    at async model.Query._find (C:\\Users\\andri\\Desktop\\Negro\\node_modules\\mongoose\\lib\\query.js:2430:14)",
+    "context": {},
+    "memory": {
+      "rss": 103657472,
+      "heapTotal": 41857024,
+      "heapUsed": 39596576,
+      "external": 24171361,
+      "arrayBuffers": 19947323
+    },
+    "uptime": 10711.5193815
+  },
+  {
+    "timestamp": "2026-09-16T15:16:53.861Z",
+    "type": "AUTO_UNBAN_SCHEDULER",
+    "message": "connection <monitor> to 65.62.227.217:27017 timed out",
+    "stack": "MongoServerSelectionError: connection <monitor> to 65.62.227.217:27017 timed out\n    at Topology.selectServer (C:\\Users\\andri\\Desktop\\Negro\\node_modules\\mongodb\\lib\\sdam\\topology.js:327:38)\n    at async tryOperation (C:\\Users\\andri\\Desktop\\Negro\\node_modules\\mongodb\\lib\\operations\\execute_operation.js:196:22)\n    at async executeOperation (C:\\Users\\andri\\Desktop\\Negro\\node_modules\\mongodb\\lib\\operations\\execute_operation.js:78:16)\n    at async FindCursor._initialize (C:\\Users\\andri\\Desktop\\Negro\\node_modules\\mongodb\\lib\\cursor\\find_cursor.js:62:26)\n    at async FindCursor.cursorInit (C:\\Users\\andri\\Desktop\\Negro\\node_modules\\mongodb\\lib\\cursor\\abstract_cursor.js:632:27)\n    at async FindCursor.fetchBatch (C:\\Users\\andri\\Desktop\\Negro\\node_modules\\mongodb\\lib\\cursor\\abstract_cursor.js:666:13)\n    at async FindCursor.next (C:\\Users\\andri\\Desktop\\Negro\\node_modules\\mongodb\\lib\\cursor\\abstract_cursor.js:342:17)\n    at async [Symbol.asyncIterator] (C:\\Users\\andri\\Desktop\\Negro\\node_modules\\mongodb\\lib\\cursor\\abstract_cursor.js:250:34)\n    at async FindCursor.toArray (C:\\Users\\andri\\Desktop\\Negro\\node_modules\\mongodb\\lib\\cursor\\abstract_cursor.js:422:26)\n    at async model.Query._find (C:\\Users\\andri\\Desktop\\Negro\\node_modules\\mongoose\\lib\\query.js:2430:14)",
+    "context": {},
+    "memory": {
+      "rss": 103743488,
+      "heapTotal": 42381312,
+      "heapUsed": 40615992,
+      "external": 24432760,
+      "arrayBuffers": 20209849
+    },
+    "uptime": 11191.5678963
+  },
+  {
+    "timestamp": "2026-09-16T15:17:34.654Z",
+    "type": "AUTO_UNBAN_SCHEDULER",
+    "message": "getaddrinfo ENOTFOUND ac-mphtqxm-shard-00-02.krvefui.mongodb.net",
+    "stack": "MongoServerSelectionError: getaddrinfo ENOTFOUND ac-mphtqxm-shard-00-02.krvefui.mongodb.net\n    at Topology.selectServer (C:\\Users\\andri\\Desktop\\Negro\\node_modules\\mongodb\\lib\\sdam\\topology.js:327:38)\n    at async tryOperation (C:\\Users\\andri\\Desktop\\Negro\\node_modules\\mongodb\\lib\\operations\\execute_operation.js:148:18)\n    at async executeOperation (C:\\Users\\andri\\Desktop\\Negro\\node_modules\\mongodb\\lib\\operations\\execute_operation.js:78:16)\n    at async FindCursor._initialize (C:\\Users\\andri\\Desktop\\Negro\\node_modules\\mongodb\\lib\\cursor\\find_cursor.js:62:26)\n    at async FindCursor.cursorInit (C:\\Users\\andri\\Desktop\\Negro\\node_modules\\mongodb\\lib\\cursor\\abstract_cursor.js:632:27)\n    at async FindCursor.fetchBatch (C:\\Users\\andri\\Desktop\\Negro\\node_modules\\mongodb\\lib\\cursor\\abstract_cursor.js:666:13)\n    at async FindCursor.next (C:\\Users\\andri\\Desktop\\Negro\\node_modules\\mongodb\\lib\\cursor\\abstract_cursor.js:342:17)\n    at async [Symbol.asyncIterator] (C:\\Users\\andri\\Desktop\\Negro\\node_modules\\mongodb\\lib\\cursor\\abstract_cursor.js:250:34)\n    at async FindCursor.toArray (C:\\Users\\andri\\Desktop\\Negro\\node_modules\\mongodb\\lib\\cursor\\abstract_cursor.js:422:26)\n    at async model.Query._find (C:\\Users\\andri\\Desktop\\Negro\\node_modules\\mongoose\\lib\\query.js:2430:14)",
+    "context": {},
+    "memory": {
+      "rss": 104148992,
+      "heapTotal": 43167744,
+      "heapUsed": 40188704,
+      "external": 24432814,
+      "arrayBuffers": 20209903
+    },
+    "uptime": 11232.3608379
+  },
+  {
+    "timestamp": "2026-09-16T15:19:05.329Z",
+    "type": "AUTO_UNBAN_SCHEDULER",
+    "message": "Connection pool for ac-mphtqxm-shard-00-01.krvefui.mongodb.net:27017 was cleared because another operation failed with: \"connection <monitor> to 65.62.227.233:27017 timed out\"",
+    "stack": "MongoPoolClearedError: Connection pool for ac-mphtqxm-shard-00-01.krvefui.mongodb.net:27017 was cleared because another operation failed with: \"connection <monitor> to 65.62.227.233:27017 timed out\"\n    at C:\\Users\\andri\\Desktop\\Negro\\node_modules\\mongodb\\lib\\cmap\\connection_pool.js:366:77\n    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)",
+    "context": {},
+    "memory": {
+      "rss": 104153088,
+      "heapTotal": 42119168,
+      "heapUsed": 40403488,
+      "external": 24443258,
+      "arrayBuffers": 20212663
+    },
+    "uptime": 11323.035049
+  },
+  {
+    "timestamp": "2026-09-16T15:19:45.738Z",
+    "type": "AUTO_UNBAN_SCHEDULER",
+    "message": "connection <monitor> to 65.62.227.233:27017 closed",
+    "stack": "MongoServerSelectionError: connection <monitor> to 65.62.227.233:27017 closed\n    at Topology.selectServer (C:\\Users\\andri\\Desktop\\Negro\\node_modules\\mongodb\\lib\\sdam\\topology.js:327:38)\n    at async tryOperation (C:\\Users\\andri\\Desktop\\Negro\\node_modules\\mongodb\\lib\\operations\\execute_operation.js:196:22)\n    at async executeOperation (C:\\Users\\andri\\Desktop\\Negro\\node_modules\\mongodb\\lib\\operations\\execute_operation.js:78:16)\n    at async FindCursor._initialize (C:\\Users\\andri\\Desktop\\Negro\\node_modules\\mongodb\\lib\\cursor\\find_cursor.js:62:26)\n    at async FindCursor.cursorInit (C:\\Users\\andri\\Desktop\\Negro\\node_modules\\mongodb\\lib\\cursor\\abstract_cursor.js:632:27)\n    at async FindCursor.fetchBatch (C:\\Users\\andri\\Desktop\\Negro\\node_modules\\mongodb\\lib\\cursor\\abstract_cursor.js:666:13)\n    at async FindCursor.next (C:\\Users\\andri\\Desktop\\Negro\\node_modules\\mongodb\\lib\\cursor\\abstract_cursor.js:342:17)\n    at async [Symbol.asyncIterator] (C:\\Users\\andri\\Desktop\\Negro\\node_modules\\mongodb\\lib\\cursor\\abstract_cursor.js:250:34)\n    at async FindCursor.toArray (C:\\Users\\andri\\Desktop\\Negro\\node_modules\\mongodb\\lib\\cursor\\abstract_cursor.js:422:26)\n    at async model.Query._find (C:\\Users\\andri\\Desktop\\Negro\\node_modules\\mongoose\\lib\\query.js:2430:14)",
+    "context": {},
+    "memory": {
+      "rss": 104103936,
+      "heapTotal": 41857024,
+      "heapUsed": 40237408,
+      "external": 24435108,
+      "arrayBuffers": 20209927
+    },
+    "uptime": 11363.4442543
+  },
+  {
+    "timestamp": "2026-09-16T20:49:05.739Z",
+    "type": "AUTO_UNBAN_SCHEDULER",
+    "message": "connection <monitor> to 65.62.227.209:27017 timed out",
+    "stack": "MongoServerSelectionError: connection <monitor> to 65.62.227.209:27017 timed out\n    at Topology.selectServer (C:\\Users\\andri\\Desktop\\Negro\\node_modules\\mongodb\\lib\\sdam\\topology.js:327:38)\n    at async tryOperation (C:\\Users\\andri\\Desktop\\Negro\\node_modules\\mongodb\\lib\\operations\\execute_operation.js:196:22)\n    at async executeOperation (C:\\Users\\andri\\Desktop\\Negro\\node_modules\\mongodb\\lib\\operations\\execute_operation.js:78:16)\n    at async FindCursor._initialize (C:\\Users\\andri\\Desktop\\Negro\\node_modules\\mongodb\\lib\\cursor\\find_cursor.js:62:26)\n    at async FindCursor.cursorInit (C:\\Users\\andri\\Desktop\\Negro\\node_modules\\mongodb\\lib\\cursor\\abstract_cursor.js:632:27)\n    at async FindCursor.fetchBatch (C:\\Users\\andri\\Desktop\\Negro\\node_modules\\mongodb\\lib\\cursor\\abstract_cursor.js:666:13)\n    at async FindCursor.next (C:\\Users\\andri\\Desktop\\Negro\\node_modules\\mongodb\\lib\\cursor\\abstract_cursor.js:342:17)\n    at async [Symbol.asyncIterator] (C:\\Users\\andri\\Desktop\\Negro\\node_modules\\mongodb\\lib\\cursor\\abstract_cursor.js:250:34)\n    at async FindCursor.toArray (C:\\Users\\andri\\Desktop\\Negro\\node_modules\\mongodb\\lib\\cursor\\abstract_cursor.js:422:26)\n    at async model.Query._find (C:\\Users\\andri\\Desktop\\Negro\\node_modules\\mongoose\\lib\\query.js:2430:14)",
+    "context": {},
+    "memory": {
+      "rss": 98643968,
+      "heapTotal": 40284160,
+      "heapUsed": 37541240,
+      "external": 22992253,
+      "arrayBuffers": 18765899
+    },
+    "uptime": 133.0695192
+  },
+  {
+    "timestamp": "2026-09-16T21:08:33.336Z",
+    "type": "AUTO_UNBAN_SCHEDULER",
+    "message": "connection <monitor> to 65.62.227.233:27017 timed out",
+    "stack": "MongoServerSelectionError: connection <monitor> to 65.62.227.233:27017 timed out\n    at Topology.selectServer (C:\\Users\\andri\\Desktop\\Negro\\node_modules\\mongodb\\lib\\sdam\\topology.js:327:38)\n    at async tryOperation (C:\\Users\\andri\\Desktop\\Negro\\node_modules\\mongodb\\lib\\operations\\execute_operation.js:148:18)\n    at async executeOperation (C:\\Users\\andri\\Desktop\\Negro\\node_modules\\mongodb\\lib\\operations\\execute_operation.js:78:16)\n    at async FindCursor._initialize (C:\\Users\\andri\\Desktop\\Negro\\node_modules\\mongodb\\lib\\cursor\\find_cursor.js:62:26)\n    at async FindCursor.cursorInit (C:\\Users\\andri\\Desktop\\Negro\\node_modules\\mongodb\\lib\\cursor\\abstract_cursor.js:632:27)\n    at async FindCursor.fetchBatch (C:\\Users\\andri\\Desktop\\Negro\\node_modules\\mongodb\\lib\\cursor\\abstract_cursor.js:666:13)\n    at async FindCursor.next (C:\\Users\\andri\\Desktop\\Negro\\node_modules\\mongodb\\lib\\cursor\\abstract_cursor.js:342:17)\n    at async [Symbol.asyncIterator] (C:\\Users\\andri\\Desktop\\Negro\\node_modules\\mongodb\\lib\\cursor\\abstract_cursor.js:250:34)\n    at async FindCursor.toArray (C:\\Users\\andri\\Desktop\\Negro\\node_modules\\mongodb\\lib\\cursor\\abstract_cursor.js:422:26)\n    at async model.Query._find (C:\\Users\\andri\\Desktop\\Negro\\node_modules\\mongoose\\lib\\query.js:2430:14)",
+    "context": {},
+    "memory": {
+      "rss": 99364864,
+      "heapTotal": 39759872,
+      "heapUsed": 37380744,
+      "external": 22894072,
+      "arrayBuffers": 18640539
+    },
+    "uptime": 70.898378
+  },
+  {
+    "timestamp": "2026-09-16T21:09:44.398Z",
+    "type": "AUTO_UNBAN_SCHEDULER",
+    "message": "connection <monitor> to 65.62.227.233:27017 closed",
+    "stack": "MongoServerSelectionError: connection <monitor> to 65.62.227.233:27017 closed\n    at Topology.selectServer (C:\\Users\\andri\\Desktop\\Negro\\node_modules\\mongodb\\lib\\sdam\\topology.js:327:38)\n    at async tryOperation (C:\\Users\\andri\\Desktop\\Negro\\node_modules\\mongodb\\lib\\operations\\execute_operation.js:196:22)\n    at async executeOperation (C:\\Users\\andri\\Desktop\\Negro\\node_modules\\mongodb\\lib\\operations\\execute_operation.js:78:16)\n    at async FindCursor._initialize (C:\\Users\\andri\\Desktop\\Negro\\node_modules\\mongodb\\lib\\cursor\\find_cursor.js:62:26)\n    at async FindCursor.cursorInit (C:\\Users\\andri\\Desktop\\Negro\\node_modules\\mongodb\\lib\\cursor\\abstract_cursor.js:632:27)\n    at async FindCursor.fetchBatch (C:\\Users\\andri\\Desktop\\Negro\\node_modules\\mongodb\\lib\\cursor\\abstract_cursor.js:666:13)\n    at async FindCursor.next (C:\\Users\\andri\\Desktop\\Negro\\node_modules\\mongodb\\lib\\cursor\\abstract_cursor.js:342:17)\n    at async [Symbol.asyncIterator] (C:\\Users\\andri\\Desktop\\Negro\\node_modules\\mongodb\\lib\\cursor\\abstract_cursor.js:250:34)\n    at async FindCursor.toArray (C:\\Users\\andri\\Desktop\\Negro\\node_modules\\mongodb\\lib\\cursor\\abstract_cursor.js:422:26)\n    at async model.Query._find (C:\\Users\\andri\\Desktop\\Negro\\node_modules\\mongoose\\lib\\query.js:2430:14)",
+    "context": {},
+    "memory": {
+      "rss": 99508224,
+      "heapTotal": 40284160,
+      "heapUsed": 37959904,
+      "external": 22896366,
+      "arrayBuffers": 18640539
+    },
+    "uptime": 141.9602585
+  },
+  {
+    "timestamp": "2026-09-17T11:38:19.531Z",
+    "type": "AUTO_UNBAN_SCHEDULER",
+    "message": "connection <monitor> to 65.62.227.233:27017 closed",
+    "stack": "MongoServerSelectionError: connection <monitor> to 65.62.227.233:27017 closed\n    at Topology.selectServer (C:\\Users\\andri\\Desktop\\Negro\\node_modules\\mongodb\\lib\\sdam\\topology.js:327:38)\n    at async tryOperation (C:\\Users\\andri\\Desktop\\Negro\\node_modules\\mongodb\\lib\\operations\\execute_operation.js:196:22)\n    at async executeOperation (C:\\Users\\andri\\Desktop\\Negro\\node_modules\\mongodb\\lib\\operations\\execute_operation.js:78:16)\n    at async FindCursor._initialize (C:\\Users\\andri\\Desktop\\Negro\\node_modules\\mongodb\\lib\\cursor\\find_cursor.js:62:26)\n    at async FindCursor.cursorInit (C:\\Users\\andri\\Desktop\\Negro\\node_modules\\mongodb\\lib\\cursor\\abstract_cursor.js:632:27)\n    at async FindCursor.fetchBatch (C:\\Users\\andri\\Desktop\\Negro\\node_modules\\mongodb\\lib\\cursor\\abstract_cursor.js:666:13)\n    at async FindCursor.next (C:\\Users\\andri\\Desktop\\Negro\\node_modules\\mongodb\\lib\\cursor\\abstract_cursor.js:342:17)\n    at async [Symbol.asyncIterator] (C:\\Users\\andri\\Desktop\\Negro\\node_modules\\mongodb\\lib\\cursor\\abstract_cursor.js:250:34)\n    at async FindCursor.toArray (C:\\Users\\andri\\Desktop\\Negro\\node_modules\\mongodb\\lib\\cursor\\abstract_cursor.js:422:26)\n    at async model.Query._find (C:\\Users\\andri\\Desktop\\Negro\\node_modules\\mongoose\\lib\\query.js:2430:14)",
+    "context": {},
+    "memory": {
+      "rss": 101437440,
+      "heapTotal": 42119168,
+      "heapUsed": 39354176,
+      "external": 23492375,
+      "arrayBuffers": 19230488
+    },
+    "uptime": 633.385469
+  },
+  {
+    "timestamp": "2026-09-17T11:38:57.932Z",
+    "type": "AUTO_UNBAN_SCHEDULER",
+    "message": "getaddrinfo ENOTFOUND ac-mphtqxm-shard-00-01.krvefui.mongodb.net",
+    "stack": "MongoServerSelectionError: getaddrinfo ENOTFOUND ac-mphtqxm-shard-00-01.krvefui.mongodb.net\n    at Topology.selectServer (C:\\Users\\andri\\Desktop\\Negro\\node_modules\\mongodb\\lib\\sdam\\topology.js:327:38)\n    at async tryOperation (C:\\Users\\andri\\Desktop\\Negro\\node_modules\\mongodb\\lib\\operations\\execute_operation.js:148:18)\n    at async executeOperation (C:\\Users\\andri\\Desktop\\Negro\\node_modules\\mongodb\\lib\\operations\\execute_operation.js:78:16)\n    at async FindCursor._initialize (C:\\Users\\andri\\Desktop\\Negro\\node_modules\\mongodb\\lib\\cursor\\find_cursor.js:62:26)\n    at async FindCursor.cursorInit (C:\\Users\\andri\\Desktop\\Negro\\node_modules\\mongodb\\lib\\cursor\\abstract_cursor.js:632:27)\n    at async FindCursor.fetchBatch (C:\\Users\\andri\\Desktop\\Negro\\node_modules\\mongodb\\lib\\cursor\\abstract_cursor.js:666:13)\n    at async FindCursor.next (C:\\Users\\andri\\Desktop\\Negro\\node_modules\\mongodb\\lib\\cursor\\abstract_cursor.js:342:17)\n    at async [Symbol.asyncIterator] (C:\\Users\\andri\\Desktop\\Negro\\node_modules\\mongodb\\lib\\cursor\\abstract_cursor.js:250:34)\n    at async FindCursor.toArray (C:\\Users\\andri\\Desktop\\Negro\\node_modules\\mongodb\\lib\\cursor\\abstract_cursor.js:422:26)\n    at async model.Query._find (C:\\Users\\andri\\Desktop\\Negro\\node_modules\\mongoose\\lib\\query.js:2430:14)",
+    "context": {},
+    "memory": {
+      "rss": 101474304,
+      "heapTotal": 41594880,
+      "heapUsed": 39028440,
+      "external": 23485581,
+      "arrayBuffers": 19230504
+    },
+    "uptime": 671.7866429
+  },
+  {
+    "timestamp": "2026-09-17T11:49:30.453Z",
+    "type": "AUTO_UNBAN_SCHEDULER",
+    "message": "connection <monitor> to 65.62.227.209:27017 timed out",
+    "stack": "MongoServerSelectionError: connection <monitor> to 65.62.227.209:27017 timed out\n    at Topology.selectServer (C:\\Users\\andri\\Desktop\\Negro\\node_modules\\mongodb\\lib\\sdam\\topology.js:327:38)\n    at async tryOperation (C:\\Users\\andri\\Desktop\\Negro\\node_modules\\mongodb\\lib\\operations\\execute_operation.js:148:18)\n    at async executeOperation (C:\\Users\\andri\\Desktop\\Negro\\node_modules\\mongodb\\lib\\operations\\execute_operation.js:78:16)\n    at async FindCursor._initialize (C:\\Users\\andri\\Desktop\\Negro\\node_modules\\mongodb\\lib\\cursor\\find_cursor.js:62:26)\n    at async FindCursor.cursorInit (C:\\Users\\andri\\Desktop\\Negro\\node_modules\\mongodb\\lib\\cursor\\abstract_cursor.js:632:27)\n    at async FindCursor.fetchBatch (C:\\Users\\andri\\Desktop\\Negro\\node_modules\\mongodb\\lib\\cursor\\abstract_cursor.js:666:13)\n    at async FindCursor.next (C:\\Users\\andri\\Desktop\\Negro\\node_modules\\mongodb\\lib\\cursor\\abstract_cursor.js:342:17)\n    at async [Symbol.asyncIterator] (C:\\Users\\andri\\Desktop\\Negro\\node_modules\\mongodb\\lib\\cursor\\abstract_cursor.js:250:34)\n    at async FindCursor.toArray (C:\\Users\\andri\\Desktop\\Negro\\node_modules\\mongodb\\lib\\cursor\\abstract_cursor.js:422:26)\n    at async model.Query._find (C:\\Users\\andri\\Desktop\\Negro\\node_modules\\mongoose\\lib\\query.js:2430:14)",
+    "context": {},
+    "memory": {
+      "rss": 100212736,
+      "heapTotal": 41070592,
+      "heapUsed": 39593560,
+      "external": 23302654,
+      "arrayBuffers": 19052421
+    },
+    "uptime": 611.0329216
+  },
+  {
+    "timestamp": "2026-09-17T11:49:59.808Z",
+    "type": "LOGIN_ERROR",
+    "message": "Connect Timeout Error (attempted address: discord.com:443, timeout: 10000ms)",
+    "stack": "ConnectTimeoutError: Connect Timeout Error (attempted address: discord.com:443, timeout: 10000ms)\n    at onConnectTimeout (node:internal/deps/undici/undici:2405:23)\n    at Immediate._onImmediate (node:internal/deps/undici/undici:2371:35)\n    at process.processImmediate (node:internal/timers:574:21)",
+    "context": {},
+    "memory": {
+      "rss": 111804416,
+      "heapTotal": 58748928,
+      "heapUsed": 41085144,
+      "external": 22730160,
+      "arrayBuffers": 18510602
+    },
+    "uptime": 11.7349545
+  },
+  {
+    "timestamp": "2026-09-17T11:52:29.027Z",
+    "type": "MESSAGE_CREATE_HANDLER",
+    "message": "getaddrinfo ENOTFOUND ac-mphtqxm-shard-00-02.krvefui.mongodb.net",
+    "stack": "MongoServerSelectionError: getaddrinfo ENOTFOUND ac-mphtqxm-shard-00-02.krvefui.mongodb.net\n    at Topology.selectServer (C:\\Users\\andri\\Desktop\\Negro\\node_modules\\mongodb\\lib\\sdam\\topology.js:327:38)\n    at async tryOperation (C:\\Users\\andri\\Desktop\\Negro\\node_modules\\mongodb\\lib\\operations\\execute_operation.js:196:22)\n    at async executeOperation (C:\\Users\\andri\\Desktop\\Negro\\node_modules\\mongodb\\lib\\operations\\execute_operation.js:78:16)\n    at async FindCursor._initialize (C:\\Users\\andri\\Desktop\\Negro\\node_modules\\mongodb\\lib\\cursor\\find_cursor.js:62:26)\n    at async FindCursor.cursorInit (C:\\Users\\andri\\Desktop\\Negro\\node_modules\\mongodb\\lib\\cursor\\abstract_cursor.js:632:27)\n    at async FindCursor.fetchBatch (C:\\Users\\andri\\Desktop\\Negro\\node_modules\\mongodb\\lib\\cursor\\abstract_cursor.js:666:13)\n    at async FindCursor.next (C:\\Users\\andri\\Desktop\\Negro\\node_modules\\mongodb\\lib\\cursor\\abstract_cursor.js:342:17)\n    at async [Symbol.asyncIterator] (C:\\Users\\andri\\Desktop\\Negro\\node_modules\\mongodb\\lib\\cursor\\abstract_cursor.js:250:34)\n    at async FindCursor.toArray (C:\\Users\\andri\\Desktop\\Negro\\node_modules\\mongodb\\lib\\cursor\\abstract_cursor.js:422:26)\n    at async model.Query._find (C:\\Users\\andri\\Desktop\\Negro\\node_modules\\mongoose\\lib\\query.js:2430:14)",
+    "context": {
+      "content": "*ban 1346238732495355944 Testingù"
+    },
+    "memory": {
+      "rss": 100077568,
+      "heapTotal": 40284160,
+      "heapUsed": 37160032,
+      "external": 22956965,
+      "arrayBuffers": 18701663
+    },
+    "uptime": 113.2250727
+  },
+  {
+    "timestamp": "2026-09-17T11:54:46.698Z",
+    "type": "AUTO_UNBAN_SCHEDULER",
+    "message": "connection <monitor> to 65.62.227.217:27017 timed out",
+    "stack": "MongoServerSelectionError: connection <monitor> to 65.62.227.217:27017 timed out\n    at Topology.selectServer (C:\\Users\\andri\\Desktop\\Negro\\node_modules\\mongodb\\lib\\sdam\\topology.js:327:38)\n    at async tryOperation (C:\\Users\\andri\\Desktop\\Negro\\node_modules\\mongodb\\lib\\operations\\execute_operation.js:148:18)\n    at async executeOperation (C:\\Users\\andri\\Desktop\\Negro\\node_modules\\mongodb\\lib\\operations\\execute_operation.js:78:16)\n    at async FindCursor._initialize (C:\\Users\\andri\\Desktop\\Negro\\node_modules\\mongodb\\lib\\cursor\\find_cursor.js:62:26)\n    at async FindCursor.cursorInit (C:\\Users\\andri\\Desktop\\Negro\\node_modules\\mongodb\\lib\\cursor\\abstract_cursor.js:632:27)\n    at async FindCursor.fetchBatch (C:\\Users\\andri\\Desktop\\Negro\\node_modules\\mongodb\\lib\\cursor\\abstract_cursor.js:666:13)\n    at async FindCursor.next (C:\\Users\\andri\\Desktop\\Negro\\node_modules\\mongodb\\lib\\cursor\\abstract_cursor.js:342:17)\n    at async [Symbol.asyncIterator] (C:\\Users\\andri\\Desktop\\Negro\\node_modules\\mongodb\\lib\\cursor\\abstract_cursor.js:250:34)\n    at async FindCursor.toArray (C:\\Users\\andri\\Desktop\\Negro\\node_modules\\mongodb\\lib\\cursor\\abstract_cursor.js:422:26)\n    at async model.Query._find (C:\\Users\\andri\\Desktop\\Negro\\node_modules\\mongoose\\lib\\query.js:2430:14)",
+    "context": {},
+    "memory": {
+      "rss": 99942400,
+      "heapTotal": 41332736,
+      "heapUsed": 38945344,
+      "external": 23036935,
+      "arrayBuffers": 18781820
+    },
+    "uptime": 250.8956554
+  },
+  {
+    "timestamp": "2026-09-17T11:56:48.545Z",
+    "type": "AUTO_UNBAN_SCHEDULER",
+    "message": "connection <monitor> to 65.62.227.217:27017 timed out",
+    "stack": "MongoServerSelectionError: connection <monitor> to 65.62.227.217:27017 timed out\n    at Topology.selectServer (C:\\Users\\andri\\Desktop\\Negro\\node_modules\\mongodb\\lib\\sdam\\topology.js:327:38)\n    at async tryOperation (C:\\Users\\andri\\Desktop\\Negro\\node_modules\\mongodb\\lib\\operations\\execute_operation.js:196:22)\n    at async executeOperation (C:\\Users\\andri\\Desktop\\Negro\\node_modules\\mongodb\\lib\\operations\\execute_operation.js:78:16)\n    at async FindCursor._initialize (C:\\Users\\andri\\Desktop\\Negro\\node_modules\\mongodb\\lib\\cursor\\find_cursor.js:62:26)\n    at async FindCursor.cursorInit (C:\\Users\\andri\\Desktop\\Negro\\node_modules\\mongodb\\lib\\cursor\\abstract_cursor.js:632:27)\n    at async FindCursor.fetchBatch (C:\\Users\\andri\\Desktop\\Negro\\node_modules\\mongodb\\lib\\cursor\\abstract_cursor.js:666:13)\n    at async FindCursor.next (C:\\Users\\andri\\Desktop\\Negro\\node_modules\\mongodb\\lib\\cursor\\abstract_cursor.js:342:17)\n    at async [Symbol.asyncIterator] (C:\\Users\\andri\\Desktop\\Negro\\node_modules\\mongodb\\lib\\cursor\\abstract_cursor.js:250:34)\n    at async FindCursor.toArray (C:\\Users\\andri\\Desktop\\Negro\\node_modules\\mongodb\\lib\\cursor\\abstract_cursor.js:422:26)\n    at async model.Query._find (C:\\Users\\andri\\Desktop\\Negro\\node_modules\\mongoose\\lib\\query.js:2430:14)",
+    "context": {},
+    "memory": {
+      "rss": 101109760,
+      "heapTotal": 41332736,
+      "heapUsed": 39102496,
+      "external": 23102533,
+      "arrayBuffers": 18847456
+    },
+    "uptime": 372.7434724
+  },
+  {
+    "timestamp": "2026-09-17T11:59:04.084Z",
+    "type": "AUTO_UNBAN_SCHEDULER",
+    "message": "connection <monitor> to 65.62.227.217:27017 timed out",
+    "stack": "MongoServerSelectionError: connection <monitor> to 65.62.227.217:27017 timed out\n    at Topology.selectServer (C:\\Users\\andri\\Desktop\\Negro\\node_modules\\mongodb\\lib\\sdam\\topology.js:327:38)\n    at async tryOperation (C:\\Users\\andri\\Desktop\\Negro\\node_modules\\mongodb\\lib\\operations\\execute_operation.js:196:22)\n    at async executeOperation (C:\\Users\\andri\\Desktop\\Negro\\node_modules\\mongodb\\lib\\operations\\execute_operation.js:78:16)\n    at async FindCursor._initialize (C:\\Users\\andri\\Desktop\\Negro\\node_modules\\mongodb\\lib\\cursor\\find_cursor.js:62:26)\n    at async FindCursor.cursorInit (C:\\Users\\andri\\Desktop\\Negro\\node_modules\\mongodb\\lib\\cursor\\abstract_cursor.js:632:27)\n    at async FindCursor.fetchBatch (C:\\Users\\andri\\Desktop\\Negro\\node_modules\\mongodb\\lib\\cursor\\abstract_cursor.js:666:13)\n    at async FindCursor.next (C:\\Users\\andri\\Desktop\\Negro\\node_modules\\mongodb\\lib\\cursor\\abstract_cursor.js:342:17)\n    at async [Symbol.asyncIterator] (C:\\Users\\andri\\Desktop\\Negro\\node_modules\\mongodb\\lib\\cursor\\abstract_cursor.js:250:34)\n    at async FindCursor.toArray (C:\\Users\\andri\\Desktop\\Negro\\node_modules\\mongodb\\lib\\cursor\\abstract_cursor.js:422:26)\n    at async model.Query._find (C:\\Users\\andri\\Desktop\\Negro\\node_modules\\mongoose\\lib\\query.js:2430:14)",
+    "context": {},
+    "memory": {
+      "rss": 99635200,
+      "heapTotal": 41594880,
+      "heapUsed": 39766984,
+      "external": 23103784,
+      "arrayBuffers": 18847556
+    },
+    "uptime": 508.2825282
+  },
+  {
+    "timestamp": "2026-09-17T12:01:05.969Z",
+    "type": "AUTO_UNBAN_SCHEDULER",
+    "message": "connection <monitor> to 65.62.227.217:27017 timed out",
+    "stack": "MongoServerSelectionError: connection <monitor> to 65.62.227.217:27017 timed out\n    at Topology.selectServer (C:\\Users\\andri\\Desktop\\Negro\\node_modules\\mongodb\\lib\\sdam\\topology.js:327:38)\n    at async tryOperation (C:\\Users\\andri\\Desktop\\Negro\\node_modules\\mongodb\\lib\\operations\\execute_operation.js:196:22)\n    at async executeOperation (C:\\Users\\andri\\Desktop\\Negro\\node_modules\\mongodb\\lib\\operations\\execute_operation.js:78:16)\n    at async FindCursor._initialize (C:\\Users\\andri\\Desktop\\Negro\\node_modules\\mongodb\\lib\\cursor\\find_cursor.js:62:26)\n    at async FindCursor.cursorInit (C:\\Users\\andri\\Desktop\\Negro\\node_modules\\mongodb\\lib\\cursor\\abstract_cursor.js:632:27)\n    at async FindCursor.fetchBatch (C:\\Users\\andri\\Desktop\\Negro\\node_modules\\mongodb\\lib\\cursor\\abstract_cursor.js:666:13)\n    at async FindCursor.next (C:\\Users\\andri\\Desktop\\Negro\\node_modules\\mongodb\\lib\\cursor\\abstract_cursor.js:342:17)\n    at async [Symbol.asyncIterator] (C:\\Users\\andri\\Desktop\\Negro\\node_modules\\mongodb\\lib\\cursor\\abstract_cursor.js:250:34)\n    at async FindCursor.toArray (C:\\Users\\andri\\Desktop\\Negro\\node_modules\\mongodb\\lib\\cursor\\abstract_cursor.js:422:26)\n    at async model.Query._find (C:\\Users\\andri\\Desktop\\Negro\\node_modules\\mongoose\\lib\\query.js:2430:14)",
+    "context": {},
+    "memory": {
+      "rss": 100188160,
+      "heapTotal": 42119168,
+      "heapUsed": 39881264,
+      "external": 23172801,
+      "arrayBuffers": 18913192
+    },
+    "uptime": 630.166677
+  },
+  {
+    "timestamp": "2026-09-17T12:23:54.822Z",
+    "type": "MESSAGE_CREATE_HANDLER",
+    "message": "connection <monitor> to 65.62.227.233:27017 closed",
+    "stack": "MongoServerSelectionError: connection <monitor> to 65.62.227.233:27017 closed\n    at Topology.selectServer (C:\\Users\\andri\\Desktop\\Negro\\node_modules\\mongodb\\lib\\sdam\\topology.js:327:38)\n    at async tryOperation (C:\\Users\\andri\\Desktop\\Negro\\node_modules\\mongodb\\lib\\operations\\execute_operation.js:148:18)\n    at async executeOperation (C:\\Users\\andri\\Desktop\\Negro\\node_modules\\mongodb\\lib\\operations\\execute_operation.js:78:16)\n    at async FindCursor._initialize (C:\\Users\\andri\\Desktop\\Negro\\node_modules\\mongodb\\lib\\cursor\\find_cursor.js:62:26)\n    at async FindCursor.cursorInit (C:\\Users\\andri\\Desktop\\Negro\\node_modules\\mongodb\\lib\\cursor\\abstract_cursor.js:632:27)\n    at async FindCursor.fetchBatch (C:\\Users\\andri\\Desktop\\Negro\\node_modules\\mongodb\\lib\\cursor\\abstract_cursor.js:666:13)\n    at async FindCursor.next (C:\\Users\\andri\\Desktop\\Negro\\node_modules\\mongodb\\lib\\cursor\\abstract_cursor.js:342:17)\n    at async [Symbol.asyncIterator] (C:\\Users\\andri\\Desktop\\Negro\\node_modules\\mongodb\\lib\\cursor\\abstract_cursor.js:250:34)\n    at async FindCursor.toArray (C:\\Users\\andri\\Desktop\\Negro\\node_modules\\mongodb\\lib\\cursor\\abstract_cursor.js:422:26)\n    at async model.Query._find (C:\\Users\\andri\\Desktop\\Negro\\node_modules\\mongoose\\lib\\query.js:2430:14)",
+    "context": {
+      "content": "!db"
+    },
+    "memory": {
+      "rss": 100425728,
+      "heapTotal": 40808448,
+      "heapUsed": 37714512,
+      "external": 22956983,
+      "arrayBuffers": 18701946
+    },
+    "uptime": 46.6592082
+  },
+  {
+    "timestamp": "2026-09-17T12:23:55.134Z",
+    "type": "MESSAGE_DELETE_LOG",
+    "message": "connection <monitor> to 65.62.227.233:27017 closed",
+    "stack": "MongoServerSelectionError: connection <monitor> to 65.62.227.233:27017 closed\n    at Topology.selectServer (C:\\Users\\andri\\Desktop\\Negro\\node_modules\\mongodb\\lib\\sdam\\topology.js:327:38)\n    at async tryOperation (C:\\Users\\andri\\Desktop\\Negro\\node_modules\\mongodb\\lib\\operations\\execute_operation.js:148:18)\n    at async executeOperation (C:\\Users\\andri\\Desktop\\Negro\\node_modules\\mongodb\\lib\\operations\\execute_operation.js:78:16)\n    at async FindCursor._initialize (C:\\Users\\andri\\Desktop\\Negro\\node_modules\\mongodb\\lib\\cursor\\find_cursor.js:62:26)\n    at async FindCursor.cursorInit (C:\\Users\\andri\\Desktop\\Negro\\node_modules\\mongodb\\lib\\cursor\\abstract_cursor.js:632:27)\n    at async FindCursor.fetchBatch (C:\\Users\\andri\\Desktop\\Negro\\node_modules\\mongodb\\lib\\cursor\\abstract_cursor.js:666:13)\n    at async FindCursor.next (C:\\Users\\andri\\Desktop\\Negro\\node_modules\\mongodb\\lib\\cursor\\abstract_cursor.js:342:17)\n    at async Collection.findOne (C:\\Users\\andri\\Desktop\\Negro\\node_modules\\mongodb\\lib\\collection.js:313:24)\n    at async model.Query._findOne (C:\\Users\\andri\\Desktop\\Negro\\node_modules\\mongoose\\lib\\query.js:2710:15)\n    at async model.Query.exec (C:\\Users\\andri\\Desktop\\Negro\\node_modules\\mongoose\\lib\\query.js:4622:63)",
+    "context": {},
+    "memory": {
+      "rss": 100442112,
+      "heapTotal": 40808448,
+      "heapUsed": 37036920,
+      "external": 22957700,
+      "arrayBuffers": 18702623
+    },
+    "uptime": 46.9709009
+  },
+  {
+    "timestamp": "2026-09-17T12:24:19.738Z",
+    "type": "AUTO_UNBAN_SCHEDULER",
+    "message": "connection <monitor> to 65.62.227.233:27017 closed",
+    "stack": "MongoServerSelectionError: connection <monitor> to 65.62.227.233:27017 closed\n    at Topology.selectServer (C:\\Users\\andri\\Desktop\\Negro\\node_modules\\mongodb\\lib\\sdam\\topology.js:327:38)\n    at async tryOperation (C:\\Users\\andri\\Desktop\\Negro\\node_modules\\mongodb\\lib\\operations\\execute_operation.js:148:18)\n    at async executeOperation (C:\\Users\\andri\\Desktop\\Negro\\node_modules\\mongodb\\lib\\operations\\execute_operation.js:78:16)\n    at async FindCursor._initialize (C:\\Users\\andri\\Desktop\\Negro\\node_modules\\mongodb\\lib\\cursor\\find_cursor.js:62:26)\n    at async FindCursor.cursorInit (C:\\Users\\andri\\Desktop\\Negro\\node_modules\\mongodb\\lib\\cursor\\abstract_cursor.js:632:27)\n    at async FindCursor.fetchBatch (C:\\Users\\andri\\Desktop\\Negro\\node_modules\\mongodb\\lib\\cursor\\abstract_cursor.js:666:13)\n    at async FindCursor.next (C:\\Users\\andri\\Desktop\\Negro\\node_modules\\mongodb\\lib\\cursor\\abstract_cursor.js:342:17)\n    at async [Symbol.asyncIterator] (C:\\Users\\andri\\Desktop\\Negro\\node_modules\\mongodb\\lib\\cursor\\abstract_cursor.js:250:34)\n    at async FindCursor.toArray (C:\\Users\\andri\\Desktop\\Negro\\node_modules\\mongodb\\lib\\cursor\\abstract_cursor.js:422:26)\n    at async model.Query._find (C:\\Users\\andri\\Desktop\\Negro\\node_modules\\mongoose\\lib\\query.js:2430:14)",
+    "context": {},
+    "memory": {
+      "rss": 100483072,
+      "heapTotal": 40022016,
+      "heapUsed": 37495896,
+      "external": 22959954,
+      "arrayBuffers": 18704877
+    },
+    "uptime": 71.5746505
+  },
+  {
+    "timestamp": "2026-09-17T12:26:58.976Z",
+    "type": "MESSAGE_CREATE_HANDLER",
+    "message": "connection <monitor> to 65.62.227.233:27017 timed out",
+    "stack": "MongoServerSelectionError: connection <monitor> to 65.62.227.233:27017 timed out\n    at Topology.selectServer (C:\\Users\\andri\\Desktop\\Negro\\node_modules\\mongodb\\lib\\sdam\\topology.js:327:38)\n    at async tryOperation (C:\\Users\\andri\\Desktop\\Negro\\node_modules\\mongodb\\lib\\operations\\execute_operation.js:148:18)\n    at async executeOperation (C:\\Users\\andri\\Desktop\\Negro\\node_modules\\mongodb\\lib\\operations\\execute_operation.js:78:16)\n    at async FindCursor._initialize (C:\\Users\\andri\\Desktop\\Negro\\node_modules\\mongodb\\lib\\cursor\\find_cursor.js:62:26)\n    at async FindCursor.cursorInit (C:\\Users\\andri\\Desktop\\Negro\\node_modules\\mongodb\\lib\\cursor\\abstract_cursor.js:632:27)\n    at async FindCursor.fetchBatch (C:\\Users\\andri\\Desktop\\Negro\\node_modules\\mongodb\\lib\\cursor\\abstract_cursor.js:666:13)\n    at async FindCursor.next (C:\\Users\\andri\\Desktop\\Negro\\node_modules\\mongodb\\lib\\cursor\\abstract_cursor.js:342:17)\n    at async [Symbol.asyncIterator] (C:\\Users\\andri\\Desktop\\Negro\\node_modules\\mongodb\\lib\\cursor\\abstract_cursor.js:250:34)\n    at async FindCursor.toArray (C:\\Users\\andri\\Desktop\\Negro\\node_modules\\mongodb\\lib\\cursor\\abstract_cursor.js:422:26)\n    at async model.Query._find (C:\\Users\\andri\\Desktop\\Negro\\node_modules\\mongoose\\lib\\query.js:2430:14)",
+    "context": {
+      "content": "!rr"
+    },
+    "memory": {
+      "rss": 100179968,
+      "heapTotal": 41070592,
+      "heapUsed": 38365096,
+      "external": 23033271,
+      "arrayBuffers": 18778194
+    },
+    "uptime": 230.8128897
+  },
+  {
+    "timestamp": "2026-09-17T12:26:59.224Z",
+    "type": "MESSAGE_DELETE_LOG",
+    "message": "connection <monitor> to 65.62.227.233:27017 timed out",
+    "stack": "MongoServerSelectionError: connection <monitor> to 65.62.227.233:27017 timed out\n    at Topology.selectServer (C:\\Users\\andri\\Desktop\\Negro\\node_modules\\mongodb\\lib\\sdam\\topology.js:327:38)\n    at async tryOperation (C:\\Users\\andri\\Desktop\\Negro\\node_modules\\mongodb\\lib\\operations\\execute_operation.js:148:18)\n    at async executeOperation (C:\\Users\\andri\\Desktop\\Negro\\node_modules\\mongodb\\lib\\operations\\execute_operation.js:78:16)\n    at async FindCursor._initialize (C:\\Users\\andri\\Desktop\\Negro\\node_modules\\mongodb\\lib\\cursor\\find_cursor.js:62:26)\n    at async FindCursor.cursorInit (C:\\Users\\andri\\Desktop\\Negro\\node_modules\\mongodb\\lib\\cursor\\abstract_cursor.js:632:27)\n    at async FindCursor.fetchBatch (C:\\Users\\andri\\Desktop\\Negro\\node_modules\\mongodb\\lib\\cursor\\abstract_cursor.js:666:13)\n    at async FindCursor.next (C:\\Users\\andri\\Desktop\\Negro\\node_modules\\mongodb\\lib\\cursor\\abstract_cursor.js:342:17)\n    at async Collection.findOne (C:\\Users\\andri\\Desktop\\Negro\\node_modules\\mongodb\\lib\\collection.js:313:24)\n    at async model.Query._findOne (C:\\Users\\andri\\Desktop\\Negro\\node_modules\\mongoose\\lib\\query.js:2710:15)\n    at async model.Query.exec (C:\\Users\\andri\\Desktop\\Negro\\node_modules\\mongoose\\lib\\query.js:4622:63)",
+    "context": {},
+    "memory": {
+      "rss": 100196352,
+      "heapTotal": 40284160,
+      "heapUsed": 37686184,
+      "external": 23033271,
+      "arrayBuffers": 18767170
+    },
+    "uptime": 231.0607283
   }
 ]
