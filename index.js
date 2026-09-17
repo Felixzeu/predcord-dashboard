@@ -554,29 +554,90 @@ async function sendSocialEmbed(channel) {
     }
 }
 
-async function generateTicketTranscript(channel, closer) {
+async function generateTicketTranscript(channel, closer, ticketMeta = {}) {
     try {
         const messages = await channel.messages.fetch({ limit: 100 });
-        let transcript = `TICKET TRANSCRIPT\nChannel: ${channel.name}\nClosed by: ${closer.tag} (${closer.id})\nDate: ${new Date().toLocaleString()}\n${'='.repeat(50)}\n\n`;
-        for (const msg of Array.from(messages.values()).reverse()) {
-            transcript += `[${msg.createdAt.toLocaleString()}] ${msg.author.tag}: ${msg.content}\n`;
-            if (msg.attachments.size > 0) {
-                transcript += `  Attachments: ${msg.attachments.map(a => a.url).join(', ')}\n`;
-            }
+        const sorted = Array.from(messages.values()).reverse();
+
+        const messagesData = sorted.map(msg => ({
+            authorId: msg.author.id,
+            authorTag: msg.author.tag,
+            authorUsername: msg.author.username,
+            authorAvatar: msg.author.displayAvatarURL({ dynamic: true, size: 64 }),
+            bot: msg.author.bot,
+            content: msg.content || '',
+            attachments: msg.attachments.map(a => ({
+                url: a.url,
+                name: a.name,
+                contentType: a.contentType
+            })),
+            embeds: msg.embeds.map(e => ({
+                title: e.title || null,
+                description: e.description || null,
+                color: e.color || null,
+                image: e.image?.url || null,
+                thumbnail: e.thumbnail?.url || null,
+                fields: (e.fields || []).map(f => ({ name: f.name, value: f.value, inline: f.inline }))
+            })),
+            timestamp: msg.createdAt
+        }));
+
+        const transcriptDoc = await db.saveTranscriptDB({
+            guildId: channel.guild.id,
+            channelId: channel.id,
+            channelName: channel.name,
+            ticketType: ticketMeta.ticketType || 'support',
+            ticketOwnerId: ticketMeta.ticketOwnerId || null,
+            ticketOwnerTag: ticketMeta.ticketOwnerTag || null,
+            createdBy: ticketMeta.createdBy || null,
+            createdByTag: ticketMeta.createdByTag || null,
+            claimedBy: ticketMeta.claimedBy || null,
+            claimedByTag: ticketMeta.claimedByTag || null,
+            closedBy: closer.id,
+            closedByTag: closer.tag,
+            messages: messagesData,
+            createdAt: channel.createdAt || new Date(),
+            closedAt: new Date()
+        });
+
+        if (!transcriptDoc) {
+            console.error('[TRANSCRIPT] Failed to save transcript to DB');
+            return null;
         }
-        const fileName = `transcript-${channel.name}-${Date.now()}.txt`;
-        const filePath = path.join(TRANSCRIPTS_DIR, fileName);
-        fs.writeFileSync(filePath, transcript);
+
         const config = await getGuildConfig(channel.guild.id);
-        const transcriptChannel = client.channels.cache.get(config.transcriptsChannelId);
-        if (transcriptChannel) {
-            await transcriptChannel.send({
-                content: `Transcript for ticket ${channel.name} - Closed by ${closer.tag}`,
-                files: [{ attachment: filePath, name: fileName }]
-            }).catch(() => {});
+        const logChannelId = config.transcriptsChannelId;
+        const logChannel = logChannelId ? client.channels.cache.get(logChannelId) : null;
+
+        if (logChannel) {
+            const embed = new EmbedBuilder()
+                .setTitle('Ticket Log')
+                .setColor(BLACK)
+                .setThumbnail(THUMBNAIL_URL)
+                .addFields(
+                    { name: 'Created By', value: transcriptDoc.createdBy ? `<@${transcriptDoc.createdBy}>` : 'Unknown', inline: true },
+                    { name: 'Claimed By', value: transcriptDoc.claimedBy ? `<@${transcriptDoc.claimedBy}>` : 'Not claimed', inline: true },
+                    { name: 'Closed By', value: closer ? `<@${closer.id}>` : 'Unknown', inline: true },
+                    { name: 'Ticket', value: `#${channel.name}`, inline: true },
+                    { name: 'Date', value: formatFullDate(new Date()), inline: true }
+                );
+
+            const row = new ActionRowBuilder().addComponents(
+                new ButtonBuilder()
+                    .setLabel('Transcript')
+                    .setStyle(ButtonStyle.Link)
+                    .setURL(`https://predcord.com/transcript/${transcriptDoc._id}`)
+            );
+
+            await logChannel.send({ embeds: [embed], components: [row] }).catch(err => {
+                console.error('[TICKET-LOG] send error:', err.message);
+            });
+        } else {
+            console.warn('[TICKET-LOG] No transcript channel configured for guild', channel.guild.id);
         }
-        console.log(`[TRANSCRIPT] Saved transcript for ${channel.name}`);
-        return filePath;
+
+        console.log(`[TRANSCRIPT] Saved transcript ${transcriptDoc._id} for ${channel.name}`);
+        return transcriptDoc._id.toString();
     } catch (error) {
         logCrash('TRANSCRIPT_ERROR', error, { channel: channel?.name });
         return null;
