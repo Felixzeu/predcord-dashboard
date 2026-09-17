@@ -63,6 +63,9 @@ const client = new Client({
     ]
 });
 
+client.on('error', (error) => logCrash('CLIENT_ERROR', error));
+client.on('shardError', (error) => logCrash('SHARD_ERROR', error));
+
 const TRANSCRIPTS_DIR = './transcripts/';
 
 if (!fs.existsSync(TRANSCRIPTS_DIR)) {
@@ -2457,8 +2460,20 @@ if (!process.env.DISCORD_TOKEN) {
     process.exit(1);
 }
 
-client.login(process.env.DISCORD_TOKEN).catch((error) => {
-    logCrash('LOGIN_ERROR', error);
-    console.error('Login failed. Check the token in the .env file');
-    process.exit(1);
-});
+async function loginWithRetry(retries = 5, delay = 10000) {
+    for (let i = 1; i <= retries; i++) {
+        try {
+            await client.login(process.env.DISCORD_TOKEN);
+            return;
+        } catch (error) {
+            logCrash('LOGIN_ERROR', error, { attempt: i, retries });
+            if (i === retries) {
+                console.error('Login failed after all retries');
+                process.exit(1);
+            }
+            await new Promise((r) => setTimeout(r, delay));
+        }
+    }
+}
+
+loginWithRetry();
