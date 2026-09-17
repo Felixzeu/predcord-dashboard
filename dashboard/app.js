@@ -417,12 +417,12 @@ function renderCommands() {
 
         const cardClass = cmd.isBase ? 'command-card base-command' : 'command-card';
 
-        const prefix = cmd.prefix || '*';
         const typeLabel = cmd.type === 'embed' ? 'Embed' : cmd.type;
         return `
         <div class="${cardClass}">
             <div class="command-info">
-                <h4>${escapeHtml(prefix)}${escapeHtml(name)}${badge}${baseBadge}</h4>
+                <h4>${escapeHtml(name)}</h4>
+                <div class="command-badges">${badge}${baseBadge}</div>
                 <p>${escapeHtml(typeLabel)} - ${escapeHtml(truncate(cmd.response || '', 70))}</p>
             </div>
             <div class="command-actions">
@@ -501,6 +501,11 @@ function openModal(name = null) {
         document.getElementById('cmdDelete').checked = cmd.deleteCommand !== false;
         document.getElementById('cmdDuration').value = cmd.duration || '';
 
+        clearExtraEmbeds();
+        if (Array.isArray(cmd.extraEmbeds)) {
+            cmd.extraEmbeds.forEach(e => addEmbedBlock(e));
+        }
+
         const baseToggle = document.getElementById('cmdIsBase');
         if (baseToggle) {
             baseToggle.checked = !!cmd.isBase;
@@ -514,6 +519,8 @@ function openModal(name = null) {
         document.getElementById('cmdImage').value = '';
         document.getElementById('cmdDelete').checked = true;
         document.getElementById('cmdDuration').value = '';
+
+        clearExtraEmbeds();
 
         const baseToggle = document.getElementById('cmdIsBase');
         if (baseToggle) {
@@ -581,6 +588,7 @@ function updateTypeUI() {
     const wrapColor = document.getElementById('labelColor');
     const wrapThumb = document.getElementById('labelThumbnail');
     const wrapImage = document.getElementById('labelImage');
+    const wrapExtraEmbeds = document.getElementById('extraEmbedsWrap');
     const wrapDuration = document.getElementById('labelDuration');
     const durationInput = document.getElementById('cmdDuration');
     const durationHint = document.getElementById('durationHint');
@@ -616,6 +624,7 @@ function updateTypeUI() {
     wrapThumb.style.display = isEmbed ? 'block' : 'none';
     wrapImage.style.display = (isEmbed || isText) ? 'block' : 'none';
     wrapDuration.style.display = showDuration ? 'block' : 'none';
+    if (wrapExtraEmbeds) wrapExtraEmbeds.style.display = isEmbed ? 'block' : 'none';
 
     if (labelResponse) {
         labelResponse.style.display = isPurge ? 'none' : 'block';
@@ -659,6 +668,51 @@ function updateTypeUI() {
     }
 
     updatePreview();
+}
+
+let extraEmbedCounter = 0;
+
+function addEmbedBlock(data = {}) {
+    const list = document.getElementById('extraEmbedsList');
+    if (!list) return;
+    const idx = extraEmbedCounter++;
+    const colorHex = '#' + (data.color || 0x7289DA).toString(16).padStart(6, '0');
+    const block = document.createElement('div');
+    block.className = 'extra-embed-block';
+    block.dataset.idx = idx;
+    block.innerHTML = `
+        <div class="extra-embed-header">
+            <span>Embed extra</span>
+            <button type="button" class="extra-embed-remove">&times;</button>
+        </div>
+        <label>Titolo</label>
+        <input type="text" class="ee-title" value="${escapeAttr(data.title || '')}">
+        <label>Risposta</label>
+        <textarea class="ee-response" rows="3">${escapeHtml(data.response || '')}</textarea>
+        <label>Colore</label>
+        <input type="color" class="ee-color" value="${colorHex}">
+        <label>Thumbnail URL (opzionale)</label>
+        <input type="url" class="ee-thumbnail" value="${escapeAttr(data.thumbnail || '')}">
+        <label>Image URL (opzionale)</label>
+        <input type="url" class="ee-image" value="${escapeAttr(data.image || '')}">
+    `;
+    block.querySelector('.extra-embed-remove').onclick = () => block.remove();
+    list.appendChild(block);
+}
+
+function clearExtraEmbeds() {
+    const list = document.getElementById('extraEmbedsList');
+    if (list) list.innerHTML = '';
+}
+
+function collectExtraEmbeds() {
+    return Array.from(document.querySelectorAll('#extraEmbedsList .extra-embed-block')).map(block => ({
+        title: block.querySelector('.ee-title').value || '',
+        response: block.querySelector('.ee-response').value || '',
+        color: parseInt((block.querySelector('.ee-color').value || '#7289da').replace('#', ''), 16),
+        thumbnail: block.querySelector('.ee-thumbnail').value || null,
+        image: block.querySelector('.ee-image').value || null
+    }));
 }
 
 function closeMoreOptions() {
@@ -878,6 +932,7 @@ async function saveCommand(e) {
         color: parseInt(colorHex.replace('#', ''), 16),
         thumbnail: document.getElementById('cmdThumbnail').value || null,
         image: document.getElementById('cmdImage').value || null,
+        extraEmbeds: typeValue === 'embed' ? collectExtraEmbeds() : [],
         deleteCommand: document.getElementById('cmdDelete').checked,
         allowedRoles: allowedRoles,
         duration: duration
@@ -1534,6 +1589,9 @@ function setupEvents() {
 
     const moreBtn = document.getElementById('moreBtn');
     if (moreBtn) moreBtn.onclick = toggleMoreOptions;
+
+    const addEmbedBtn = document.getElementById('addEmbedBtn');
+    if (addEmbedBtn) addEmbedBtn.onclick = () => addEmbedBlock();
 
     const permissionsBtn = document.getElementById('permissionsBtn');
     if (permissionsBtn) permissionsBtn.onclick = togglePermissions;
