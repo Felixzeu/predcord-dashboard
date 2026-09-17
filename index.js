@@ -2037,28 +2037,24 @@ client.on('interactionCreate', async (interaction) => {
 
             await interaction.channel.permissionOverwrites.set(newOverwrites);
 
+            try {
+                const noButtonsRow = new ActionRowBuilder();
+                await interaction.message.edit({ components: [noButtonsRow] });
+            } catch (error) {}
+
             const embed = new EmbedBuilder()
                 .setTitle('Ticket Claimed')
                 .setDescription(`This ticket has been claimed by ${interaction.user.toString()}, he will assist you with your request.`)
                 .setColor(GOLD);
 
-            await interaction.channel.send({ embeds: [embed] });
+            const closeRow = new ActionRowBuilder().addComponents(
+                new ButtonBuilder()
+                    .setCustomId('close_ticket')
+                    .setLabel('Close Ticket')
+                    .setStyle(ButtonStyle.Danger)
+            );
 
-            try {
-                const newRow = new ActionRowBuilder().addComponents(
-                    new ButtonBuilder()
-                        .setCustomId('close_ticket')
-                        .setLabel('Close Ticket')
-                        .setStyle(ButtonStyle.Danger)
-                );
-                await interaction.message.edit({ components: [newRow] });
-            } catch (error) {}
-
-            try {
-                await interaction.reply({ content: '✅ You have claimed this ticket!', flags: 64 });
-            } catch (error) {
-                await interaction.followUp({ content: '✅ You have claimed this ticket!', flags: 64 }).catch(() => {});
-            }
+            await interaction.channel.send({ embeds: [embed], components: [closeRow] });
             return;
         }
 
@@ -2082,11 +2078,12 @@ client.on('interactionCreate', async (interaction) => {
                 .setDescription('This ticket has been closed, the channel will be deleted in 5 seconds....')
                 .setColor(RED);
 
-            await interaction.channel.send({ embeds: [embed] });
-
             try {
-                await interaction.reply({ content: '✅ Closing ticket...', flags: 64 });
+                const noButtonsRow = new ActionRowBuilder();
+                await interaction.message.edit({ components: [noButtonsRow] });
             } catch (error) {}
+
+            await interaction.channel.send({ embeds: [embed] });
 
             setTimeout(async () => {
                 try {
