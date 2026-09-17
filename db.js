@@ -155,6 +155,8 @@ const DashboardLogSchema = new mongoose.Schema({
     reason: { type: String, default: null },
     details: { type: String, default: null },
     channelId: { type: String, default: null },
+    transcriptId: { type: String, default: null },
+    extra: { type: mongoose.Schema.Types.Mixed, default: null },
     date: { type: Date, default: Date.now, index: true }
 }, { timestamps: true });
 
@@ -419,6 +421,8 @@ async function saveDashboardLogDB(guildId, data) {
             reason: data.reason || null,
             details: data.details || null,
             channelId: data.channelId || null,
+            transcriptId: data.transcriptId || null,
+            extra: data.extra || null,
             date: new Date()
         });
         return doc.toObject();
