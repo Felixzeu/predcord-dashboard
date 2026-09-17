@@ -6,7 +6,7 @@ async function connectDB() {
     if (connected) return true;
     const uri = process.env.MONGODB_URI;
     if (!uri) {
-        console.error('[DB] MONGODB_URI mancante nel .env!');
+        console.error('[DB] MONGODB_URI missing in .env!');
         return false;
     }
     try {
@@ -14,10 +14,10 @@ async function connectDB() {
             serverSelectionTimeoutMS: 10000
         });
         connected = true;
-        console.log('[DB] Connesso a MongoDB');
+        console.log('[DB] Connected to MongoDB');
         return true;
     } catch (err) {
-        console.error('[DB] Errore connessione MongoDB:', err.message);
+        console.error('[DB] MongoDB connection error:', err.message);
         return false;
     }
 }
@@ -123,12 +123,32 @@ const CommandCooldownSchema = new mongoose.Schema({
 CommandCooldownSchema.index({ userId: 1, guildId: 1, action: 1 }, { unique: true });
 CommandCooldownSchema.index({ expiresAt: 1 });
 
+const DashboardLogSchema = new mongoose.Schema({
+    guildId: { type: String, required: true, index: true },
+    type: { type: String, required: true, index: true },
+    action: { type: String, required: true, index: true },
+    userId: { type: String, default: null, index: true },
+    userTag: { type: String, default: null },
+    targetId: { type: String, default: null, index: true },
+    targetTag: { type: String, default: null },
+    moderatorId: { type: String, default: null, index: true },
+    moderatorTag: { type: String, default: null },
+    reason: { type: String, default: null },
+    details: { type: String, default: null },
+    channelId: { type: String, default: null },
+    date: { type: Date, default: Date.now, index: true }
+}, { timestamps: true });
+
+DashboardLogSchema.index({ guildId: 1, date: -1 });
+DashboardLogSchema.index({ guildId: 1, type: 1, date: -1 });
+
 const ModLog = mongoose.model('ModLog', ModLogSchema);
 const Warning = mongoose.model('Warning', WarningSchema);
 const GuildConfig = mongoose.model('GuildConfig', GuildConfigSchema);
 const CustomCommand = mongoose.model('CustomCommand', CustomCommandSchema);
 const PendingBan = mongoose.model('PendingBan', PendingBanSchema);
 const CommandCooldown = mongoose.model('CommandCooldown', CommandCooldownSchema);
+const DashboardLog = mongoose.model('DashboardLog', DashboardLogSchema);
 
 async function getNextCaseId(guildId) {
     const last = await ModLog.findOne({ guildId }).sort({ caseId: -1 }).lean();
@@ -344,6 +364,34 @@ async function getPendingBan(guildId, userId) {
     return await PendingBan.findOne({ guildId, userId }).lean();
 }
 
+async function saveDashboardLogDB(guildId, data) {
+    try {
+        const doc = await DashboardLog.create({
+            guildId,
+            type: data.type || 'generic',
+            action: data.action || 'unknown',
+            userId: data.userId || null,
+            userTag: data.userTag || null,
+            targetId: data.targetId || null,
+            targetTag: data.targetTag || null,
+            moderatorId: data.moderatorId || null,
+            moderatorTag: data.moderatorTag || null,
+            reason: data.reason || null,
+            details: data.details || null,
+            channelId: data.channelId || null,
+            date: new Date()
+        });
+        return doc.toObject();
+    } catch (err) {
+        console.error('[DB] saveDashboardLogDB error:', err.message);
+        return null;
+    }
+}
+
+async function getDashboardLogsDB(guildId, limit = 200) {
+    return DashboardLog.find({ guildId }).sort({ date: -1 }).limit(limit).lean();
+}
+
 module.exports = {
     connectDB,
     ModLog,
@@ -352,6 +400,7 @@ module.exports = {
     CustomCommand,
     PendingBan,
     CommandCooldown,
+    DashboardLog,
     createModLog,
     getModLogsByTarget,
     getModLogsByGuild,
@@ -378,5 +427,7 @@ module.exports = {
     addPendingBan,
     getExpiredBans,
     removePendingBan,
-    getPendingBan
+    getPendingBan,
+    saveDashboardLogDB,
+    getDashboardLogsDB
 };
