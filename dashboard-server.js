@@ -796,6 +796,31 @@ app.get('/api/modlogs/:guildId/:userId', requireAuth, async (req, res) => {
     }
 });
 
+app.get('/api/bans/:guildId', requireAuth, async (req, res) => {
+    try {
+        const hasPerm = await userHasPermission(req, 'viewLogsRoles');
+        if (!hasPerm) {
+            return res.status(403).json({ error: 'Access Denied' });
+        }
+
+        const { db, client } = global.PredCord;
+        const bans = await db.getBanLogsDB(req.params.guildId, 200);
+
+        const enriched = await Promise.all(bans.map(async (ban) => {
+            let avatarURL = 'https://cdn.discordapp.com/embed/avatars/0.png';
+            try {
+                const user = await client.users.fetch(ban.targetId);
+                avatarURL = user.displayAvatarURL({ size: 64 });
+            } catch (e) {}
+            return { ...ban, avatarURL };
+        }));
+
+        res.json(enriched);
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
 app.get('/api/dashboard-logs/:guildId', requireAuth, async (req, res) => {
     try {
         const hasPerm = await userHasPermission(req, 'viewLogsRoles');
