@@ -84,8 +84,8 @@ const GuildConfigSchema = new mongoose.Schema({
     adminRoleId: { type: String, default: null },
     supportCategoryId: { type: String, default: null },
     reportCategoryId: { type: String, default: null },
-    staffAppCommunityChannelId: { type: String, default: null },
-    staffAppPredcordChannelId: { type: String, default: null },
+    staffApplicationChannelId: { type: String, default: null },
+    staffAppPredcordGuildId: { type: String, default: null },
     dashboardPermissions: {
         createRoles: { type: [String], default: [] },
         editRoles: { type: [String], default: [] },
