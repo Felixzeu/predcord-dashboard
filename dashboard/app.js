@@ -733,6 +733,20 @@ function collectExtraEmbeds() {
 
 let buttonBlockCounter = 0;
 
+function updateAddButtonBtnState() {
+    const list = document.getElementById('cmdButtonsList');
+    const btn = document.getElementById('addButtonBtn');
+    if (!list || !btn) return;
+    const count = list.querySelectorAll('.cmd-button-block').length;
+    if (count >= 5) {
+        btn.disabled = true;
+        btn.textContent = 'Max 5 buttons';
+    } else {
+        btn.disabled = false;
+        btn.textContent = '+ Add buttons';
+    }
+}
+
 function addButtonBlock(data = {}, silent = false) {
     const list = document.getElementById('cmdButtonsList');
     if (!list) return;
@@ -751,15 +765,17 @@ function addButtonBlock(data = {}, silent = false) {
         <label>Button URL</label>
         <input type="url" class="cb-url" value="${escapeAttr(data.url || '')}" placeholder="https://...">
     `;
-    block.querySelector('.extra-embed-remove').onclick = () => { block.remove(); updatePreview(); };
+    block.querySelector('.extra-embed-remove').onclick = () => { block.remove(); updateAddButtonBtnState(); updatePreview(); };
     block.querySelectorAll('input').forEach(el => el.addEventListener('input', updatePreview));
     list.appendChild(block);
+    updateAddButtonBtnState();
     if (!silent) updatePreview();
 }
 
 function clearButtons() {
     const list = document.getElementById('cmdButtonsList');
     if (list) list.innerHTML = '';
+    updateAddButtonBtnState();
 }
 
 function collectButtons() {
