@@ -1141,6 +1141,8 @@ async function loadBans() {
 
 function renderBans(bans) {
     const list = document.getElementById('bansList');
+    const count = document.getElementById('bansCount');
+    if (count) count.textContent = `${bans ? bans.length : 0} ban`;
     if (!bans || bans.length === 0) {
         list.innerHTML = '<div class="empty-state"><h3>No bans</h3><p>No bans recorded</p></div>';
         return;
