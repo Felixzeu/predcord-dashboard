@@ -502,7 +502,7 @@ async function sendJoinLog(member) {
         const createdTs = Math.floor(member.user.createdAt.getTime() / 1000);
         const embed = new EmbedBuilder()
             .setTitle('New Member Joined')
-            .setColor(COLORS.SUCCESS)
+            .setColor(0x2ECC71)
             .setThumbnail(member.user.displayAvatarURL({ dynamic: true }))
             .addFields(
                 { name: 'User', value: member.user.toString(), inline: true },
@@ -536,7 +536,7 @@ async function sendLeaveLog(member) {
 
         const embed = new EmbedBuilder()
             .setTitle(banned ? 'New Member Left (Banned)' : 'New Member Left')
-            .setColor(COLORS.ERROR)
+            .setColor(0xE74C3C)
             .setThumbnail(member.user.displayAvatarURL({ dynamic: true }))
             .addFields(
                 { name: 'User', value: member.user.toString(), inline: true },
