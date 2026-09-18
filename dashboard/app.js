@@ -1,4 +1,6 @@
 let currentGuild = null;
+let knownGuilds = { predcord: null, community: null };
+let currentBanGuild = 'predcord';
 let currentCommands = {};
 let editingName = null;
 let currentMembers = [];
@@ -1203,12 +1205,29 @@ function renderModlogs(logs) {
     });
 }
 
+async function ensureKnownGuilds() {
+    if (knownGuilds.predcord || knownGuilds.community) return;
+    try {
+        const res = await fetch('/api/known-guilds');
+        if (res.ok) knownGuilds = await res.json();
+    } catch (e) {
+        console.error('[BANS] known-guilds error:', e);
+    }
+}
+
 async function loadBans() {
-    if (!currentGuild) return;
+    await ensureKnownGuilds();
+
+    const targetGuildId = currentBanGuild === 'community' ? knownGuilds.community : knownGuilds.predcord;
     const list = document.getElementById('bansList');
+    if (!targetGuildId) {
+        list.innerHTML = '<div class="empty-state"><h3>Not configured</h3><p>Missing guild ID for this server</p></div>';
+        return;
+    }
+
     list.innerHTML = '<div class="loading">Loading</div>';
     try {
-        const res = await fetch(`/api/bans/${currentGuild}`);
+        const res = await fetch(`/api/bans/${targetGuildId}`);
         if (!res.ok) throw new Error('Failed to load');
         const bans = await res.json();
         renderBans(bans);
@@ -1679,8 +1698,17 @@ async function loadStaffAppConfig() {
         if (!res.ok) throw new Error('Failed to load');
         const data = await res.json();
 
-        renderSingleSelectList('cfgStaffAppCommunityList', data.community.channels, data.community.selected, 'communityChannelId');
-        renderSingleSelectList('cfgStaffAppPredcordList', data.predcord.channels, data.predcord.selected, 'predcordChannelId');
+        if (!data.community.guildFound) {
+            document.getElementById('cfgStaffAppCommunityList').innerHTML = '<p class="loading-text">Bot not in this server, or COMMUNITY_GUILD_ID is missing/wrong.</p>';
+        } else {
+            renderSingleSelectList('cfgStaffAppCommunityList', data.community.channels, data.community.selected, 'communityChannelId');
+        }
+
+        if (!data.predcord.guildFound) {
+            document.getElementById('cfgStaffAppPredcordList').innerHTML = '<p class="loading-text">Bot not in this server, or MAIN_GUILD_ID is missing/wrong.</p>';
+        } else {
+            renderSingleSelectList('cfgStaffAppPredcordList', data.predcord.channels, data.predcord.selected, 'predcordChannelId');
+        }
     } catch (e) {
         console.error('[STAFF APP CONFIG] load error:', e);
         containers.forEach(id => {
@@ -1790,6 +1818,16 @@ function setupEvents() {
 
     const saveTicketsBtn = document.getElementById('saveTicketsBtn');
     if (saveTicketsBtn) saveTicketsBtn.onclick = saveTicketsConfig;
+
+    document.querySelectorAll('.ban-server-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            if (btn.classList.contains('active')) return;
+            document.querySelectorAll('.ban-server-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            currentBanGuild = btn.getAttribute('data-guild');
+            loadBans();
+        });
+    });
 
     const adminUserAdd = document.getElementById('adminUserAdd');
     if (adminUserAdd) adminUserAdd.onclick = () => addSpecialUser('admin');
