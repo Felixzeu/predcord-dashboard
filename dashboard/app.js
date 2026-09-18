@@ -512,6 +512,11 @@ function openModal(name = null) {
             cmd.extraEmbeds.forEach(e => addEmbedBlock(e, true));
         }
 
+        clearButtons();
+        if (Array.isArray(cmd.buttons)) {
+            cmd.buttons.forEach(b => addButtonBlock(b, true));
+        }
+
         const baseToggle = document.getElementById('cmdIsBase');
         if (baseToggle) {
             baseToggle.checked = !!cmd.isBase;
@@ -527,6 +532,7 @@ function openModal(name = null) {
         document.getElementById('cmdDuration').value = '';
 
         clearExtraEmbeds();
+        clearButtons();
 
         const baseToggle = document.getElementById('cmdIsBase');
         if (baseToggle) {
@@ -594,6 +600,7 @@ function updateTypeUI() {
     const wrapColor = document.getElementById('labelColor');
     const wrapThumb = document.getElementById('labelThumbnail');
     const wrapImage = document.getElementById('labelImage');
+    const wrapButtons = document.getElementById('labelButtons');
     const wrapExtraEmbeds = document.getElementById('extraEmbedsWrap');
     const wrapDuration = document.getElementById('labelDuration');
     const durationInput = document.getElementById('cmdDuration');
@@ -629,6 +636,7 @@ function updateTypeUI() {
     wrapColor.style.display = isEmbed ? 'block' : 'none';
     wrapThumb.style.display = isEmbed ? 'block' : 'none';
     wrapImage.style.display = (isEmbed || isText) ? 'block' : 'none';
+    if (wrapButtons) wrapButtons.style.display = (isEmbed || isText) ? 'block' : 'none';
     wrapDuration.style.display = showDuration ? 'block' : 'none';
     if (wrapExtraEmbeds) wrapExtraEmbeds.style.display = isEmbed ? 'block' : 'none';
 
@@ -691,15 +699,15 @@ function addEmbedBlock(data = {}, silent = false) {
             <span>Embed extra</span>
             <button type="button" class="extra-embed-remove">&times;</button>
         </div>
-        <label>Titolo</label>
+        <label>Title</label>
         <input type="text" class="ee-title" value="${escapeAttr(data.title || '')}">
-        <label>Risposta</label>
+        <label>Response</label>
         <textarea class="ee-response" rows="3">${escapeHtml(data.response || '')}</textarea>
-        <label>Colore</label>
+        <label>Color</label>
         <input type="color" class="ee-color" value="${colorHex}">
-        <label>Thumbnail URL (opzionale)</label>
+        <label>Thumbnail URL (optional)</label>
         <input type="url" class="ee-thumbnail" value="${escapeAttr(data.thumbnail || '')}">
-        <label>Image URL (opzionale)</label>
+        <label>Image URL (optional)</label>
         <input type="url" class="ee-image" value="${escapeAttr(data.image || '')}">
     `;
     block.querySelector('.extra-embed-remove').onclick = () => { block.remove(); updatePreview(); };
@@ -721,6 +729,46 @@ function collectExtraEmbeds() {
         thumbnail: block.querySelector('.ee-thumbnail').value || null,
         image: block.querySelector('.ee-image').value || null
     }));
+}
+
+let buttonBlockCounter = 0;
+
+function addButtonBlock(data = {}, silent = false) {
+    const list = document.getElementById('cmdButtonsList');
+    if (!list) return;
+    if (list.querySelectorAll('.cmd-button-block').length >= 5) return;
+    const idx = buttonBlockCounter++;
+    const block = document.createElement('div');
+    block.className = 'extra-embed-block cmd-button-block';
+    block.dataset.idx = idx;
+    block.innerHTML = `
+        <div class="extra-embed-header">
+            <span>Button</span>
+            <button type="button" class="extra-embed-remove">&times;</button>
+        </div>
+        <label>Button label</label>
+        <input type="text" class="cb-label" maxlength="80" value="${escapeAttr(data.label || '')}" placeholder="e.g: Join our server">
+        <label>Button URL</label>
+        <input type="url" class="cb-url" value="${escapeAttr(data.url || '')}" placeholder="https://...">
+    `;
+    block.querySelector('.extra-embed-remove').onclick = () => { block.remove(); updatePreview(); };
+    block.querySelectorAll('input').forEach(el => el.addEventListener('input', updatePreview));
+    list.appendChild(block);
+    if (!silent) updatePreview();
+}
+
+function clearButtons() {
+    const list = document.getElementById('cmdButtonsList');
+    if (list) list.innerHTML = '';
+}
+
+function collectButtons() {
+    return Array.from(document.querySelectorAll('#cmdButtonsList .cmd-button-block'))
+        .map(block => ({
+            label: block.querySelector('.cb-label').value || '',
+            url: block.querySelector('.cb-url').value || ''
+        }))
+        .filter(b => b.label.trim() && b.url.trim());
 }
 
 function closeMoreOptions() {
@@ -761,6 +809,17 @@ function renderPreviewEmbed(title, colorHex, thumbnail, responseRaw, text, image
         html += `<img class="discord-embed-image" src="${escapeAttr(image)}" alt="" onerror="this.style.display='none'">`;
     }
     html += `</div>`;
+    return html;
+}
+
+function renderPreviewButtons() {
+    const buttons = collectButtons();
+    if (!buttons.length) return '';
+    let html = '<div class="discord-buttons-row">';
+    buttons.forEach(b => {
+        html += `<span class="discord-link-button">${escapeHtml(b.label)}</span>`;
+    });
+    html += '</div>';
     return html;
 }
 
@@ -814,6 +873,7 @@ function updatePreview() {
             html += renderPreviewEmbed(eTitle, eColor, eThumb, eResponse, eText, eImage);
         });
 
+        html += renderPreviewButtons();
         preview.innerHTML = html;
         return;
     }
@@ -828,9 +888,10 @@ function updatePreview() {
         html += `<div class="discord-embed-desc">${escapeHtml(text)}</div>`;
         html += `<img class="discord-embed-image" src="${escapeAttr(image)}" alt="" onerror="this.style.display='none'">`;
         html += `</div>`;
+        html += renderPreviewButtons();
         preview.innerHTML = html;
     } else {
-        preview.innerHTML = escapeHtml(text).replace(/\n/g, '<br>');
+        preview.innerHTML = escapeHtml(text).replace(/\n/g, '<br>') + renderPreviewButtons();
     }
 }
 
@@ -967,6 +1028,7 @@ async function saveCommand(e) {
         thumbnail: document.getElementById('cmdThumbnail').value || null,
         image: document.getElementById('cmdImage').value || null,
         extraEmbeds: typeValue === 'embed' ? collectExtraEmbeds() : [],
+        buttons: (typeValue === 'embed' || typeValue === 'text') ? collectButtons() : [],
         deleteCommand: document.getElementById('cmdDelete').checked,
         allowedRoles: allowedRoles,
         duration: duration
@@ -1670,6 +1732,9 @@ function setupEvents() {
 
     const addEmbedBtn = document.getElementById('addEmbedBtn');
     if (addEmbedBtn) addEmbedBtn.onclick = () => addEmbedBlock();
+
+    const addButtonBtn = document.getElementById('addButtonBtn');
+    if (addButtonBtn) addButtonBtn.onclick = () => addButtonBlock();
 
     const permissionsBtn = document.getElementById('permissionsBtn');
     if (permissionsBtn) permissionsBtn.onclick = togglePermissions;
