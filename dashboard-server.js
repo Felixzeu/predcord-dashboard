@@ -814,18 +814,52 @@ app.get('/api/bans/:guildId', requireAuth, async (req, res) => {
         }
 
         const { db, client } = global.PredCord;
-        const bans = await db.getBanLogsDB(req.params.guildId, 200);
+        const guild = client.guilds.cache.get(req.params.guildId);
+        if (!guild) return res.status(404).json({ error: 'Server not found' });
 
-        const enriched = await Promise.all(bans.map(async (ban) => {
-            let avatarURL = 'https://cdn.discordapp.com/embed/avatars/0.png';
-            try {
-                const user = await client.users.fetch(ban.targetId);
-                avatarURL = user.displayAvatarURL({ size: 64 });
-            } catch (e) {}
-            return { ...ban, avatarURL };
-        }));
+        const liveBans = await guild.bans.fetch();
+        const logs = await db.getBanLogsDB(req.params.guildId, 500);
 
-        res.json(enriched);
+        const logsByTarget = {};
+        for (const log of logs) {
+            if (!logsByTarget[log.targetId]) logsByTarget[log.targetId] = log;
+        }
+
+        let auditByTarget = {};
+        try {
+            const auditLogs = await guild.fetchAuditLogs({ type: 22, limit: 100 });
+            for (const entry of auditLogs.entries.values()) {
+                if (!auditByTarget[entry.targetId]) {
+                    auditByTarget[entry.targetId] = {
+                        moderatorTag: entry.executor ? entry.executor.tag : null,
+                        reason: entry.reason || null,
+                        date: entry.createdAt
+                    };
+                }
+            }
+        } catch (e) {}
+
+        const result = liveBans.map(ban => {
+            const log = logsByTarget[ban.user.id];
+            const audit = auditByTarget[ban.user.id];
+            return {
+                targetId: ban.user.id,
+                targetTag: ban.user.tag,
+                avatarURL: ban.user.displayAvatarURL({ size: 64 }),
+                moderatorTag: (log && log.moderatorTag) || (audit && audit.moderatorTag) || 'Unknown',
+                reason: (log && log.reason) || (audit && audit.reason) || ban.reason || 'No reason provided',
+                date: (log && log.date) || (audit && audit.date) || null
+            };
+        });
+
+        result.sort((a, b) => {
+            if (!a.date && !b.date) return 0;
+            if (!a.date) return 1;
+            if (!b.date) return -1;
+            return new Date(b.date) - new Date(a.date);
+        });
+
+        res.json(result);
     } catch (e) {
         res.status(500).json({ error: e.message });
     }
