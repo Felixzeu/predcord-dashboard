@@ -320,13 +320,36 @@ header {
     backdrop-filter: blur(20px);
     -webkit-backdrop-filter: blur(20px);
     padding: 16px 32px;
-    display: flex;
-    justify-content: space-between;
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
     align-items: center;
     border-bottom: 1px solid var(--border);
     position: sticky;
     top: 0;
     z-index: 100;
+}
+
+.dash-header-nav {
+    display: flex;
+    align-items: center;
+    gap: 36px;
+}
+
+.dash-header-nav a {
+    color: var(--text-dim);
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 14px;
+    letter-spacing: 0.2px;
+    transition: color 0.15s ease;
+}
+
+.dash-header-nav a:hover {
+    color: var(--text);
+}
+
+.dash-header-nav a.active {
+    color: var(--primary);
 }
 
 .logo {
@@ -379,6 +402,7 @@ header {
     display: flex;
     align-items: center;
     gap: 14px;
+    justify-self: end;
 }
 
 .user-menu {
