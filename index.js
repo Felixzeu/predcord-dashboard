@@ -129,6 +129,20 @@ function applyHammertime(text) {
     });
 }
 
+async function substituteAll(text, message, mdTarget, args) {
+    if (!text) return '';
+    let result = text;
+    result = result.replace(/{user}/g, message.author.toString());
+    result = result.replace(/{username}/g, message.author.username);
+    result = result.replace(/{server}/g, message.guild.name);
+    result = result.replace(/{membercount}/g, message.guild.memberCount);
+    result = result.replace(/{args}/g, args.join(' '));
+    result = result.replace(/{md}/g, await formatModerationHistory(mdTarget.id, message.guild.id, mdTarget.username, 1));
+    result = applyPositionalArgs(result, args);
+    result = applyHammertime(result);
+    return result;
+}
+
 async function getGuildConfig(guildId) {
     const config = await db.getGuildConfigDB(guildId);
     return {
@@ -1799,23 +1813,16 @@ async function handleCustomCommand(message, command, args, cmdData) {
     }
     if (!mdTarget) mdTarget = message.author;
 
-    let replyText = cmdData.response || '';
-    replyText = replyText.replace(/{user}/g, message.author.toString());
-    replyText = replyText.replace(/{username}/g, message.author.username);
-    replyText = replyText.replace(/{server}/g, message.guild.name);
-    replyText = replyText.replace(/{membercount}/g, message.guild.memberCount);
-    replyText = replyText.replace(/{args}/g, args.join(' '));
-    replyText = replyText.replace(/{md}/g, await formatModerationHistory(mdTarget.id, message.guild.id, mdTarget.username, 1));
-    replyText = applyPositionalArgs(replyText, args);
-    replyText = applyHammertime(replyText);
+    const replyText = await substituteAll(cmdData.response || '', message, mdTarget, args);
 
     const cmdImage = cmdData.image && isValidUrl(cmdData.image) ? cmdData.image : null;
 
     if (cmdType === 'embed') {
+        const cmdTitle = await substituteAll(cmdData.title || '', message, mdTarget, args);
         const embed = new EmbedBuilder()
             .setColor(typeof cmdData.color === 'number' ? cmdData.color : COLORS.INFO);
         if (replyText.trim()) embed.setDescription(replyText);
-        if (cmdData.title) embed.setTitle(cmdData.title);
+        if (cmdTitle) embed.setTitle(cmdTitle);
         if (cmdThumbnail) embed.setThumbnail(cmdThumbnail);
         if (cmdImage) embed.setImage(cmdImage);
 
@@ -1823,20 +1830,13 @@ async function handleCustomCommand(message, command, args, cmdData) {
 
         if (Array.isArray(cmdData.extraEmbeds)) {
             for (const extra of cmdData.extraEmbeds.slice(0, 9)) {
-                let extraText = extra.response || '';
-                extraText = extraText.replace(/{user}/g, message.author.toString());
-                extraText = extraText.replace(/{username}/g, message.author.username);
-                extraText = extraText.replace(/{server}/g, message.guild.name);
-                extraText = extraText.replace(/{membercount}/g, message.guild.memberCount);
-                extraText = extraText.replace(/{args}/g, args.join(' '));
-                extraText = extraText.replace(/{md}/g, await formatModerationHistory(mdTarget.id, message.guild.id, mdTarget.username, 1));
-                extraText = applyPositionalArgs(extraText, args);
-                extraText = applyHammertime(extraText);
+                const extraText = await substituteAll(extra.response || '', message, mdTarget, args);
+                const extraTitle = await substituteAll(extra.title || '', message, mdTarget, args);
 
                 const extraEmbed = new EmbedBuilder()
                     .setColor(typeof extra.color === 'number' ? extra.color : COLORS.INFO);
                 if (extraText.trim()) extraEmbed.setDescription(extraText);
-                if (extra.title) extraEmbed.setTitle(extra.title);
+                if (extraTitle) extraEmbed.setTitle(extraTitle);
                 if (extra.thumbnail && isValidUrl(extra.thumbnail)) extraEmbed.setThumbnail(extra.thumbnail);
                 if (extra.image && isValidUrl(extra.image)) extraEmbed.setImage(extra.image);
                 embeds.push(extraEmbed);
