@@ -35,6 +35,7 @@ const DISCORD_CLIENT_SECRET = process.env.DISCORD_CLIENT_SECRET;
 const DISCORD_REDIRECT_URI = process.env.DISCORD_REDIRECT_URI || 'http://localhost:10000/auth/discord/callback';
 const DISCORD_SITE_REDIRECT_URI = process.env.DISCORD_SITE_REDIRECT_URI || 'http://localhost:10000/site-auth/discord/callback';
 const MAIN_GUILD_ID = process.env.MAIN_GUILD_ID;
+const COMMUNITY_GUILD_ID = process.env.COMMUNITY_GUILD_ID;
 
 const MAX_BASE_COMMANDS = 10;
 
@@ -369,8 +370,11 @@ app.post('/api/site/apply', async (req, res) => {
 
     try {
         const { client, db } = global.PredCord;
-        const guildConfig = await db.getGuildConfigDB(MAIN_GUILD_ID);
-        const channelId = team === 'community' ? guildConfig.staffAppCommunityChannelId : guildConfig.staffAppPredcordChannelId;
+        const targetGuildId = team === 'community' ? COMMUNITY_GUILD_ID : MAIN_GUILD_ID;
+        if (!targetGuildId) return res.status(503).json({ error: 'guild_not_configured' });
+
+        const guildConfig = await db.getGuildConfigDB(targetGuildId);
+        const channelId = guildConfig.staffApplicationChannelId;
         if (!channelId) return res.status(503).json({ error: 'channel_not_configured' });
 
         const channel = await client.channels.fetch(channelId);
@@ -650,6 +654,60 @@ app.get('/api/channels/:guildId', requireAuth, (req, res) => {
     }
 });
 
+app.get('/api/staff-app-config', requireAuth, async (req, res) => {
+    try {
+        if (!isOwner(req) && !isDashboardAdmin(req)) {
+            return res.status(403).json({ error: 'Access Denied' });
+        }
+
+        const { client, db } = global.PredCord;
+
+        async function guildData(guildId) {
+            if (!guildId) return { channels: [], selected: null, guildFound: false };
+            const guild = client.guilds.cache.get(guildId);
+            const channels = guild
+                ? guild.channels.cache
+                    .filter(c => c.type === ChannelType.GuildText)
+                    .sort((a, b) => a.position - b.position)
+                    .map(c => ({ id: c.id, name: c.name }))
+                : [];
+            const config = await db.getGuildConfigDB(guildId);
+            return { channels, selected: config.staffApplicationChannelId || null, guildFound: !!guild };
+        }
+
+        const [community, predcord] = await Promise.all([
+            guildData(COMMUNITY_GUILD_ID),
+            guildData(MAIN_GUILD_ID)
+        ]);
+
+        res.json({ community, predcord });
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
+app.post('/api/staff-app-config', requireAuth, async (req, res) => {
+    try {
+        if (!isOwner(req) && !isDashboardAdmin(req)) {
+            return res.status(403).json({ error: 'Access Denied' });
+        }
+
+        const { db } = global.PredCord;
+        const { communityChannelId, predcordChannelId } = req.body;
+
+        if (COMMUNITY_GUILD_ID && communityChannelId !== undefined) {
+            await db.saveGuildConfigDB(COMMUNITY_GUILD_ID, 'staffApplicationChannelId', communityChannelId || null);
+        }
+        if (MAIN_GUILD_ID && predcordChannelId !== undefined) {
+            await db.saveGuildConfigDB(MAIN_GUILD_ID, 'staffApplicationChannelId', predcordChannelId || null);
+        }
+
+        res.json({ success: true });
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
 app.get('/api/guildconfig/:guildId', requireAuth, async (req, res) => {
     try {
         const { db } = global.PredCord;
@@ -674,9 +732,7 @@ app.post('/api/guildconfig/:guildId', requireAuth, async (req, res) => {
             transcriptsChannelId,
             staffRoleId,
             adminRoleId,
-            supportCategoryId,
-            staffAppCommunityChannelId,
-            staffAppPredcordChannelId
+            supportCategoryId
         } = req.body;
 
         const updates = {};
@@ -686,8 +742,6 @@ app.post('/api/guildconfig/:guildId', requireAuth, async (req, res) => {
         if (staffRoleId !== undefined) updates.staffRoleId = staffRoleId || null;
         if (adminRoleId !== undefined) updates.adminRoleId = adminRoleId || null;
         if (supportCategoryId !== undefined) updates.supportCategoryId = supportCategoryId || null;
-        if (staffAppCommunityChannelId !== undefined) updates.staffAppCommunityChannelId = staffAppCommunityChannelId || null;
-        if (staffAppPredcordChannelId !== undefined) updates.staffAppPredcordChannelId = staffAppPredcordChannelId || null;
 
         for (const [key, value] of Object.entries(updates)) {
             await db.saveGuildConfigDB(guildId, key, value);
