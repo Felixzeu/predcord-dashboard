@@ -1523,7 +1523,7 @@ async function loadConfigSection() {
         return;
     }
 
-    const containers = ['cfgJoinLeaveList', 'cfgModLogList', 'cfgStaffRoleList', 'cfgAdminRoleList', 'cfgStaffAppCommunityList', 'cfgStaffAppPredcordList'];
+    const containers = ['cfgJoinLeaveList', 'cfgModLogList', 'cfgStaffRoleList', 'cfgAdminRoleList'];
     containers.forEach(id => {
         const el = document.getElementById(id);
         if (el) el.innerHTML = '<p class="loading-text">Loading...</p>';
@@ -1551,8 +1551,6 @@ async function loadConfigSection() {
         renderSingleSelectList('cfgModLogList', textChannels, config.modLogChannelId, 'modLogChannelId');
         renderSingleSelectList('cfgStaffRoleList', roles, config.staffRoleId, 'staffRoleId');
         renderSingleSelectList('cfgAdminRoleList', roles, config.adminRoleId, 'adminRoleId');
-        renderSingleSelectList('cfgStaffAppCommunityList', textChannels, config.staffAppCommunityChannelId, 'staffAppCommunityChannelId');
-        renderSingleSelectList('cfgStaffAppPredcordList', textChannels, config.staffAppPredcordChannelId, 'staffAppPredcordChannelId');
 
         configLoaded = true;
     } catch (e) {
@@ -1632,31 +1630,63 @@ async function saveConfig() {
         joinLeaveLogChannelId: getSelectedValue('cfgJoinLeaveList'),
         modLogChannelId: getSelectedValue('cfgModLogList'),
         staffRoleId: getSelectedValue('cfgStaffRoleList'),
-        adminRoleId: getSelectedValue('cfgAdminRoleList'),
-        staffAppCommunityChannelId: getSelectedValue('cfgStaffAppCommunityList'),
-        staffAppPredcordChannelId: getSelectedValue('cfgStaffAppPredcordList')
+        adminRoleId: getSelectedValue('cfgAdminRoleList')
     };
 
     try {
-        const res = await fetch(`/api/guildconfig/${currentGuild}`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
-        });
+        const [configRes, staffAppRes] = await Promise.all([
+            fetch(`/api/guildconfig/${currentGuild}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            }),
+            fetch('/api/staff-app-config', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    communityChannelId: getSelectedValue('cfgStaffAppCommunityList'),
+                    predcordChannelId: getSelectedValue('cfgStaffAppPredcordList')
+                })
+            })
+        ]);
 
-        if (res.ok) {
+        if (configRes.ok && staffAppRes.ok) {
             showToast('Configuration saved');
-        } else if (res.status === 403) {
+        } else if (configRes.status === 403 || staffAppRes.status === 403) {
             showAccessDenied();
         } else {
-            const err = await res.json();
-            showToast(err.error || 'Error', 'error');
+            showToast('Error', 'error');
         }
     } catch (err) {
         showToast('Connection error', 'error');
     } finally {
         btn.innerHTML = originalText;
         btn.disabled = false;
+    }
+}
+
+async function loadStaffAppConfig() {
+    if (!isOwner()) return;
+
+    const containers = ['cfgStaffAppCommunityList', 'cfgStaffAppPredcordList'];
+    containers.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.innerHTML = '<p class="loading-text">Loading...</p>';
+    });
+
+    try {
+        const res = await fetch('/api/staff-app-config');
+        if (!res.ok) throw new Error('Failed to load');
+        const data = await res.json();
+
+        renderSingleSelectList('cfgStaffAppCommunityList', data.community.channels, data.community.selected, 'communityChannelId');
+        renderSingleSelectList('cfgStaffAppPredcordList', data.predcord.channels, data.predcord.selected, 'predcordChannelId');
+    } catch (e) {
+        console.error('[STAFF APP CONFIG] load error:', e);
+        containers.forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.innerHTML = `<p class="loading-text">Error: ${e.message}</p>`;
+        });
     }
 }
 
@@ -1821,6 +1851,7 @@ function setupEvents() {
                     loadPermissionsSection();
                 } else if (target === 'config') {
                     loadConfigSection();
+                    loadStaffAppConfig();
                 } else if (target === 'tickets') {
                     loadTicketsSection();
                 } else if (target === 'commands') {
