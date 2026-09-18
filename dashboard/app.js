@@ -1455,7 +1455,7 @@ async function loadConfigSection() {
         return;
     }
 
-    const containers = ['cfgJoinLeaveList', 'cfgModLogList', 'cfgMessageLogList', 'cfgTranscriptsList', 'cfgStaffRoleList', 'cfgAdminRoleList'];
+    const containers = ['cfgJoinLeaveList', 'cfgModLogList', 'cfgStaffRoleList', 'cfgAdminRoleList'];
     containers.forEach(id => {
         const el = document.getElementById(id);
         if (el) el.innerHTML = '<p class="loading-text">Loading...</p>';
@@ -1481,8 +1481,6 @@ async function loadConfigSection() {
 
         renderSingleSelectList('cfgJoinLeaveList', textChannels, config.joinLeaveLogChannelId, 'joinLeaveLogChannelId');
         renderSingleSelectList('cfgModLogList', textChannels, config.modLogChannelId, 'modLogChannelId');
-        renderSingleSelectList('cfgMessageLogList', textChannels, config.messageLogChannelId, 'messageLogChannelId');
-        renderSingleSelectList('cfgTranscriptsList', textChannels, config.transcriptsChannelId, 'transcriptsChannelId');
         renderSingleSelectList('cfgStaffRoleList', roles, config.staffRoleId, 'staffRoleId');
         renderSingleSelectList('cfgAdminRoleList', roles, config.adminRoleId, 'adminRoleId');
 
@@ -1504,7 +1502,7 @@ async function loadTicketsSection() {
         return;
     }
 
-    const containers = ['ticketCategoryList', 'ticketLogsList', 'ticketStaffRoleList', 'ticketAdminRoleList'];
+    const containers = ['ticketCategoryList', 'ticketStaffRoleList', 'ticketAdminRoleList'];
     containers.forEach(id => {
         const el = document.getElementById(id);
         if (el) el.innerHTML = '<p class="loading-text">Loading...</p>';
@@ -1526,11 +1524,9 @@ async function loadTicketsSection() {
         currentChannels = channels;
         currentRoles = roles;
 
-        const textChannels = channels.filter(c => c.type === 'text');
         const categoryChannels = channels.filter(c => c.type === 'category');
 
         renderSingleSelectList('ticketCategoryList', categoryChannels, config.supportCategoryId, 'supportCategoryId');
-        renderSingleSelectList('ticketLogsList', textChannels, config.transcriptsChannelId, 'transcriptsChannelId');
         renderSingleSelectList('ticketStaffRoleList', roles, config.staffRoleId, 'staffRoleId');
         renderSingleSelectList('ticketAdminRoleList', roles, config.adminRoleId, 'adminRoleId');
     } catch (e) {
@@ -1563,8 +1559,6 @@ async function saveConfig() {
     const payload = {
         joinLeaveLogChannelId: getSelectedValue('cfgJoinLeaveList'),
         modLogChannelId: getSelectedValue('cfgModLogList'),
-        messageLogChannelId: getSelectedValue('cfgMessageLogList'),
-        transcriptsChannelId: getSelectedValue('cfgTranscriptsList'),
         staffRoleId: getSelectedValue('cfgStaffRoleList'),
         adminRoleId: getSelectedValue('cfgAdminRoleList')
     };
@@ -1605,7 +1599,6 @@ async function saveTicketsConfig() {
 
     const payload = {
         supportCategoryId: getSelectedValue('ticketCategoryList'),
-        transcriptsChannelId: getSelectedValue('ticketLogsList'),
         staffRoleId: getSelectedValue('ticketStaffRoleList'),
         adminRoleId: getSelectedValue('ticketAdminRoleList')
     };
