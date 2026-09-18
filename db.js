@@ -78,6 +78,7 @@ const GuildConfigSchema = new mongoose.Schema({
     guildId: { type: String, required: true, unique: true, index: true },
     joinLeaveLogChannelId: { type: String, default: null },
     modLogChannelId: { type: String, default: null },
+    transcriptsChannelId: { type: String, default: null },
     staffRoleId: { type: String, default: null },
     modRoleId: { type: String, default: null },
     adminRoleId: { type: String, default: null },
