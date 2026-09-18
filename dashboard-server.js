@@ -445,15 +445,25 @@ app.get('/api/channels/:guildId', requireAuth, (req, res) => {
         const guild = client.guilds.cache.get(req.params.guildId);
         if (!guild) return res.status(404).json({ error: 'Server not found' });
 
-        const channels = guild.channels.cache
+        const all = guild.channels.cache
             .filter(c => c.type === ChannelType.GuildText || c.type === ChannelType.GuildCategory)
-            .sort((a, b) => a.position - b.position)
             .map(c => ({
                 id: c.id,
                 name: c.name,
                 type: c.type === ChannelType.GuildCategory ? 'category' : 'text',
-                parentId: c.parentId || null
+                parentId: c.parentId || null,
+                position: c.position
             }));
+
+        const topLevel = all.filter(c => !c.parentId).sort((a, b) => a.position - b.position);
+        const channels = [];
+        for (const entry of topLevel) {
+            channels.push(entry);
+            if (entry.type === 'category') {
+                const children = all.filter(c => c.parentId === entry.id).sort((a, b) => a.position - b.position);
+                channels.push(...children);
+            }
+        }
 
         res.json(channels);
     } catch (e) {
