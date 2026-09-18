@@ -148,6 +148,7 @@ async function getGuildConfig(guildId) {
     return {
         joinLeaveLogChannelId: config.joinLeaveLogChannelId,
         modLogChannelId: config.modLogChannelId,
+        transcriptsChannelId: config.transcriptsChannelId,
         staffRoleId: config.staffRoleId,
         modRoleId: config.modRoleId,
         adminRoleId: config.adminRoleId,
@@ -640,6 +641,37 @@ async function generateTicketTranscript(channel, closer, ticketMeta = {}) {
         if (!transcriptDoc) {
             console.error('[TRANSCRIPT] Failed to save transcript to DB');
             return null;
+        }
+
+        const config = await getGuildConfig(channel.guild.id);
+        const logChannelId = config.transcriptsChannelId;
+        const logChannel = logChannelId ? client.channels.cache.get(logChannelId) : null;
+
+        if (logChannel) {
+            const embed = new EmbedBuilder()
+                .setTitle('Ticket Log')
+                .setColor(BLACK)
+                .setThumbnail(THUMBNAIL_URL)
+                .addFields(
+                    { name: 'Created By', value: transcriptDoc.createdBy ? `<@${transcriptDoc.createdBy}>` : 'Unknown', inline: true },
+                    { name: 'Claimed By', value: transcriptDoc.claimedBy ? `<@${transcriptDoc.claimedBy}>` : 'Not claimed', inline: true },
+                    { name: 'Closed By', value: closer ? `<@${closer.id}>` : 'Unknown', inline: true },
+                    { name: 'Ticket', value: `#${channel.name}`, inline: true },
+                    { name: 'Date', value: formatFullDate(new Date()), inline: true }
+                );
+
+            const row = new ActionRowBuilder().addComponents(
+                new ButtonBuilder()
+                    .setLabel('Transcript')
+                    .setStyle(ButtonStyle.Link)
+                    .setURL(`${process.env.DASHBOARD_URL || 'https://predcord-dashboard.onrender.com'}/transcript/${transcriptDoc._id}`)
+            );
+
+            await logChannel.send({ embeds: [embed], components: [row] }).catch(err => {
+                console.error('[TICKET-LOG] send error:', err.message);
+            });
+        } else {
+            console.warn('[TICKET-LOG] No transcript channel configured for guild', channel.guild.id);
         }
 
         console.log(`[TRANSCRIPT] Saved transcript ${transcriptDoc._id} for ${channel.name}`);
