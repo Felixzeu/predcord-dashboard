@@ -587,12 +587,14 @@ app.get('/api/my-permissions', requireAuth, async (req, res) => {
 app.get('/api/guilds', requireAuth, (req, res) => {
     try {
         const { client } = global.PredCord;
-        const guilds = client.guilds.cache.map(g => ({
-            id: g.id,
-            name: g.name,
-            icon: g.iconURL({ dynamic: true, size: 128 }),
-            memberCount: g.memberCount
-        }));
+        const guilds = client.guilds.cache
+            .filter(g => g.id === MAIN_GUILD_ID)
+            .map(g => ({
+                id: g.id,
+                name: g.name,
+                icon: g.iconURL({ dynamic: true, size: 128 }),
+                memberCount: g.memberCount
+            }));
         res.json(guilds);
     } catch (e) {
         res.status(500).json({ error: e.message });
