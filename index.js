@@ -266,10 +266,14 @@ async function sendActionDM(user, action, reason, moderator, duration = null) {
             'warned': 'warned',
             'banned': 'banned',
             'kicked': 'kicked',
-            'muted': 'muted'
+            'muted': 'muted',
+            'unbanned': 'unbanned',
+            'unmuted': 'unmuted'
         };
         const label = actionText[action] || action;
-        const description = `**You have been ${label} for ${reason || 'no reason provided'}**`;
+        const description = (action === 'unbanned' || action === 'unmuted')
+            ? `**You have been ${label} in ${moderator?.guild?.name || 'the server'}**`
+            : `**You have been ${label} for ${reason || 'no reason provided'}**`;
 
         const embed = new EmbedBuilder()
             .setDescription(description)
@@ -287,7 +291,7 @@ async function sendActionDM(user, action, reason, moderator, duration = null) {
             payload.components = [row];
         }
 
-        await user.send(payload).catch(() => console.log(`DM failed: ${user?.tag || user?.id}`));
+        await user.send(payload).catch(err => console.log(`DM failed: ${user?.tag || user?.id} (${err.message})`));
     } catch (error) {
         logCrash('DM_ERROR', error, { userId: user?.id, action });
     }
@@ -314,8 +318,8 @@ async function addWarning(guild, user, moderator, reason) {
             if (await hasProjectedRole(member, guild.id)) {
                 console.log(`[PROJECTED] Skipped auto-ban for ${user.tag} (projected role)`);
             } else {
-                await member.ban({ reason: 'Auto-ban: 10 warnings' }).catch(() => {});
                 await sendActionDM(user, 'banned', '10 warnings accumulated', { tag: 'Auto-Mod', guild: guild });
+                await member.ban({ reason: 'Auto-ban: 10 warnings' }).catch(() => {});
                 await saveModLog(guild, 'User banned (auto)', user, client.user, '10 warnings accumulated', null);
                 await db.saveDashboardLogDB(guild.id, {
                     type: 'auto_mod',
@@ -332,8 +336,8 @@ async function addWarning(guild, user, moderator, reason) {
             if (await hasProjectedRole(member, guild.id)) {
                 console.log(`[PROJECTED] Skipped auto-kick for ${user.tag} (projected role)`);
             } else {
-                await member.kick('Auto-kick: 5 warnings').catch(() => {});
                 await sendActionDM(user, 'kicked', '5 warnings accumulated', { tag: 'Auto-Mod', guild: guild });
+                await member.kick('Auto-kick: 5 warnings').catch(() => {});
                 await saveModLog(guild, 'User kicked (auto)', user, client.user, '5 warnings accumulated', null);
                 await db.saveDashboardLogDB(guild.id, {
                     type: 'auto_mod',
@@ -1172,12 +1176,13 @@ async function handleNativeCommand(message, command, args) {
                     await message.delete().catch(() => {});
                     return;
                 }
+                await sendActionDM(user, 'banned', reason, { tag: message.author.tag, guild: message.guild });
                 await member.ban({ reason });
             } else {
+                await sendActionDM(user, 'banned', reason, { tag: message.author.tag, guild: message.guild });
                 await message.guild.bans.create(user.id, { reason });
             }
 
-            await sendActionDM(user, 'banned', reason, { tag: message.author.tag, guild: message.guild });
             const embed = new EmbedBuilder()
                 .setDescription(`**${user.username}** (${user.id}) has been banned for the reason **${reason}**`)
                 .setColor(BLACK);
@@ -1224,6 +1229,7 @@ async function handleNativeCommand(message, command, args) {
             }
             await message.guild.members.unban(userId);
             await db.removePendingBan(message.guild.id, userId);
+            await sendActionDM(bannedUser.user, 'unbanned', 'Unbanned', { tag: message.author.tag, guild: message.guild });
             const embed = new EmbedBuilder()
                 .setDescription(`**${bannedUser.user.username}** (${bannedUser.user.id}) has been unbanned for the reason **Unbanned**`)
                 .setColor(BLACK);
@@ -1277,8 +1283,8 @@ async function handleNativeCommand(message, command, args) {
             return;
         }
         try {
-            await member.kick(reason);
             await sendActionDM(user, 'kicked', reason, { tag: message.author.tag, guild: message.guild });
+            await member.kick(reason);
             const embed = new EmbedBuilder()
                 .setDescription(`**${user.username}** (${user.id}) has been kicked for the reason **${reason}**`)
                 .setColor(BLACK);
@@ -1402,6 +1408,7 @@ async function handleNativeCommand(message, command, args) {
         }
         try {
             await member.timeout(null, reason);
+            await sendActionDM(user, 'unmuted', reason, { tag: message.author.tag, guild: message.guild });
             const embed = new EmbedBuilder()
                 .setDescription(`**${user.username}** (${user.id}) has been unmuted for the reason **${reason}**`)
                 .setColor(BLACK);
@@ -1514,8 +1521,10 @@ async function handleCustomCommand(message, command, args, cmdData) {
                     await message.delete().catch(() => {});
                     return;
                 }
+                await sendActionDM(user, 'banned', reason, { tag: message.author.tag, guild: message.guild });
                 await member.ban({ reason });
             } else {
+                await sendActionDM(user, 'banned', reason, { tag: message.author.tag, guild: message.guild });
                 await message.guild.bans.create(user.id, { reason });
             }
 
@@ -1533,7 +1542,6 @@ async function handleCustomCommand(message, command, args, cmdData) {
                 });
             }
 
-            await sendActionDM(user, 'banned', reason, { tag: message.author.tag, guild: message.guild });
             const embed = new EmbedBuilder()
                 .setDescription(`**${user.username}** (${user.id}) has been banned for the reason **${reason}**`)
                 .setColor(BLACK);
@@ -1599,8 +1607,8 @@ async function handleCustomCommand(message, command, args, cmdData) {
             return;
         }
         try {
-            await member.kick(reason);
             await sendActionDM(user, 'kicked', reason, { tag: message.author.tag, guild: message.guild });
+            await member.kick(reason);
             const embed = new EmbedBuilder()
                 .setDescription(`**${user.username}** (${user.id}) has been kicked for the reason **${reason}**`)
                 .setColor(BLACK);
