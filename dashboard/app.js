@@ -1533,7 +1533,7 @@ async function loadConfigSection() {
         return;
     }
 
-    const containers = ['cfgJoinLeaveList', 'cfgModLogList', 'cfgStaffRoleList', 'cfgAdminRoleList'];
+    const containers = ['cfgJoinLeaveList', 'cfgModLogList', 'cfgStaffRoleList', 'cfgAdminRoleList', 'cfgStaffAppCommunityList', 'cfgStaffAppPredcordList'];
     containers.forEach(id => {
         const el = document.getElementById(id);
         if (el) el.innerHTML = '<p class="loading-text">Loading...</p>';
@@ -1561,6 +1561,8 @@ async function loadConfigSection() {
         renderSingleSelectList('cfgModLogList', textChannels, config.modLogChannelId, 'modLogChannelId');
         renderSingleSelectList('cfgStaffRoleList', roles, config.staffRoleId, 'staffRoleId');
         renderSingleSelectList('cfgAdminRoleList', roles, config.adminRoleId, 'adminRoleId');
+        renderSingleSelectList('cfgStaffAppCommunityList', textChannels, config.staffAppCommunityChannelId, 'staffAppCommunityChannelId');
+        renderSingleSelectList('cfgStaffAppPredcordList', textChannels, config.staffAppPredcordChannelId, 'staffAppPredcordChannelId');
 
         configLoaded = true;
     } catch (e) {
@@ -1640,7 +1642,9 @@ async function saveConfig() {
         joinLeaveLogChannelId: getSelectedValue('cfgJoinLeaveList'),
         modLogChannelId: getSelectedValue('cfgModLogList'),
         staffRoleId: getSelectedValue('cfgStaffRoleList'),
-        adminRoleId: getSelectedValue('cfgAdminRoleList')
+        adminRoleId: getSelectedValue('cfgAdminRoleList'),
+        staffAppCommunityChannelId: getSelectedValue('cfgStaffAppCommunityList'),
+        staffAppPredcordChannelId: getSelectedValue('cfgStaffAppPredcordList')
     };
 
     try {
