@@ -1799,8 +1799,8 @@ async function handleCustomCommand(message, command, args, cmdData) {
 
     if (cmdType === 'embed') {
         const embed = new EmbedBuilder()
-            .setDescription(replyText)
             .setColor(typeof cmdData.color === 'number' ? cmdData.color : COLORS.INFO);
+        if (replyText.trim()) embed.setDescription(replyText);
         if (cmdData.title) embed.setTitle(cmdData.title);
         if (cmdThumbnail) embed.setThumbnail(cmdThumbnail);
         if (cmdImage) embed.setImage(cmdImage);
@@ -1819,8 +1819,8 @@ async function handleCustomCommand(message, command, args, cmdData) {
                 extraText = applyPositionalArgs(extraText, args);
 
                 const extraEmbed = new EmbedBuilder()
-                    .setDescription(extraText)
                     .setColor(typeof extra.color === 'number' ? extra.color : COLORS.INFO);
+                if (extraText.trim()) extraEmbed.setDescription(extraText);
                 if (extra.title) extraEmbed.setTitle(extra.title);
                 if (extra.thumbnail && isValidUrl(extra.thumbnail)) extraEmbed.setThumbnail(extra.thumbnail);
                 if (extra.image && isValidUrl(extra.image)) extraEmbed.setImage(extra.image);
@@ -1828,14 +1828,13 @@ async function handleCustomCommand(message, command, args, cmdData) {
             }
         }
 
-        await message.channel.send({ embeds }).catch(() => {});
+        await message.channel.send({ embeds }).catch(err => console.error('[CUSTOM-CMD] send failed:', err.message));
     } else if (cmdImage) {
-        const embed = new EmbedBuilder()
-            .setDescription(replyText)
-            .setImage(cmdImage);
-        await message.channel.send({ embeds: [embed] }).catch(() => {});
+        const embed = new EmbedBuilder().setImage(cmdImage);
+        if (replyText.trim()) embed.setDescription(replyText);
+        await message.channel.send({ embeds: [embed] }).catch(err => console.error('[CUSTOM-CMD] send failed:', err.message));
     } else {
-        await message.channel.send(replyText).catch(() => {});
+        await message.channel.send(replyText.trim() ? replyText : '​').catch(err => console.error('[CUSTOM-CMD] send failed:', err.message));
     }
 
     if (cmdData.deleteCommand) await message.delete().catch(() => {});
