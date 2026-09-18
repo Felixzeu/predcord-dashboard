@@ -391,6 +391,22 @@ app.post('/api/site/apply', async (req, res) => {
             .setTitle(team === 'community' ? 'Predage Community Staff Application' : 'PredCord Staff Application')
             .setTimestamp();
 
+        try {
+            const guild = client.guilds.cache.get(targetGuildId);
+            const member = guild ? await guild.members.fetch(user.id).catch(() => null) : null;
+            if (member) {
+                const createdTs = Math.floor(member.user.createdTimestamp / 1000);
+                const joinedTs = member.joinedTimestamp ? Math.floor(member.joinedTimestamp / 1000) : null;
+                const userInfoLines = [`**Account Created:** <t:${createdTs}:F> (<t:${createdTs}:R>)`];
+                if (joinedTs) {
+                    userInfoLines.push(`**Joined Server:** <t:${joinedTs}:F> (<t:${joinedTs}:R>)`);
+                }
+                embed.addFields({ name: 'User Info', value: userInfoLines.join('\n') });
+            }
+        } catch (e) {
+            console.error('[SITE APPLY] user info fetch failed:', e.message);
+        }
+
         for (const [question, answer] of Object.entries(answers)) {
             embed.addFields({ name: String(question).slice(0, 256), value: String(answer || 'N/A').slice(0, 1024) });
         }
