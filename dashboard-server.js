@@ -584,6 +584,10 @@ app.get('/api/my-permissions', requireAuth, async (req, res) => {
     }
 });
 
+app.get('/api/known-guilds', requireAuth, (req, res) => {
+    res.json({ predcord: MAIN_GUILD_ID || null, community: COMMUNITY_GUILD_ID || null });
+});
+
 app.get('/api/guilds', requireAuth, (req, res) => {
     try {
         const { client } = global.PredCord;
