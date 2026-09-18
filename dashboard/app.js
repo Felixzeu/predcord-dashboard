@@ -603,8 +603,8 @@ function updateTypeUI() {
     const labelResponse = document.getElementById('labelResponse');
 
     const hints = {
-        text: 'The bot replies with this text. Variables: {user} {username} {server} {membercount} {args} {md} | Positional args: $1 $2 $3 ...',
-        embed: 'The bot replies with an embed. Variables: {user} {username} {server} {membercount} {args} {md} | Positional args: $1 $2 $3 ...',
+        text: 'The bot replies with this text. Variables: {user} {username} {server} {membercount} {args} {md} {hammertime+N} | Positional args: $1 $2 $3 ...',
+        embed: 'The bot replies with an embed. Variables: {user} {username} {server} {membercount} {args} {md} {hammertime+N} | Positional args: $1 $2 $3 ...',
         ban: 'Usage: {prefix}command @user reason. The reason in Response is optional (uses default). Supports $1 $2 $3 ...',
         kick: 'Usage: {prefix}command @user reason. The reason in Response is optional (uses default). Supports $1 $2 $3 ...',
         mute: 'Usage: {prefix}command @user reason. The reason in Response is optional (uses default). Supports $1 $2 $3 ...',
@@ -669,7 +669,7 @@ function updateTypeUI() {
         if (deleteCheck) deleteCheck.checked = true;
     } else {
         responseLabel.textContent = 'Response';
-        response.placeholder = 'Variables: {user} {username} {server} {membercount} {args} {md}';
+        response.placeholder = 'Variables: {user} {username} {server} {membercount} {args} {md} {hammertime+N}';
         response.required = false;
     }
 
@@ -790,6 +790,7 @@ function updatePreview() {
         .replace(/{membercount}/g, '42')
         .replace(/{args}/g, 'example args')
         .replace(/{md}/g, '[modlogs placeholder]')
+        .replace(/{hammertime[+-]\d+}/g, '[orario]')
         .replace(/\$(\d+)/g, (match, num) => `[arg${num}]`);
 
     if (isEmbed) {
@@ -808,6 +809,7 @@ function updatePreview() {
                 .replace(/{membercount}/g, '42')
                 .replace(/{args}/g, 'example args')
                 .replace(/{md}/g, '[modlogs placeholder]')
+                .replace(/{hammertime[+-]\d+}/g, '[orario]')
                 .replace(/\$(\d+)/g, (match, num) => `[arg${num}]`);
             html += renderPreviewEmbed(eTitle, eColor, eThumb, eResponse, eText, eImage);
         });
