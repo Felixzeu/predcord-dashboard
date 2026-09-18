@@ -166,10 +166,68 @@ app.use(passport.session());
 app.use('/dashboard', express.static(DASHBOARD_DIR));
 app.use(express.static(SITE_DIR));
 
+async function trySiteUserAsAdmin(req) {
+    if (!req.session.siteUser || !MAIN_GUILD_ID) return false;
+    try {
+        const { client, db } = global.PredCord;
+        const guild = client.guilds.cache.get(MAIN_GUILD_ID);
+        if (!guild) return false;
+
+        const u = req.session.siteUser;
+        const specialUsers = await db.getDashboardSpecialUsersDB(MAIN_GUILD_ID);
+
+        let role = null;
+        if (specialUsers.ownerUsers.includes(u.id)) {
+            role = 'owner';
+        } else if (specialUsers.adminUsers.includes(u.id)) {
+            role = 'admin';
+        } else {
+            const member = await guild.members.fetch(u.id).catch(() => null);
+            if (!member) return false;
+
+            const permissions = await db.getDashboardPermissionsDB(MAIN_GUILD_ID);
+            const userRoles = member.roles.cache.map(r => r.id);
+            const allAllowed = [
+                ...(permissions.createRoles || []),
+                ...(permissions.editRoles || []),
+                ...(permissions.deleteRoles || []),
+                ...(permissions.viewLogsRoles || [])
+            ];
+            if (!allAllowed.some(roleId => userRoles.includes(roleId))) return false;
+            role = 'user';
+        }
+
+        req.session.user = {
+            id: u.id,
+            username: u.username,
+            avatar: u.avatar,
+            role: role,
+            isDiscord: true
+        };
+        return true;
+    } catch (e) {
+        console.error('[SITE->ADMIN] resolve failed:', e.message);
+        return false;
+    }
+}
+
 function requireAuth(req, res, next) {
     if (req.session.user || (req.user && req.user.isDiscord)) return next();
-    if (req.path.startsWith('/api/')) return res.status(401).json({ error: 'Not authenticated' });
-    res.redirect('/login');
+
+    trySiteUserAsAdmin(req).then((ok) => {
+        if (!ok) {
+            if (req.path.startsWith('/api/')) return res.status(401).json({ error: 'Not authenticated' });
+            return res.redirect('/login');
+        }
+        req.session.save((err) => {
+            if (err) console.error('[SESSION] save error:', err);
+            next();
+        });
+    }).catch((e) => {
+        console.error('[AUTH] requireAuth error:', e.message);
+        if (req.path.startsWith('/api/')) return res.status(401).json({ error: 'Not authenticated' });
+        res.redirect('/login');
+    });
 }
 
 function isDashboardAdmin(req) {
