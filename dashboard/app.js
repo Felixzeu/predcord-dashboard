@@ -1125,6 +1125,52 @@ function renderModlogs(logs) {
     });
 }
 
+async function loadBans() {
+    if (!currentGuild) return;
+    const list = document.getElementById('bansList');
+    list.innerHTML = '<div class="loading">Loading</div>';
+    try {
+        const res = await fetch(`/api/bans/${currentGuild}`);
+        if (!res.ok) throw new Error('Failed to load');
+        const bans = await res.json();
+        renderBans(bans);
+    } catch (e) {
+        list.innerHTML = `<div class="empty-state"><h3>Error</h3><p>${e.message}</p></div>`;
+    }
+}
+
+function renderBans(bans) {
+    const list = document.getElementById('bansList');
+    if (!bans || bans.length === 0) {
+        list.innerHTML = '<div class="empty-state"><h3>No bans</h3><p>No bans recorded</p></div>';
+        return;
+    }
+    list.innerHTML = bans.map((ban, i) => {
+        const date = ban.date ? new Date(ban.date).toLocaleString('en-US') : '';
+        return `
+        <div class="modlog-card" data-idx="${i}">
+            <div class="modlog-row">
+                <img class="ban-avatar" src="${escapeAttr(ban.avatarURL)}" alt="">
+                <span class="modlog-line"><span class="log-user">${escapeHtml(ban.targetTag || 'Unknown')}</span> (${escapeHtml(ban.targetId || '')})</span>
+                <button class="modlog-arrow" type="button" aria-label="Details">&#9662;</button>
+            </div>
+            <div class="modlog-details">
+                <div class="modlog-details-inner">
+                    <div><b>Reason:</b> ${escapeHtml(ban.reason || 'No reason provided')}</div>
+                    <div><b>Banned by:</b> ${escapeHtml(ban.moderatorTag || 'Unknown')}</div>
+                    <div><b>Date:</b> ${escapeHtml(date)}</div>
+                </div>
+            </div>
+        </div>`;
+    }).join('');
+
+    list.querySelectorAll('.modlog-card').forEach(card => {
+        card.querySelector('.modlog-row').addEventListener('click', () => {
+            card.classList.toggle('open');
+        });
+    });
+}
+
 async function loadPermissionsSection() {
     if (!currentGuild) return;
 
@@ -1690,6 +1736,12 @@ function setupEvents() {
                         return;
                     }
                     loadModlogs();
+                } else if (target === 'bans') {
+                    if (!userHasDashboardPermission('viewLogsRoles')) {
+                        showAccessDenied();
+                        return;
+                    }
+                    loadBans();
                 } else if (target === 'permissions') {
                     loadPermissionsSection();
                 } else if (target === 'config') {
