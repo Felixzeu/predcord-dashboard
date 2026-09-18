@@ -447,6 +447,10 @@ async function getDashboardLogsDB(guildId, limit = 200) {
     return DashboardLog.find({ guildId }).sort({ date: -1 }).limit(limit).lean();
 }
 
+async function getBanLogsDB(guildId, limit = 200) {
+    return DashboardLog.find({ guildId, action: { $in: ['user_banned', 'user_banned_auto'] } }).sort({ date: -1 }).limit(limit).lean();
+}
+
 async function saveTranscriptDB(data) {
     try {
         const doc = await Transcript.create({
@@ -524,6 +528,7 @@ module.exports = {
     getPendingBan,
     saveDashboardLogDB,
     getDashboardLogsDB,
+    getBanLogsDB,
     Transcript,
     saveTranscriptDB,
     getTranscriptDB,
