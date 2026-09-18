@@ -260,13 +260,41 @@ app.get('/site-auth/discord/callback',
     }
 );
 
-app.get('/api/site/me', (req, res) => {
+app.get('/api/site/me', async (req, res) => {
     if (!req.session.siteUser) return res.json({ loggedIn: false });
     const u = req.session.siteUser;
     const avatarUrl = u.avatar
         ? `https://cdn.discordapp.com/avatars/${u.id}/${u.avatar}.png?size=64`
         : `https://cdn.discordapp.com/embed/avatars/${(parseInt(u.discriminator, 10) || 0) % 5}.png`;
-    res.json({ loggedIn: true, id: u.id, username: u.username, avatar: avatarUrl });
+
+    let canAccessDashboard = false;
+    try {
+        const { client, db } = global.PredCord;
+        const guild = MAIN_GUILD_ID ? client.guilds.cache.get(MAIN_GUILD_ID) : null;
+        if (guild) {
+            const specialUsers = await db.getDashboardSpecialUsersDB(MAIN_GUILD_ID);
+            if (specialUsers.ownerUsers.includes(u.id) || specialUsers.adminUsers.includes(u.id)) {
+                canAccessDashboard = true;
+            } else {
+                const member = await guild.members.fetch(u.id).catch(() => null);
+                if (member) {
+                    const permissions = await db.getDashboardPermissionsDB(MAIN_GUILD_ID);
+                    const userRoles = member.roles.cache.map(r => r.id);
+                    const allAllowed = [
+                        ...(permissions.createRoles || []),
+                        ...(permissions.editRoles || []),
+                        ...(permissions.deleteRoles || []),
+                        ...(permissions.viewLogsRoles || [])
+                    ];
+                    canAccessDashboard = allAllowed.some(roleId => userRoles.includes(roleId));
+                }
+            }
+        }
+    } catch (e) {
+        console.error('[SITE ME] canAccessDashboard check failed:', e.message);
+    }
+
+    res.json({ loggedIn: true, id: u.id, username: u.username, avatar: avatarUrl, canAccessDashboard });
 });
 
 app.post('/api/site/logout', (req, res) => {
