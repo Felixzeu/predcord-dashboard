@@ -109,6 +109,13 @@ const CustomCommandSchema = new mongoose.Schema({
     deleteCommand: { type: Boolean, default: true },
     thumbnail: { type: String, default: null },
     image: { type: String, default: null },
+    buttons: {
+        type: [{
+            label: { type: String, default: '' },
+            url: { type: String, default: '' }
+        }],
+        default: []
+    },
     extraEmbeds: {
         type: [{
             title: { type: String, default: '' },
