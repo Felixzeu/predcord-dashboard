@@ -1990,6 +1990,36 @@ aside h3 {
     clear: both;
 }
 
+.discord-buttons-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 10px;
+}
+
+.discord-link-button {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: #4e5058;
+    color: #fff;
+    font-size: 13px;
+    font-weight: 500;
+    padding: 8px 12px;
+    border-radius: 4px;
+    text-decoration: none;
+    max-width: 220px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.discord-link-button::after {
+    content: '↗';
+    font-size: 11px;
+    opacity: 0.8;
+}
+
 .loading-text {
     color: var(--text-dim);
     font-size: 12px;
