@@ -1502,7 +1502,7 @@ async function loadTicketsSection() {
         return;
     }
 
-    const containers = ['ticketCategoryList', 'ticketStaffRoleList', 'ticketAdminRoleList'];
+    const containers = ['ticketCategoryList', 'ticketLogsList', 'ticketStaffRoleList', 'ticketAdminRoleList'];
     containers.forEach(id => {
         const el = document.getElementById(id);
         if (el) el.innerHTML = '<p class="loading-text">Loading...</p>';
@@ -1524,9 +1524,11 @@ async function loadTicketsSection() {
         currentChannels = channels;
         currentRoles = roles;
 
+        const textChannels = channels.filter(c => c.type === 'text');
         const categoryChannels = channels.filter(c => c.type === 'category');
 
         renderSingleSelectList('ticketCategoryList', categoryChannels, config.supportCategoryId, 'supportCategoryId');
+        renderSingleSelectList('ticketLogsList', textChannels, config.transcriptsChannelId, 'transcriptsChannelId');
         renderSingleSelectList('ticketStaffRoleList', roles, config.staffRoleId, 'staffRoleId');
         renderSingleSelectList('ticketAdminRoleList', roles, config.adminRoleId, 'adminRoleId');
     } catch (e) {
@@ -1599,6 +1601,7 @@ async function saveTicketsConfig() {
 
     const payload = {
         supportCategoryId: getSelectedValue('ticketCategoryList'),
+        transcriptsChannelId: getSelectedValue('ticketLogsList'),
         staffRoleId: getSelectedValue('ticketStaffRoleList'),
         adminRoleId: getSelectedValue('ticketAdminRoleList')
     };
