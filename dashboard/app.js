@@ -1177,7 +1177,7 @@ function renderModlogs(logs) {
         rows.push(`<div><b>Date:</b> ${escapeHtml(date)}</div>`);
 
         const transcriptBtn = log.transcriptId
-            ? `<a class="modlog-transcript-btn" href="/transcript/${escapeAttr(log.transcriptId)}" target="_blank" rel="noopener">Transcript</a>`
+            ? `<a class="modlog-transcript-btn" href="/dashboard/transcript/${escapeAttr(log.transcriptId)}" target="_blank" rel="noopener">Transcript</a>`
             : '';
 
         return `
