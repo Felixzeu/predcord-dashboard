@@ -273,6 +273,7 @@ function isOwner(req) {
 }
 
 app.get('/login', (req, res) => {
+    res.set('Cache-Control', 'no-store');
     if (req.session.user || (req.user && req.user.isDiscord)) return res.redirect('/dashboard');
     res.sendFile(path.join(DASHBOARD_DIR, 'login.html'));
 });
@@ -1265,14 +1266,17 @@ app.get('/dashboard/transcript/:transcriptId', requireAuth, async (req, res) => 
 });
 
 app.get('/', (req, res) => {
+    res.set('Cache-Control', 'no-store');
     res.sendFile(path.join(SITE_DIR, 'index.html'));
 });
 
 app.get('/staff-application', (req, res) => {
+    res.set('Cache-Control', 'no-store');
     res.sendFile(path.join(SITE_DIR, 'staff-application.html'));
 });
 
 app.get('/dashboard', requireAuth, (req, res) => {
+    res.set('Cache-Control', 'no-store');
     res.sendFile(path.join(DASHBOARD_DIR, 'index.html'));
 });
 
