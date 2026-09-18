@@ -120,6 +120,15 @@ function applyPositionalArgs(text, args) {
     });
 }
 
+function applyHammertime(text) {
+    if (!text) return '';
+    return text.replace(/{hammertime([+-]\d+)}/g, (match, offset) => {
+        const minutes = parseInt(offset, 10);
+        const target = Math.floor((Date.now() + minutes * 60 * 1000) / 1000);
+        return `<t:${target}:t>`;
+    });
+}
+
 async function getGuildConfig(guildId) {
     const config = await db.getGuildConfigDB(guildId);
     return {
@@ -1513,6 +1522,7 @@ async function handleCustomCommand(message, command, args, cmdData) {
             reason = reason
                 .replace(/{md}/g, await formatModerationHistory(user.id, message.guild.id, user.username, 1));
         }
+        reason = applyHammertime(reason);
 
         const durationDays = cmdData.duration ? parseInt(cmdData.duration) : null;
         const isTemporary = durationDays && durationDays > 0;
@@ -1602,6 +1612,7 @@ async function handleCustomCommand(message, command, args, cmdData) {
             reason = reason
                 .replace(/{md}/g, await formatModerationHistory(user.id, message.guild.id, user.username, 1));
         }
+        reason = applyHammertime(reason);
         if (!member || !member.kickable) {
             const embed = new EmbedBuilder().setDescription('I cannot kick this user.').setColor(COLORS.ERROR).setThumbnail(THUMBNAIL_URL);
             await message.channel.send({ embeds: [embed] });
@@ -1675,6 +1686,7 @@ async function handleCustomCommand(message, command, args, cmdData) {
             reason = reason
                 .replace(/{md}/g, await formatModerationHistory(user.id, message.guild.id, user.username, 1));
         }
+        reason = applyHammertime(reason);
 
         if (!member || !member.moderatable) {
             const embed = new EmbedBuilder().setDescription('I cannot mute this user.').setColor(COLORS.ERROR).setThumbnail(THUMBNAIL_URL);
@@ -1743,6 +1755,7 @@ async function handleCustomCommand(message, command, args, cmdData) {
             reason = reason
                 .replace(/{md}/g, await formatModerationHistory(user.id, message.guild.id, user.username, 1));
         }
+        reason = applyHammertime(reason);
         try {
             await addWarning(message.guild, user, message.author, reason);
             await sendActionDM(user, 'warned', reason, { tag: message.author.tag, guild: message.guild });
@@ -1794,6 +1807,7 @@ async function handleCustomCommand(message, command, args, cmdData) {
     replyText = replyText.replace(/{args}/g, args.join(' '));
     replyText = replyText.replace(/{md}/g, await formatModerationHistory(mdTarget.id, message.guild.id, mdTarget.username, 1));
     replyText = applyPositionalArgs(replyText, args);
+    replyText = applyHammertime(replyText);
 
     const cmdImage = cmdData.image && isValidUrl(cmdData.image) ? cmdData.image : null;
 
@@ -1817,6 +1831,7 @@ async function handleCustomCommand(message, command, args, cmdData) {
                 extraText = extraText.replace(/{args}/g, args.join(' '));
                 extraText = extraText.replace(/{md}/g, await formatModerationHistory(mdTarget.id, message.guild.id, mdTarget.username, 1));
                 extraText = applyPositionalArgs(extraText, args);
+                extraText = applyHammertime(extraText);
 
                 const extraEmbed = new EmbedBuilder()
                     .setColor(typeof extra.color === 'number' ? extra.color : COLORS.INFO);
