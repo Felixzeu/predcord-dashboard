@@ -148,8 +148,6 @@ async function getGuildConfig(guildId) {
     return {
         joinLeaveLogChannelId: config.joinLeaveLogChannelId,
         modLogChannelId: config.modLogChannelId,
-        messageLogChannelId: config.messageLogChannelId,
-        transcriptsChannelId: config.transcriptsChannelId,
         staffRoleId: config.staffRoleId,
         modRoleId: config.modRoleId,
         adminRoleId: config.adminRoleId,
@@ -500,17 +498,17 @@ async function sendJoinLog(member) {
         const config = await getGuildConfig(member.guild.id);
         const channel = client.channels.cache.get(config.joinLeaveLogChannelId);
         if (!channel) return;
+        const createdTs = Math.floor(member.user.createdAt.getTime() / 1000);
         const embed = new EmbedBuilder()
-            .setTitle(`${member.user.username} just joined the server.`)
+            .setTitle('New Member Joined')
             .setColor(COLORS.SUCCESS)
             .setThumbnail(member.user.displayAvatarURL({ dynamic: true }))
             .addFields(
-                { name: 'Member', value: member.user.toString(), inline: true },
+                { name: 'User', value: member.user.toString(), inline: true },
                 { name: 'User ID', value: member.user.id, inline: true },
-                { name: 'User Tag', value: member.user.tag, inline: true },
-                { name: 'Account Created', value: formatFullDate(member.user.createdAt), inline: false },
-                { name: 'Joined Server', value: formatFullDate(member.joinedAt), inline: false },
-                { name: 'Member Count', value: `${member.guild.memberCount} members`, inline: true }
+                { name: 'Username', value: member.user.username, inline: true },
+                { name: 'Account Created', value: `<t:${createdTs}:F> (<t:${createdTs}:R>)`, inline: false },
+                { name: 'Member Count', value: `${member.guild.memberCount}`, inline: false }
             );
         await channel.send({ embeds: [embed] }).catch(() => {});
     } catch (error) {
@@ -523,17 +521,29 @@ async function sendLeaveLog(member) {
         const config = await getGuildConfig(member.guild.id);
         const channel = client.channels.cache.get(config.joinLeaveLogChannelId);
         if (!channel) return;
+
+        let banned = false;
+        try {
+            await member.guild.bans.fetch(member.id);
+            banned = true;
+        } catch (e) {}
+
+        const createdTs = Math.floor(member.user.createdAt.getTime() / 1000);
+        const roles = member.roles?.cache
+            ? member.roles.cache.filter(r => r.id !== member.guild.id).map(r => r.toString()).join(' ') || 'None'
+            : 'None';
+
         const embed = new EmbedBuilder()
-            .setTitle(`${member.user.username} has left the server.`)
+            .setTitle(banned ? 'New Member Left (Banned)' : 'New Member Left')
             .setColor(COLORS.ERROR)
             .setThumbnail(member.user.displayAvatarURL({ dynamic: true }))
             .addFields(
-                { name: 'Member', value: member.user.toString(), inline: true },
+                { name: 'User', value: member.user.toString(), inline: true },
                 { name: 'User ID', value: member.user.id, inline: true },
-                { name: 'User Tag', value: member.user.tag, inline: true },
-                { name: 'Account Created', value: formatFullDate(member.user.createdAt), inline: false },
-                { name: 'Joined Server', value: formatFullDate(member.joinedAt), inline: false },
-                { name: 'Member Count', value: `${member.guild.memberCount} members`, inline: true }
+                { name: 'Username', value: member.user.username, inline: true },
+                { name: 'Account Created', value: `<t:${createdTs}:F> (<t:${createdTs}:R>)`, inline: false },
+                { name: 'Member Count', value: `${member.guild.memberCount}`, inline: false },
+                { name: 'Users Roles', value: roles, inline: false }
             );
         await channel.send({ embeds: [embed] }).catch(() => {});
     } catch (error) {
@@ -630,37 +640,6 @@ async function generateTicketTranscript(channel, closer, ticketMeta = {}) {
         if (!transcriptDoc) {
             console.error('[TRANSCRIPT] Failed to save transcript to DB');
             return null;
-        }
-
-        const config = await getGuildConfig(channel.guild.id);
-        const logChannelId = config.transcriptsChannelId;
-        const logChannel = logChannelId ? client.channels.cache.get(logChannelId) : null;
-
-        if (logChannel) {
-            const embed = new EmbedBuilder()
-                .setTitle('Ticket Log')
-                .setColor(BLACK)
-                .setThumbnail(THUMBNAIL_URL)
-                .addFields(
-                    { name: 'Created By', value: transcriptDoc.createdBy ? `<@${transcriptDoc.createdBy}>` : 'Unknown', inline: true },
-                    { name: 'Claimed By', value: transcriptDoc.claimedBy ? `<@${transcriptDoc.claimedBy}>` : 'Not claimed', inline: true },
-                    { name: 'Closed By', value: closer ? `<@${closer.id}>` : 'Unknown', inline: true },
-                    { name: 'Ticket', value: `#${channel.name}`, inline: true },
-                    { name: 'Date', value: formatFullDate(new Date()), inline: true }
-                );
-
-            const row = new ActionRowBuilder().addComponents(
-                new ButtonBuilder()
-                    .setLabel('Transcript')
-                    .setStyle(ButtonStyle.Link)
-                    .setURL(`${process.env.DASHBOARD_URL || 'https://predcord-dashboard.onrender.com'}/transcript/${transcriptDoc._id}`)
-            );
-
-            await logChannel.send({ embeds: [embed], components: [row] }).catch(err => {
-                console.error('[TICKET-LOG] send error:', err.message);
-            });
-        } else {
-            console.warn('[TICKET-LOG] No transcript channel configured for guild', channel.guild.id);
         }
 
         console.log(`[TRANSCRIPT] Saved transcript ${transcriptDoc._id} for ${channel.name}`);
@@ -802,52 +781,6 @@ client.on('guildMemberRemove', async (member) => {
         await sendLeaveLog(member);
     } catch (error) {
         logCrash('GUILD_MEMBER_REMOVE', error, { userId: member?.user?.id });
-    }
-});
-
-client.on(Events.MessageDelete, async (message) => {
-    try {
-        if (!message.guild) return;
-        if (message.author?.bot) return;
-        const config = await getGuildConfig(message.guild.id);
-        const logChannel = client.channels.cache.get(config.messageLogChannelId);
-        if (!logChannel) return;
-        const embed = new EmbedBuilder()
-            .setTitle('Message Deleted')
-            .setColor(COLORS.ERROR)
-            .setThumbnail(THUMBNAIL_URL)
-            .addFields(
-                { name: 'Channel', value: message.channel.toString(), inline: true },
-                { name: 'Author', value: message.author?.toString() || 'Unknown', inline: true },
-                { name: 'Content', value: (message.content || 'No content').substring(0, 1000), inline: false }
-            );
-        await logChannel.send({ embeds: [embed] });
-    } catch (error) {
-        logCrash('MESSAGE_DELETE_LOG', error);
-    }
-});
-
-client.on(Events.MessageUpdate, async (oldMessage, newMessage) => {
-    try {
-        if (!newMessage.guild) return;
-        if (oldMessage.content === newMessage.content) return;
-        if (newMessage.author?.bot) return;
-        const config = await getGuildConfig(newMessage.guild.id);
-        const logChannel = client.channels.cache.get(config.messageLogChannelId);
-        if (!logChannel) return;
-        const embed = new EmbedBuilder()
-            .setTitle('Message Edited')
-            .setColor(COLORS.WARNING)
-            .setThumbnail(THUMBNAIL_URL)
-            .addFields(
-                { name: 'Channel', value: newMessage.channel.toString(), inline: true },
-                { name: 'Author', value: newMessage.author?.toString() || 'Unknown', inline: true },
-                { name: 'Before', value: (oldMessage.content || 'No content').substring(0, 1000), inline: false },
-                { name: 'After', value: (newMessage.content || 'No content').substring(0, 1000), inline: false }
-            );
-        await logChannel.send({ embeds: [embed] });
-    } catch (error) {
-        logCrash('MESSAGE_UPDATE_LOG', error);
     }
 });
 
