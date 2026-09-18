@@ -1718,7 +1718,7 @@ function setupEvents() {
         window.location.href = '/login';
     };
 
-    let switchingTab = false;
+    let tabTransitionToken = 0;
 
     document.querySelectorAll('.nav-tab').forEach(tab => {
         tab.onclick = () => {
@@ -1728,6 +1728,8 @@ function setupEvents() {
 
             document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
             tab.classList.add('active');
+
+            const myToken = ++tabTransitionToken;
 
             const currentActive = document.querySelector('.tab-content:not(.hidden)');
 
@@ -1760,25 +1762,30 @@ function setupEvents() {
                 return;
             }
 
-            if (switchingTab) return;
-            switchingTab = true;
-
             currentActive.classList.add('fade-out');
 
             setTimeout(() => {
-                currentActive.classList.add('hidden');
-                currentActive.classList.remove('fade-out');
+                if (myToken !== tabTransitionToken) return;
+
+                document.querySelectorAll('.tab-content').forEach(c => {
+                    if (c !== targetContent) {
+                        c.classList.add('hidden');
+                        c.classList.remove('fade-out');
+                        c.style.opacity = '';
+                    }
+                });
 
                 targetContent.classList.remove('hidden');
                 targetContent.style.opacity = '0';
 
                 requestAnimationFrame(() => {
+                    if (myToken !== tabTransitionToken) return;
                     targetContent.style.opacity = '1';
                     loadTarget();
 
                     setTimeout(() => {
+                        if (myToken !== tabTransitionToken) return;
                         targetContent.style.opacity = '';
-                        switchingTab = false;
                     }, 350);
                 });
             }, 180);
