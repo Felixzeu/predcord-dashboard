@@ -1490,17 +1490,7 @@ function renderSingleSelectList(containerId, items, selectedId, configKey) {
         return;
     }
 
-    let html = `
-        <div class="role-item">
-            <span class="role-name">— None —</span>
-            <label class="role-toggle">
-                <input type="checkbox" class="role-toggle-input radio-toggle" data-config="${configKey}" value="" ${!selectedId ? 'checked' : ''}>
-                <span class="role-toggle-switch"></span>
-            </label>
-        </div>
-    `;
-
-    html += items.map(item => {
+    let html = items.map(item => {
         const checked = item.id === selectedId ? 'checked' : '';
         return `
         <div class="role-item">
