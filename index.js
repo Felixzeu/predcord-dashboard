@@ -271,13 +271,21 @@ async function sendActionDM(user, action, reason, moderator, duration = null) {
             'unmuted': 'unmuted'
         };
         const label = actionText[action] || action;
-        const description = (action === 'unbanned' || action === 'unmuted')
-            ? `**You have been ${label} in ${moderator?.guild?.name || 'the server'}**`
-            : `**You have been ${label} for ${reason || 'no reason provided'}**`;
+        let description;
+        let embedColor = COLORS.WARNING;
+
+        if (action === 'banned') {
+            description = `**You have been ${label}** in ${moderator?.guild?.name || 'PredCord'} for **${reason || 'no reason provided'}**`;
+            embedColor = 0xE74C3C;
+        } else if (action === 'unbanned' || action === 'unmuted') {
+            description = `**You have been ${label} in ${moderator?.guild?.name || 'the server'}**`;
+        } else {
+            description = `**You have been ${label} for ${reason || 'no reason provided'}**`;
+        }
 
         const embed = new EmbedBuilder()
             .setDescription(description)
-            .setColor(COLORS.WARNING);
+            .setColor(embedColor);
 
         const payload = { embeds: [embed] };
 
@@ -294,6 +302,25 @@ async function sendActionDM(user, action, reason, moderator, duration = null) {
         await user.send(payload).catch(err => console.log(`DM failed: ${user?.tag || user?.id} (${err.message})`));
     } catch (error) {
         logCrash('DM_ERROR', error, { userId: user?.id, action });
+    }
+}
+
+async function sendUnbanDM(user) {
+    try {
+        const embed = new EmbedBuilder()
+            .setDescription('Your ban has expired. You can join back now https://discord.gg/nF4Js5X585')
+            .setColor(COLORS.SUCCESS);
+
+        const row = new ActionRowBuilder().addComponents(
+            new ButtonBuilder()
+                .setLabel('Join Back')
+                .setStyle(ButtonStyle.Link)
+                .setURL('https://discord.gg/nF4Js5X585')
+        );
+
+        await user.send({ embeds: [embed], components: [row] }).catch(err => console.log(`DM failed: ${user?.tag || user?.id} (${err.message})`));
+    } catch (error) {
+        logCrash('DM_ERROR', error, { userId: user?.id, action: 'unbanned' });
     }
 }
 
@@ -1342,7 +1369,7 @@ async function handleNativeCommand(message, command, args) {
             }
             await message.guild.members.unban(userId);
             await db.removePendingBan(message.guild.id, userId);
-            await sendActionDM(bannedUser.user, 'unbanned', 'Unbanned', { tag: message.author.tag, guild: message.guild });
+            await sendUnbanDM(bannedUser.user);
             const embed = new EmbedBuilder()
                 .setDescription(`**${bannedUser.user.username}** (${bannedUser.user.id}) has been unbanned for the reason **Unbanned**`)
                 .setColor(BLACK);
@@ -1952,6 +1979,21 @@ async function handleCustomCommand(message, command, args, cmdData) {
 
     const cmdImage = cmdData.image && isValidUrl(cmdData.image) ? cmdData.image : null;
 
+    let cmdComponents = [];
+    if (Array.isArray(cmdData.buttons) && cmdData.buttons.length) {
+        const row = new ActionRowBuilder();
+        for (const btn of cmdData.buttons.slice(0, 5)) {
+            if (!btn.label || !btn.url || !isValidUrl(btn.url)) continue;
+            row.addComponents(
+                new ButtonBuilder()
+                    .setLabel(String(btn.label).slice(0, 80))
+                    .setStyle(ButtonStyle.Link)
+                    .setURL(btn.url)
+            );
+        }
+        if (row.components.length) cmdComponents = [row];
+    }
+
     if (cmdType === 'embed') {
         const cmdTitle = await substituteAll(cmdData.title || '', message, mdTarget, args);
         const embed = new EmbedBuilder()
@@ -1978,13 +2020,13 @@ async function handleCustomCommand(message, command, args, cmdData) {
             }
         }
 
-        await message.channel.send({ embeds }).catch(err => console.error('[CUSTOM-CMD] send failed:', err.message));
+        await message.channel.send({ embeds, components: cmdComponents }).catch(err => console.error('[CUSTOM-CMD] send failed:', err.message));
     } else if (cmdImage) {
         const embed = new EmbedBuilder().setImage(cmdImage);
         if (replyText.trim()) embed.setDescription(replyText);
-        await message.channel.send({ embeds: [embed] }).catch(err => console.error('[CUSTOM-CMD] send failed:', err.message));
+        await message.channel.send({ embeds: [embed], components: cmdComponents }).catch(err => console.error('[CUSTOM-CMD] send failed:', err.message));
     } else {
-        await message.channel.send(replyText.trim() ? replyText : '​').catch(err => console.error('[CUSTOM-CMD] send failed:', err.message));
+        await message.channel.send({ content: replyText.trim() ? replyText : '​', components: cmdComponents }).catch(err => console.error('[CUSTOM-CMD] send failed:', err.message));
     }
 
     if (cmdData.deleteCommand) await message.delete().catch(() => {});
@@ -2637,6 +2679,13 @@ setInterval(async () => {
                 await guild.members.unban(ban.userId, 'Temporary ban expired');
                 await db.removePendingBan(ban.guildId, ban.userId);
                 await saveModLog(guild, 'User unbanned (auto)', { id: ban.userId, tag: ban.userTag }, client.user, 'Temporary ban expired');
+
+                try {
+                    const unbannedUser = await client.users.fetch(ban.userId);
+                    await sendUnbanDM(unbannedUser);
+                } catch (dmErr) {
+                    console.error(`[AUTO-UNBAN] DM fetch error on ${ban.userId}:`, dmErr.message);
+                }
 
                 await db.saveDashboardLogDB(guild.id, {
                     type: 'auto_mod',
