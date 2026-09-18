@@ -5,7 +5,7 @@ const bcrypt = require('bcryptjs');
 const passport = require('passport');
 const DiscordStrategy = require('passport-discord').Strategy;
 const path = require('path');
-const { ChannelType } = require('discord.js');
+const { ChannelType, EmbedBuilder } = require('discord.js');
 require('dotenv').config();
 
 require('./index.js');
@@ -33,13 +33,17 @@ const ADMIN_PASSWORD_HASH = bcrypt.hashSync(ADMIN_PASSWORD, 10);
 const DISCORD_CLIENT_ID = process.env.DISCORD_CLIENT_ID;
 const DISCORD_CLIENT_SECRET = process.env.DISCORD_CLIENT_SECRET;
 const DISCORD_REDIRECT_URI = process.env.DISCORD_REDIRECT_URI || 'http://localhost:10000/auth/discord/callback';
+const DISCORD_SITE_REDIRECT_URI = process.env.DISCORD_SITE_REDIRECT_URI || 'http://localhost:10000/site-auth/discord/callback';
 const MAIN_GUILD_ID = process.env.MAIN_GUILD_ID;
+const STAFF_CHANNEL_COMMUNITY_ID = process.env.STAFF_CHANNEL_COMMUNITY_ID;
+const STAFF_CHANNEL_PREDCORD_ID = process.env.STAFF_CHANNEL_PREDCORD_ID;
 
 const MAX_BASE_COMMANDS = 10;
 
 const app = express();
 const PORT = process.env.PORT || 10000;
 const DASHBOARD_DIR = path.join(__dirname, 'dashboard');
+const SITE_DIR = path.join(__dirname, 'site');
 
 app.set('trust proxy', 1);
 
@@ -143,10 +147,26 @@ passport.use(new DiscordStrategy({
     }
 }));
 
+passport.use('discord-site', new DiscordStrategy({
+    clientID: DISCORD_CLIENT_ID,
+    clientSecret: DISCORD_CLIENT_SECRET,
+    callbackURL: DISCORD_SITE_REDIRECT_URI,
+    scope: ['identify']
+}, (accessToken, refreshToken, profile, done) => {
+    return done(null, {
+        id: profile.id,
+        username: profile.username,
+        discriminator: profile.discriminator,
+        avatar: profile.avatar,
+        isSitePublic: true
+    });
+}));
+
 app.use(passport.initialize());
 app.use(passport.session());
 
-app.use(express.static(DASHBOARD_DIR));
+app.use('/dashboard', express.static(DASHBOARD_DIR));
+app.use(express.static(SITE_DIR));
 
 function requireAuth(req, res, next) {
     if (req.session.user || (req.user && req.user.isDiscord)) return next();
@@ -196,7 +216,7 @@ function isOwner(req) {
 }
 
 app.get('/login', (req, res) => {
-    if (req.session.user || (req.user && req.user.isDiscord)) return res.redirect('/');
+    if (req.session.user || (req.user && req.user.isDiscord)) return res.redirect('/dashboard');
     res.sendFile(path.join(DASHBOARD_DIR, 'login.html'));
 });
 
@@ -214,10 +234,84 @@ app.get('/auth/discord/callback',
         };
         req.session.save((err) => {
             if (err) console.error('[SESSION] save error:', err);
-            res.redirect('/');
+            res.redirect('/dashboard');
         });
     }
 );
+
+app.get('/site-auth/discord', (req, res, next) => {
+    req.session.siteReturnTo = (req.query.next && req.query.next.startsWith('/')) ? req.query.next : '/staff-application';
+    next();
+}, passport.authenticate('discord-site'));
+
+app.get('/site-auth/discord/callback',
+    passport.authenticate('discord-site', { failureRedirect: '/staff-application' }),
+    (req, res) => {
+        req.session.siteUser = {
+            id: req.user.id,
+            username: req.user.username,
+            discriminator: req.user.discriminator,
+            avatar: req.user.avatar
+        };
+        const returnTo = req.session.siteReturnTo || '/staff-application';
+        delete req.session.siteReturnTo;
+        req.session.save((err) => {
+            if (err) console.error('[SESSION] site save error:', err);
+            res.redirect(returnTo);
+        });
+    }
+);
+
+app.get('/api/site/me', (req, res) => {
+    if (!req.session.siteUser) return res.json({ loggedIn: false });
+    const u = req.session.siteUser;
+    const avatarUrl = u.avatar
+        ? `https://cdn.discordapp.com/avatars/${u.id}/${u.avatar}.png?size=64`
+        : `https://cdn.discordapp.com/embed/avatars/${(parseInt(u.discriminator, 10) || 0) % 5}.png`;
+    res.json({ loggedIn: true, id: u.id, username: u.username, avatar: avatarUrl });
+});
+
+app.post('/api/site/logout', (req, res) => {
+    delete req.session.siteUser;
+    req.session.save(() => res.json({ success: true }));
+});
+
+app.post('/api/site/apply', async (req, res) => {
+    if (!req.session.siteUser) return res.status(401).json({ error: 'not_authenticated' });
+
+    const { team, answers } = req.body;
+    if (!['community', 'predcord'].includes(team)) return res.status(400).json({ error: 'invalid_team' });
+    if (!answers || typeof answers !== 'object') return res.status(400).json({ error: 'invalid_answers' });
+
+    const channelId = team === 'community' ? STAFF_CHANNEL_COMMUNITY_ID : STAFF_CHANNEL_PREDCORD_ID;
+    if (!channelId) return res.status(503).json({ error: 'channel_not_configured' });
+
+    try {
+        const { client } = global.PredCord;
+        const channel = await client.channels.fetch(channelId);
+        if (!channel) return res.status(503).json({ error: 'channel_not_found' });
+
+        const user = req.session.siteUser;
+        const avatarUrl = user.avatar
+            ? `https://cdn.discordapp.com/avatars/${user.id}/${user.avatar}.png?size=128`
+            : `https://cdn.discordapp.com/embed/avatars/${(parseInt(user.discriminator, 10) || 0) % 5}.png`;
+
+        const embed = new EmbedBuilder()
+            .setColor(team === 'community' ? 0xE67E22 : 0x38BDF8)
+            .setAuthor({ name: `${user.username} (${user.id})`, iconURL: avatarUrl })
+            .setTitle(team === 'community' ? 'Predage Community Staff Application' : 'PredCord Staff Application')
+            .setTimestamp();
+
+        for (const [question, answer] of Object.entries(answers)) {
+            embed.addFields({ name: String(question).slice(0, 256), value: String(answer || 'N/A').slice(0, 1024) });
+        }
+
+        await channel.send({ embeds: [embed] });
+        res.json({ success: true });
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
 
 app.post('/api/login', async (req, res) => {
     const { username, password } = req.body;
@@ -1001,11 +1095,19 @@ app.get('/api/transcripts/:guildId/:transcriptId', requireAuth, async (req, res)
     }
 });
 
-app.get('/transcript/:transcriptId', requireAuth, async (req, res) => {
+app.get('/dashboard/transcript/:transcriptId', requireAuth, async (req, res) => {
     res.sendFile(path.join(DASHBOARD_DIR, 'transcript.html'));
 });
 
-app.get('/', requireAuth, (req, res) => {
+app.get('/', (req, res) => {
+    res.sendFile(path.join(SITE_DIR, 'index.html'));
+});
+
+app.get('/staff-application', (req, res) => {
+    res.sendFile(path.join(SITE_DIR, 'staff-application.html'));
+});
+
+app.get('/dashboard', requireAuth, (req, res) => {
     res.sendFile(path.join(DASHBOARD_DIR, 'index.html'));
 });
 
