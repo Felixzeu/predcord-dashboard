@@ -1729,10 +1729,8 @@ function setupEvents() {
         };
     });
 
-    const modalEl = document.getElementById('modal');
-    if (modalEl) modalEl.onclick = (e) => {
-        if (e.target.id === 'modal') closeModal();
-    };
+    const modalCloseBtn = document.getElementById('modalCloseBtn');
+    if (modalCloseBtn) modalCloseBtn.onclick = closeModal;
 
     document.addEventListener('keydown', (e) => {
         if (e.key === 'Escape') {
