@@ -649,6 +649,14 @@ app.post('/api/commands/:guildId', requireAuth, async (req, res) => {
             if (!isNaN(d) && d > 0) duration = d;
         }
 
+        let buttons = [];
+        if (Array.isArray(data.buttons)) {
+            buttons = data.buttons
+                .filter(b => b && typeof b.label === 'string' && b.label.trim() && typeof b.url === 'string' && b.url.trim())
+                .slice(0, 5)
+                .map(b => ({ label: b.label.trim().slice(0, 80), url: b.url.trim() }));
+        }
+
         let extraEmbeds = [];
         if (Array.isArray(data.extraEmbeds)) {
             extraEmbeds = data.extraEmbeds.slice(0, 9).map(e => ({
@@ -669,6 +677,7 @@ app.post('/api/commands/:guildId', requireAuth, async (req, res) => {
             deleteCommand: data.deleteCommand !== false,
             thumbnail: data.thumbnail || null,
             image: data.image || null,
+            buttons: buttons,
             extraEmbeds: extraEmbeds,
             allowedRoles: allowedRoles,
             duration: duration,
