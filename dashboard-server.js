@@ -35,8 +35,6 @@ const DISCORD_CLIENT_SECRET = process.env.DISCORD_CLIENT_SECRET;
 const DISCORD_REDIRECT_URI = process.env.DISCORD_REDIRECT_URI || 'http://localhost:10000/auth/discord/callback';
 const DISCORD_SITE_REDIRECT_URI = process.env.DISCORD_SITE_REDIRECT_URI || 'http://localhost:10000/site-auth/discord/callback';
 const MAIN_GUILD_ID = process.env.MAIN_GUILD_ID;
-const STAFF_CHANNEL_COMMUNITY_ID = process.env.STAFF_CHANNEL_COMMUNITY_ID;
-const STAFF_CHANNEL_PREDCORD_ID = process.env.STAFF_CHANNEL_PREDCORD_ID;
 
 const MAX_BASE_COMMANDS = 10;
 
@@ -283,11 +281,12 @@ app.post('/api/site/apply', async (req, res) => {
     if (!['community', 'predcord'].includes(team)) return res.status(400).json({ error: 'invalid_team' });
     if (!answers || typeof answers !== 'object') return res.status(400).json({ error: 'invalid_answers' });
 
-    const channelId = team === 'community' ? STAFF_CHANNEL_COMMUNITY_ID : STAFF_CHANNEL_PREDCORD_ID;
-    if (!channelId) return res.status(503).json({ error: 'channel_not_configured' });
-
     try {
-        const { client } = global.PredCord;
+        const { client, db } = global.PredCord;
+        const guildConfig = await db.getGuildConfigDB(MAIN_GUILD_ID);
+        const channelId = team === 'community' ? guildConfig.staffAppCommunityChannelId : guildConfig.staffAppPredcordChannelId;
+        if (!channelId) return res.status(503).json({ error: 'channel_not_configured' });
+
         const channel = await client.channels.fetch(channelId);
         if (!channel) return res.status(503).json({ error: 'channel_not_found' });
 
@@ -589,7 +588,9 @@ app.post('/api/guildconfig/:guildId', requireAuth, async (req, res) => {
             transcriptsChannelId,
             staffRoleId,
             adminRoleId,
-            supportCategoryId
+            supportCategoryId,
+            staffAppCommunityChannelId,
+            staffAppPredcordChannelId
         } = req.body;
 
         const updates = {};
@@ -599,6 +600,8 @@ app.post('/api/guildconfig/:guildId', requireAuth, async (req, res) => {
         if (staffRoleId !== undefined) updates.staffRoleId = staffRoleId || null;
         if (adminRoleId !== undefined) updates.adminRoleId = adminRoleId || null;
         if (supportCategoryId !== undefined) updates.supportCategoryId = supportCategoryId || null;
+        if (staffAppCommunityChannelId !== undefined) updates.staffAppCommunityChannelId = staffAppCommunityChannelId || null;
+        if (staffAppPredcordChannelId !== undefined) updates.staffAppPredcordChannelId = staffAppPredcordChannelId || null;
 
         for (const [key, value] of Object.entries(updates)) {
             await db.saveGuildConfigDB(guildId, key, value);
