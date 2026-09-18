@@ -483,6 +483,55 @@ async function formatModerationHistory(userId, guildId, username, page = 1) {
     return output;
 }
 
+async function formatGuildModerationHistory(guildId, page = 1) {
+    const totalLogs = await db.ModLog.countDocuments({ guildId });
+
+    if (totalLogs === 0) {
+        return 'No modlogs recorded for this server.';
+    }
+
+    const totalPages = Math.max(1, Math.ceil(totalLogs / LOGS_PER_PAGE));
+    const safePage = Math.min(Math.max(1, page), totalPages);
+    const skip = (safePage - 1) * LOGS_PER_PAGE;
+
+    const logs = await db.ModLog
+        .find({ guildId })
+        .sort({ date: -1 })
+        .skip(skip)
+        .limit(LOGS_PER_PAGE)
+        .lean();
+
+    const typeLabel = (action) => {
+        const a = (action || '').toLowerCase();
+        if (a.includes('unban')) return 'Unban';
+        if (a.includes('ban')) return 'Ban';
+        if (a.includes('kick')) return 'Kick';
+        if (a.includes('unmute')) return 'Unmute';
+        if (a.includes('mute')) return 'Mute';
+        if (a.includes('warn')) return 'Warn';
+        if (a.includes('purge')) return 'Purge';
+        return action;
+    };
+
+    let output = `**Server Modlogs**\n`;
+
+    for (const log of logs) {
+        const tipo = typeLabel(log.action);
+        const durata = log.duration ? ` (${log.duration})` : '';
+        const timestamp = Math.floor(new Date(log.date).getTime() / 1000);
+
+        output += `\n**Case ${log.caseId}**\n`;
+        output += `**Type**: ${tipo}${durata}\n`;
+        output += `**Target**: ${log.targetTag} (${log.targetId})\n`;
+        output += `**Moderator**: ${log.moderatorTag} (${log.moderatorId})\n`;
+        output += `**Reason**: ${log.reason} - <t:${timestamp}:f>\n`;
+    }
+
+    output += `\nPage ${safePage}/${totalPages} | Total Logs: ${totalLogs}`;
+
+    return output;
+}
+
 function formatFullDate(date) {
     const timestamp = Math.floor(date.getTime() / 1000);
     return `<t:${timestamp}:F>`;
@@ -973,6 +1022,69 @@ async function handleNativeCommand(message, command, args) {
         return;
     }
 
+    if (command === 'md') {
+        if (!(await isStaffSafe(message.member))) { await message.delete().catch(() => {}); return; }
+
+        const input = args[0];
+        const pageArg = args[1] ? parseInt(args[1]) : 1;
+
+        if (!input) {
+            const embed = new EmbedBuilder().setDescription('Usage: `*md @user/ID [page]`').setColor(COLORS.ERROR);
+            await message.channel.send({ embeds: [embed] });
+            await message.delete().catch(() => {});
+            return;
+        }
+
+        if (isNaN(pageArg) || pageArg < 1) {
+            const embed = new EmbedBuilder().setDescription('Specify a valid page number (>= 1).').setColor(COLORS.ERROR);
+            await message.channel.send({ embeds: [embed] });
+            await message.delete().catch(() => {});
+            return;
+        }
+
+        let userId = null;
+        const mentionMatch = input.match(/^<@!?(\d+)>$/);
+        if (mentionMatch) userId = mentionMatch[1];
+        else if (/^\d+$/.test(input)) userId = input;
+
+        if (!userId) {
+            const embed = new EmbedBuilder().setDescription('Invalid user ID. Use a mention or an ID.').setColor(COLORS.ERROR);
+            await message.channel.send({ embeds: [embed] });
+            await message.delete().catch(() => {});
+            return;
+        }
+
+        let username = `Unknown (${userId})`;
+        try {
+            const user = await client.users.fetch(userId);
+            username = user.username;
+        } catch {}
+
+        const text = await formatModerationHistory(userId, message.guild.id, username, pageArg);
+        const embed = new EmbedBuilder().setDescription(text).setColor(COLORS.INFO);
+        await message.channel.send({ embeds: [embed] });
+        await message.delete().catch(() => {});
+        return;
+    }
+
+    if (command === 'modlogs') {
+        if (!(await isStaffSafe(message.member))) { await message.delete().catch(() => {}); return; }
+
+        const pageArg = args[0] ? parseInt(args[0]) : 1;
+        if (isNaN(pageArg) || pageArg < 1) {
+            const embed = new EmbedBuilder().setDescription('Specify a valid page number (>= 1).').setColor(COLORS.ERROR);
+            await message.channel.send({ embeds: [embed] });
+            await message.delete().catch(() => {});
+            return;
+        }
+
+        const text = await formatGuildModerationHistory(message.guild.id, pageArg);
+        const embed = new EmbedBuilder().setDescription(text).setColor(COLORS.INFO);
+        await message.channel.send({ embeds: [embed] });
+        await message.delete().catch(() => {});
+        return;
+    }
+
     if (command === 'help') {
         if (!(await canUseBaseCommands(message.member))) {
             await message.delete().catch(() => {});
@@ -986,8 +1098,9 @@ async function handleNativeCommand(message, command, args) {
             .addFields(
                 { name: 'Admin Only', value: '`/panel` - Send ticket panel', inline: false },
                 { name: 'Mod & Admin', value: '`*av [user]` - Show avatar\n`*w [user]` - User info\n`*server` - Server info\n`*social` - Social links\n`*page {userid} {page}` - Paginate modlogs\n`*help` - This message', inline: false },
-                { name: 'Warnings (Mod+)', value: '`*warnings @user/ID`\n`*clearwarns @user/ID`', inline: false },
-                { name: 'Bans (Mod+)', value: '`*ban @user/ID [reason]`\n`*unban ID`\n`*kick @user/ID [reason]`\n`*mute @user/ID [minutes] [reason]`\n`*unmute @user/ID`', inline: false }
+                { name: 'Warnings (Mod+)', value: '`*warnings @user/ID`\n`*clearwarns @user/ID`\n`*warn @user/ID [reason]`', inline: false },
+                { name: 'Bans (Mod+)', value: '`*ban @user/ID [reason]`\n`*unban ID`\n`*kick @user/ID [reason]`\n`*mute @user/ID [minutes] [reason]`\n`*unmute @user/ID`', inline: false },
+                { name: 'Modlogs (Staff+)', value: '`*md @user/ID [page]` - User modlogs\n`*modlogs [page]` - Server modlogs', inline: false }
             );
         await message.channel.send({ embeds: [embed] });
         await message.delete().catch(() => {});
@@ -1148,7 +1261,7 @@ async function handleNativeCommand(message, command, args) {
     }
 
     if (command === 'ban') {
-        if (!(await hasModPerms(message.member))) { await message.delete().catch(() => {}); return; }
+        if (!(await isStaffSafe(message.member))) { await message.delete().catch(() => {}); return; }
         const input = args[0];
         if (!input) {
             const embed = new EmbedBuilder().setDescription('You need to mention a user or provide an ID.').setColor(COLORS.ERROR).setThumbnail(THUMBNAIL_URL);
@@ -1210,7 +1323,7 @@ async function handleNativeCommand(message, command, args) {
     }
 
     if (command === 'unban') {
-        if (!(await hasModPerms(message.member))) { await message.delete().catch(() => {}); return; }
+        if (!(await isStaffSafe(message.member))) { await message.delete().catch(() => {}); return; }
         const userId = args[0];
         if (!userId) {
             const embed = new EmbedBuilder().setDescription('You need to specify the user ID to unban.').setColor(COLORS.ERROR).setThumbnail(THUMBNAIL_URL);
@@ -1312,7 +1425,7 @@ async function handleNativeCommand(message, command, args) {
     }
 
     if (command === 'mute') {
-        if (!(await hasModPerms(message.member))) { await message.delete().catch(() => {}); return; }
+        if (!(await isStaffSafe(message.member))) { await message.delete().catch(() => {}); return; }
         const input = args[0];
         if (!input) {
             const embed = new EmbedBuilder().setDescription('You need to mention a user or provide an ID.').setColor(COLORS.ERROR).setThumbnail(THUMBNAIL_URL);
@@ -1382,7 +1495,7 @@ async function handleNativeCommand(message, command, args) {
     }
 
     if (command === 'unmute') {
-        if (!(await hasModPerms(message.member))) { await message.delete().catch(() => {}); return; }
+        if (!(await isStaffSafe(message.member))) { await message.delete().catch(() => {}); return; }
         const input = args[0];
         if (!input) {
             const embed = new EmbedBuilder().setDescription('You need to mention a user or provide an ID.').setColor(COLORS.ERROR).setThumbnail(THUMBNAIL_URL);
@@ -1435,8 +1548,57 @@ async function handleNativeCommand(message, command, args) {
         return;
     }
 
+    if (command === 'warn') {
+        if (!(await isStaffSafe(message.member))) { await message.delete().catch(() => {}); return; }
+        const input = args[0];
+        if (!input) {
+            const embed = new EmbedBuilder().setDescription('Usage: `*warn @user/ID reason`').setColor(COLORS.ERROR).setThumbnail(THUMBNAIL_URL);
+            await message.channel.send({ embeds: [embed] });
+            await message.delete().catch(() => {});
+            return;
+        }
+        const result = await getUserFromInput(message.guild, input);
+        if (!result || !result.user) {
+            const embed = new EmbedBuilder().setDescription('User not found.').setColor(COLORS.ERROR).setThumbnail(THUMBNAIL_URL);
+            await message.channel.send({ embeds: [embed] });
+            await message.delete().catch(() => {});
+            return;
+        }
+        const user = result.user;
+        const member = result.member;
+        if (await projectedRoleBlock(message, member)) return;
+        const reason = args.slice(1).join(' ') || 'No reason provided';
+        try {
+            await addWarning(message.guild, user, message.author, reason);
+            await sendActionDM(user, 'warned', reason, { tag: message.author.tag, guild: message.guild });
+            const embed = new EmbedBuilder()
+                .setDescription(`**${user.username}** (${user.id}) has been warned for the reason **${reason}**`)
+                .setColor(BLACK);
+            await message.channel.send({ embeds: [embed] });
+            await saveModLog(message.guild, 'User warned', user, message.author, reason);
+
+            await db.saveDashboardLogDB(message.guild.id, {
+                type: 'moderation',
+                action: 'user_warned',
+                userId: message.author.id,
+                userTag: message.author.tag,
+                targetId: user.id,
+                targetTag: user.tag,
+                moderatorId: message.author.id,
+                moderatorTag: message.author.tag,
+                reason: reason,
+                channelId: message.channel.id
+            });
+        } catch (error) {
+            const embed = new EmbedBuilder().setDescription('Error during warn.').setColor(COLORS.ERROR).setThumbnail(THUMBNAIL_URL);
+            await message.channel.send({ embeds: [embed] });
+        }
+        await message.delete().catch(() => {});
+        return;
+    }
+
     if (command === 'purge') {
-        if (!(await hasModPerms(message.member))) { await message.delete().catch(() => {}); return; }
+        if (!(await isStaffSafe(message.member))) { await message.delete().catch(() => {}); return; }
         const amount = parseInt(args[0]);
         if (isNaN(amount) || amount < 1 || amount > 100) {
             const embed = new EmbedBuilder().setDescription('You need to specify a number between 1 and 100.').setColor(COLORS.ERROR).setThumbnail(THUMBNAIL_URL);
