@@ -492,6 +492,7 @@ app.post('/api/guildconfig/:guildId', requireAuth, async (req, res) => {
         const {
             joinLeaveLogChannelId,
             modLogChannelId,
+            transcriptsChannelId,
             staffRoleId,
             adminRoleId,
             supportCategoryId
@@ -500,6 +501,7 @@ app.post('/api/guildconfig/:guildId', requireAuth, async (req, res) => {
         const updates = {};
         if (joinLeaveLogChannelId !== undefined) updates.joinLeaveLogChannelId = joinLeaveLogChannelId || null;
         if (modLogChannelId !== undefined) updates.modLogChannelId = modLogChannelId || null;
+        if (transcriptsChannelId !== undefined) updates.transcriptsChannelId = transcriptsChannelId || null;
         if (staffRoleId !== undefined) updates.staffRoleId = staffRoleId || null;
         if (adminRoleId !== undefined) updates.adminRoleId = adminRoleId || null;
         if (supportCategoryId !== undefined) updates.supportCategoryId = supportCategoryId || null;
