@@ -407,6 +407,10 @@ header span {
             document.getElementById('dashboardNavLink').classList.remove('hidden');
         }
     }).catch(function() {});
+
+    window.addEventListener('pageshow', function() {
+        document.body.classList.remove('page-fade-out');
+    });
 })();
 </script>
 </body>
