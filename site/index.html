@@ -318,8 +318,7 @@ header span {
 .sponsor-banner {
     flex-shrink: 0;
     display: block;
-    width: 200px;
-    min-height: 60px;
+    width: clamp(180px, 16vw, 320px);
     border-radius: 12px;
     overflow: hidden;
     border: 1px solid var(--border);
@@ -439,7 +438,7 @@ header span {
     .hero-photo { height: 260px; }
     .results-grid { grid-template-columns: 1fr; }
     .servers-grid { grid-template-columns: 1fr; }
-    .sponsor-banner { width: 140px; }
+    .sponsor-banner { width: 260px; }
 }
 </style>
 </head>
