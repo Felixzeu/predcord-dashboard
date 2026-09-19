@@ -591,20 +591,20 @@ header span {
 (function() {
     var QUESTIONS = {
         community: [
-            { id: 'age', label: 'How old are you?', type: 'text' },
-            { id: 'time', label: 'How much time can you dedicate?', type: 'text' },
-            { id: 'why', label: 'Why do you want to become a mod?', type: 'textarea' },
-            { id: 'modexp', label: 'Do you have any mod experience? (if yes, where?)', type: 'textarea' },
+            { id: 'age', label: 'How old are you?', type: 'text', placeholder: '18' },
+            { id: 'time', label: 'How much time can you dedicate?', type: 'text', placeholder: 'e.g. 10 hours a week' },
+            { id: 'why', label: 'Why do you want to become a mod?', type: 'textarea', placeholder: 'e.g. I want to help keep the community friendly and organized' },
+            { id: 'modexp', label: 'Do you have any mod experience? (if yes, where?)', type: 'textarea', placeholder: 'e.g. I was a moderator on another server for 6 months' },
             { id: 'dyno', label: 'Do you have any experience with Dyno?', type: 'yesno' },
-            { id: 'dynocommands', label: 'What commands do you know?', type: 'textarea', dependsOn: 'dyno' }
+            { id: 'dynocommands', label: 'What commands do you know?', type: 'textarea', dependsOn: 'dyno', placeholder: 'e.g. !warn, !mute, !ban' }
         ],
         predcord: [
-            { id: 'age', label: 'How old are you?', type: 'text' },
-            { id: 'time', label: 'How much time can you dedicate?', type: 'text' },
-            { id: 'why', label: 'Why do you want to become a staff member?', type: 'textarea' },
-            { id: 'modexp', label: 'Do you have any mod experience? (if yes, where?)', type: 'textarea' },
+            { id: 'age', label: 'How old are you?', type: 'text', placeholder: '18' },
+            { id: 'time', label: 'How much time can you dedicate?', type: 'text', placeholder: 'e.g. 10 hours a week' },
+            { id: 'why', label: 'Why do you want to become a staff member?', type: 'textarea', placeholder: 'e.g. I want to help keep the server organized and competitive' },
+            { id: 'modexp', label: 'Do you have any mod experience? (if yes, where?)', type: 'textarea', placeholder: 'e.g. I was a moderator on another server for 6 months' },
             { id: 'dyno', label: 'Do you have any experience with Dyno / Yunite?', type: 'yesno' },
-            { id: 'dynocommands', label: 'What commands do you know?', type: 'textarea', dependsOn: 'dyno' }
+            { id: 'dynocommands', label: 'What commands do you know?', type: 'textarea', dependsOn: 'dyno', placeholder: 'e.g. !warn, !mute, !ban' }
         ]
     };
 
@@ -660,9 +660,9 @@ header span {
                     '<button type="button" class="yesno-btn" data-field="' + q.id + '" data-value="No">No</button>' +
                     '</div><input type="hidden" name="' + q.id + '" required>';
             } else if (q.type === 'textarea') {
-                html += '<textarea name="' + q.id + '" rows="3" required></textarea>';
+                html += '<textarea name="' + q.id + '" rows="3" placeholder="' + (q.placeholder || '') + '" required></textarea>';
             } else {
-                html += '<input type="text" name="' + q.id + '" required>';
+                html += '<input type="text" name="' + q.id + '" placeholder="' + (q.placeholder || '') + '" required>';
             }
             html += '</div>';
         });
@@ -693,8 +693,8 @@ header span {
     }
 
     modalClose.addEventListener('click', closeModal);
-    modal.addEventListener('click', function(e) {
-        if (e.target === modal) closeModal();
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape' && modal.classList.contains('open')) closeModal();
     });
 
     modalContent.addEventListener('click', function(e) {
