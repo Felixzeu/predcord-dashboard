@@ -1030,9 +1030,17 @@ header span {
         marqueeTrack.innerHTML = cardsHtml + cardsHtml + cardsHtml + cardsHtml;
     }
 
-    var slides = document.querySelectorAll('.hero-photo img');
+    var slides = Array.prototype.slice.call(document.querySelectorAll('.hero-photo img'));
     if (slides.length >= 2) {
+        for (var si = slides.length - 1; si > 0; si--) {
+            var sj = Math.floor(Math.random() * (si + 1));
+            var tmp = slides[si];
+            slides[si] = slides[sj];
+            slides[sj] = tmp;
+        }
+        slides.forEach(function(s) { s.classList.remove('active'); });
         var current = 0;
+        slides[current].classList.add('active');
         setInterval(function() {
             slides[current].classList.remove('active');
             current = (current + 1) % slides.length;
