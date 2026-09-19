@@ -103,6 +103,50 @@ header span {
     display: none;
 }
 
+.header-auth {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 12px;
+}
+
+.auth-btn {
+    background: var(--primary);
+    color: #fff;
+    border: none;
+    padding: 9px 20px;
+    border-radius: 8px;
+    font-family: inherit;
+    font-weight: 700;
+    font-size: 13.5px;
+    cursor: pointer;
+    transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+}
+
+.auth-btn.logged-in {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+}
+
+.auth-btn.logged-in:hover {
+    background: #e74c3c;
+    border-color: #e74c3c;
+    color: #fff;
+}
+
+.auth-avatar {
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid var(--border);
+}
+
+.auth-avatar.hidden {
+    display: none;
+}
+
 .hero {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -286,7 +330,6 @@ header span {
     body { display: block; }
     header { grid-template-columns: 1fr; row-gap: 12px; padding: 14px 20px; }
     .header-nav { justify-content: center; gap: 22px; flex-wrap: wrap; }
-    header > div:last-child { display: none; }
     .hero { grid-template-columns: 1fr; flex: none; }
     .hero-photo { min-height: 280px; height: 280px; }
 }
@@ -307,7 +350,10 @@ header span {
         <a href="/dashboard" class="hidden" id="dashboardNavLink">Dashboard</a>
     </nav>
 
-    <div></div>
+    <div class="header-auth">
+        <button class="auth-btn" id="authBtn">Sign In</button>
+        <img class="auth-avatar hidden" id="authAvatar" src="" alt="">
+    </div>
 </header>
 
 <section class="hero">
@@ -382,6 +428,38 @@ header span {
 
 <script>
 (function() {
+    var currentUser = null;
+    var authBtn = document.getElementById('authBtn');
+    var authAvatar = document.getElementById('authAvatar');
+
+    function refreshAuth() {
+        return fetch('/api/site/me').then(function(r) { return r.json(); }).then(function(data) {
+            var dashboardLink = document.getElementById('dashboardNavLink');
+            if (data.loggedIn) {
+                currentUser = data;
+                authBtn.textContent = 'Log Out';
+                authBtn.classList.add('logged-in');
+                authAvatar.src = data.avatar;
+                authAvatar.classList.remove('hidden');
+                if (dashboardLink) dashboardLink.classList.toggle('hidden', !data.canAccessDashboard);
+            } else {
+                currentUser = null;
+                authBtn.textContent = 'Sign In';
+                authBtn.classList.remove('logged-in');
+                authAvatar.classList.add('hidden');
+                if (dashboardLink) dashboardLink.classList.add('hidden');
+            }
+        }).catch(function() {});
+    }
+
+    authBtn.addEventListener('click', function() {
+        if (currentUser) {
+            fetch('/api/site/logout', { method: 'POST' }).then(refreshAuth);
+        } else {
+            window.location.href = '/site-auth/discord?next=' + encodeURIComponent(window.location.pathname);
+        }
+    });
+
     var slides = document.querySelectorAll('.hero-photo img');
     if (slides.length >= 2) {
         var current = 0;
@@ -402,11 +480,7 @@ header span {
         });
     });
 
-    fetch('/api/site/me').then(function(r) { return r.json(); }).then(function(data) {
-        if (data.loggedIn && data.canAccessDashboard) {
-            document.getElementById('dashboardNavLink').classList.remove('hidden');
-        }
-    }).catch(function() {});
+    refreshAuth();
 
     window.addEventListener('pageshow', function() {
         document.body.classList.remove('page-fade-out');
