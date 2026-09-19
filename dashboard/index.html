@@ -219,9 +219,12 @@
                 </div>
                 <div class="permission-card">
                     <h3>PredCord Applications</h3>
-                    <p class="permission-desc">Channel where PredCord staff applications are sent</p>
+                    <p class="permission-desc">Server and channel where PredCord staff applications are sent</p>
+                    <select id="cfgStaffAppPredcordGuild" class="cfg-guild-select">
+                        <option value="">Loading servers...</option>
+                    </select>
                     <div id="cfgStaffAppPredcordList" class="roles-list">
-                        <p class="loading-text">Loading...</p>
+                        <p class="loading-text">Select a server first</p>
                     </div>
                 </div>
             </div>
@@ -274,6 +277,18 @@
             <div class="panel-header">
                 <h2>Ban</h2>
             </div>
+
+            <div class="ban-server-toggle">
+                <button type="button" class="ban-server-btn active" data-guild="predcord">
+                    <img src="/images/predcord-pfp.webp" alt="">
+                    PredCord
+                </button>
+                <button type="button" class="ban-server-btn" data-guild="community">
+                    <img src="/images/dragon-pfp.webp" alt="">
+                    Predage Community
+                </button>
+            </div>
+
             <p id="bansCount" class="bans-count"></p>
 
             <div class="logs-container">
