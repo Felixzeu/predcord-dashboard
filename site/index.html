@@ -211,6 +211,7 @@ header span {
 }
 
 .result-item {
+    position: relative;
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -218,7 +219,7 @@ header span {
     background: var(--bg-card);
     border: 1px solid var(--border);
     border-radius: 10px;
-    padding: 10px 14px;
+    padding: 10px 14px 10px 22px;
     font-size: 12.5px;
     font-weight: 700;
     color: var(--text);
@@ -226,7 +227,43 @@ header span {
     transition: border-color 0.2s ease, transform 0.2s ease;
 }
 
+.result-item::before {
+    content: '';
+    position: absolute;
+    left: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 3px;
+    height: 60%;
+    background: var(--primary);
+    border-radius: 2px;
+}
+
 .result-item:hover {
+    border-color: rgba(255, 255, 255, 0.25);
+    transform: translateY(-1px);
+}
+
+.results-more-wrap {
+    display: flex;
+    justify-content: center;
+    margin-top: 16px;
+}
+
+.results-more-btn {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-size: 12.5px;
+    font-weight: 700;
+    padding: 9px 30px;
+    border-radius: 10px;
+    cursor: pointer;
+    font-family: inherit;
+    transition: border-color 0.2s ease, transform 0.2s ease;
+}
+
+.results-more-btn:hover {
     border-color: rgba(255, 255, 255, 0.25);
     transform: translateY(-1px);
 }
@@ -597,6 +634,9 @@ header span {
             <h2 class="section-heading">Predage <span class="highlight">Results</span></h2>
             <p class="results-subheading">X6 FNCS Grands Finals</p>
             <div class="results-grid" id="resultsGrid"></div>
+            <div class="results-more-wrap">
+                <button class="results-more-btn" id="resultsMoreBtn">More</button>
+            </div>
         </div>
     </div>
 </section>
@@ -762,6 +802,15 @@ header span {
             var item = e.target.closest('.result-item');
             if (!item) return;
             openResultModal(parseInt(item.getAttribute('data-index'), 10));
+        });
+    }
+
+    var resultsMoreBtn = document.getElementById('resultsMoreBtn');
+    if (resultsMoreBtn) {
+        resultsMoreBtn.addEventListener('click', function() {
+            if (!resultModal || !resultModalContent) return;
+            resultModalContent.innerHTML = '<h3 class="modal-title">More Results</h3><p style="color: var(--text-dim); font-size: 13px;">Working....</p>';
+            resultModal.classList.add('open');
         });
     }
 
