@@ -211,13 +211,130 @@ header span {
 }
 
 .result-item {
-    color: var(--accent);
-    text-decoration: none;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 10px 14px;
     font-size: 12.5px;
-    line-height: 1.55;
+    font-weight: 700;
+    color: var(--text);
+    cursor: pointer;
+    transition: border-color 0.2s ease, transform 0.2s ease;
 }
 
 .result-item:hover {
+    border-color: rgba(255, 255, 255, 0.25);
+    transform: translateY(-1px);
+}
+
+.result-item-chevron {
+    width: 14px;
+    height: 14px;
+    flex-shrink: 0;
+    stroke: var(--text-dim);
+}
+
+.modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(5, 5, 8, 0.72);
+    z-index: 1000;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+}
+
+.modal-overlay.open {
+    display: flex;
+}
+
+.modal-box {
+    background: #14141c;
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 32px;
+    max-width: 460px;
+    width: 100%;
+    max-height: 85vh;
+    overflow-y: auto;
+    position: relative;
+    animation: modalPopIn 0.22s ease;
+}
+
+@keyframes modalPopIn {
+    from { opacity: 0; transform: scale(0.96) translateY(8px); }
+    to { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+.modal-close {
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    background: none;
+    border: none;
+    color: var(--text-dim);
+    font-size: 22px;
+    line-height: 1;
+    cursor: pointer;
+}
+
+.modal-close:hover {
+    color: var(--text);
+}
+
+.modal-title {
+    font-size: 17px;
+    font-weight: 800;
+    margin-bottom: 20px;
+    padding-right: 24px;
+    line-height: 1.4;
+}
+
+.modal-title a {
+    color: var(--text);
+    text-decoration: none;
+}
+
+.modal-title a:hover {
+    text-decoration: underline;
+}
+
+.result-detail-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 16px;
+    padding: 11px 0;
+    border-bottom: 1px solid var(--border);
+    font-size: 13px;
+}
+
+.result-detail-row:last-child {
+    border-bottom: none;
+}
+
+.result-detail-label {
+    color: var(--text-dim);
+    flex-shrink: 0;
+}
+
+.result-detail-value {
+    color: var(--text);
+    font-weight: 700;
+    text-align: right;
+}
+
+.result-detail-value a {
+    color: var(--accent);
+    text-decoration: none;
+}
+
+.result-detail-value a:hover {
     text-decoration: underline;
 }
 
@@ -480,12 +597,7 @@ header span {
         <div class="results-block">
             <h2 class="section-heading">Predage <span class="highlight">Results</span></h2>
             <p class="results-subheading">X6 FNCS Grands Finals</p>
-            <div class="results-grid">
-                <a class="result-item" href="https://liquipedia.net/fortnite/Reddysh_Rumble/Love_%26_Legends/Europe" target="_blank" rel="noopener">Reddysh Rumble: Love &amp; Legends (Top 1)</a>
-                <a class="result-item" href="https://liquipedia.net/fortnite/Twitch_Rivals/Cracked_Cup/TwitchCon_Europe" target="_blank" rel="noopener">Twitch Rivals: Cracked Cup 2025 (Top 1)</a>
-                <a class="result-item" href="https://liquipedia.net/fortnite/Piz_Tournament_ZB" target="_blank" rel="noopener">Piz Tournament ZB (Top 1)</a>
-                <a class="result-item" href="https://liquipedia.net/fortnite/Chapter_5/Season_4/Duos_Cash_Cup/Week_2/Europe" target="_blank" rel="noopener">Duos Cash Cup (Top 2)</a>
-            </div>
+            <div class="results-grid" id="resultsGrid"></div>
         </div>
     </div>
 </section>
@@ -535,6 +647,13 @@ header span {
     </div>
 </section>
 
+<div class="modal-overlay" id="resultModal">
+    <div class="modal-box">
+        <button class="modal-close" id="resultModalClose">&times;</button>
+        <div id="resultModalContent"></div>
+    </div>
+</div>
+
 <script>
 (function() {
     var currentUser = null;
@@ -567,6 +686,94 @@ header span {
         } else {
             window.location.href = '/site-auth/discord?next=' + encodeURIComponent(window.location.pathname);
         }
+    });
+
+    var RESULTS = [
+        {
+            name: 'Reddysh Rumble: Love & Legends - Europe',
+            link: 'https://liquipedia.net/fortnite/Reddysh_Rumble/Love_%26_Legends/Europe',
+            date: '2026-02-07',
+            placement: '1',
+            teammates: [{ name: 'Fraanticc', link: 'https://x.com/Fraanticc' }],
+            earnings: '$5.000'
+        },
+        {
+            name: 'Twitch Rivals: Cracked Cup 2025',
+            link: 'https://liquipedia.net/fortnite/Twitch_Rivals/Cracked_Cup/TwitchCon_Europe',
+            date: '2025-05-31',
+            placement: '1',
+            teammates: [{ name: 'Nezak', link: 'https://x.com/Nezak8' }],
+            earnings: '$2.250'
+        },
+        {
+            name: 'Piz Tournament ZB (Zero Build)',
+            link: 'https://liquipedia.net/fortnite/Piz_Tournament_ZB',
+            date: '2024-06-28',
+            placement: '1',
+            teammates: [{ name: 'Bobby', link: 'https://x.com/bobbyfnn' }, { name: 'F0x', link: 'https://x.com/Coach_F0x' }],
+            earnings: '$500'
+        },
+        {
+            name: 'Duos Cash Cup',
+            link: 'https://liquipedia.net/fortnite/Chapter_5/Season_4/Duos_Cash_Cup/Week_2/Europe',
+            date: '2024-09-12',
+            placement: '2',
+            teammates: [{ name: 'Rad3on', link: 'https://x.com/Rad3on2' }],
+            earnings: '$1.350'
+        }
+    ];
+
+    var resultsGrid = document.getElementById('resultsGrid');
+    if (resultsGrid) {
+        resultsGrid.innerHTML = RESULTS.map(function(r, i) {
+            return '<div class="result-item" data-index="' + i + '">' +
+                '<span>' + r.name + '</span>' +
+                '<svg class="result-item-chevron" viewBox="0 0 24 24" fill="none" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>' +
+            '</div>';
+        }).join('');
+    }
+
+    var resultModal = document.getElementById('resultModal');
+    var resultModalContent = document.getElementById('resultModalContent');
+    var resultModalClose = document.getElementById('resultModalClose');
+
+    function openResultModal(index) {
+        var r = RESULTS[index];
+        if (!r || !resultModal || !resultModalContent) return;
+        var teammatesHtml = r.teammates.map(function(t) {
+            return '<a href="' + t.link + '" target="_blank" rel="noopener">' + t.name + '</a>';
+        }).join(', ');
+        var html = '<h3 class="modal-title"><a href="' + r.link + '" target="_blank" rel="noopener">' + r.name + '</a></h3>';
+        html += '<div class="result-detail-row"><span class="result-detail-label">Tournament Date</span><span class="result-detail-value">' + r.date + '</span></div>';
+        if (r.placement) {
+            html += '<div class="result-detail-row"><span class="result-detail-label">Placement</span><span class="result-detail-value">' + r.placement + '</span></div>';
+        }
+        html += '<div class="result-detail-row"><span class="result-detail-label">Predage Played with</span><span class="result-detail-value">' + teammatesHtml + '</span></div>';
+        html += '<div class="result-detail-row"><span class="result-detail-label">Earnings</span><span class="result-detail-value">' + r.earnings + '</span></div>';
+        resultModalContent.innerHTML = html;
+        resultModal.classList.add('open');
+    }
+
+    function closeResultModal() {
+        if (resultModal) resultModal.classList.remove('open');
+    }
+
+    if (resultsGrid) {
+        resultsGrid.addEventListener('click', function(e) {
+            var item = e.target.closest('.result-item');
+            if (!item) return;
+            openResultModal(parseInt(item.getAttribute('data-index'), 10));
+        });
+    }
+
+    if (resultModalClose) resultModalClose.addEventListener('click', closeResultModal);
+    if (resultModal) {
+        resultModal.addEventListener('click', function(e) {
+            if (e.target === resultModal) closeResultModal();
+        });
+    }
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape' && resultModal && resultModal.classList.contains('open')) closeResultModal();
     });
 
     var SOCIALS = [
