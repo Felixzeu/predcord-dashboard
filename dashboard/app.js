@@ -1653,7 +1653,7 @@ async function saveConfig() {
     };
 
     try {
-        const [configRes, staffAppRes] = await Promise.all([
+        const [configRes, staffAppRes, banAppealRes] = await Promise.all([
             fetch(`/api/guildconfig/${currentGuild}`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -1666,12 +1666,20 @@ async function saveConfig() {
                     communityChannelId: getSelectedValue('cfgStaffAppCommunityList'),
                     predcordChannelId: getSelectedValue('cfgStaffAppPredcordList')
                 })
+            }),
+            fetch('/api/ban-appeal-config', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    communityChannelId: getSelectedValue('cfgBanAppealCommunityList'),
+                    predcordChannelId: getSelectedValue('cfgBanAppealPredcordList')
+                })
             })
         ]);
 
-        if (configRes.ok && staffAppRes.ok) {
+        if (configRes.ok && staffAppRes.ok && banAppealRes.ok) {
             showToast('Configuration saved');
-        } else if (configRes.status === 403 || staffAppRes.status === 403) {
+        } else if (configRes.status === 403 || staffAppRes.status === 403 || banAppealRes.status === 403) {
             showAccessDenied();
         } else {
             showToast('Error', 'error');
@@ -1711,6 +1719,40 @@ async function loadStaffAppConfig() {
         }
     } catch (e) {
         console.error('[STAFF APP CONFIG] load error:', e);
+        containers.forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.innerHTML = `<p class="loading-text">Error: ${e.message}</p>`;
+        });
+    }
+}
+
+async function loadBanAppealConfig() {
+    if (!isOwner()) return;
+
+    const containers = ['cfgBanAppealCommunityList', 'cfgBanAppealPredcordList'];
+    containers.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.innerHTML = '<p class="loading-text">Loading...</p>';
+    });
+
+    try {
+        const res = await fetch('/api/ban-appeal-config');
+        if (!res.ok) throw new Error('Failed to load');
+        const data = await res.json();
+
+        if (!data.community.guildFound) {
+            document.getElementById('cfgBanAppealCommunityList').innerHTML = '<p class="loading-text">Bot not in this server, or COMMUNITY_GUILD_ID is missing/wrong.</p>';
+        } else {
+            renderSingleSelectList('cfgBanAppealCommunityList', data.community.channels, data.community.selected, 'communityChannelId');
+        }
+
+        if (!data.predcord.guildFound) {
+            document.getElementById('cfgBanAppealPredcordList').innerHTML = '<p class="loading-text">Bot not in this server, or MAIN_GUILD_ID is missing/wrong.</p>';
+        } else {
+            renderSingleSelectList('cfgBanAppealPredcordList', data.predcord.channels, data.predcord.selected, 'predcordChannelId');
+        }
+    } catch (e) {
+        console.error('[BAN APPEAL CONFIG] load error:', e);
         containers.forEach(id => {
             const el = document.getElementById(id);
             if (el) el.innerHTML = `<p class="loading-text">Error: ${e.message}</p>`;
@@ -1890,6 +1932,7 @@ function setupEvents() {
                 } else if (target === 'config') {
                     loadConfigSection();
                     loadStaffAppConfig();
+                    loadBanAppealConfig();
                 } else if (target === 'tickets') {
                     loadTicketsSection();
                 } else if (target === 'commands') {
