@@ -243,7 +243,7 @@ header span {
 
 @keyframes marqueeScroll {
     from { transform: translateX(0); }
-    to { transform: translateX(-50%); }
+    to { transform: translateX(-25%); }
 }
 
 .social-card {
@@ -588,7 +588,7 @@ header span {
                 '</span>' +
             '</a>';
         }).join('');
-        marqueeTrack.innerHTML = cardsHtml + cardsHtml;
+        marqueeTrack.innerHTML = cardsHtml + cardsHtml + cardsHtml + cardsHtml;
     }
 
     var slides = document.querySelectorAll('.hero-photo img');
