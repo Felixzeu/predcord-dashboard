@@ -363,6 +363,29 @@ app.post('/api/site/logout', (req, res) => {
     req.session.save(() => res.json({ success: true }));
 });
 
+async function buildUserInfoField(client, guildId, userId) {
+    const lines = [`User: <@${userId}>`];
+    try {
+        const guild = client.guilds.cache.get(guildId);
+        const member = guild ? await guild.members.fetch(userId).catch(() => null) : null;
+        if (member) {
+            const createdTs = Math.floor(member.user.createdTimestamp / 1000);
+            lines.push(`Account Created: <t:${createdTs}:F> (<t:${createdTs}:R>)`);
+            if (member.joinedTimestamp) {
+                const joinedTs = Math.floor(member.joinedTimestamp / 1000);
+                lines.push(`Joined Server: <t:${joinedTs}:F> (<t:${joinedTs}:R>)`);
+            }
+            const roles = member.roles.cache.filter(r => r.id !== guild.id);
+            if (roles.size > 0) {
+                lines.push(`Roles: ${roles.map(r => `<@&${r.id}>`).join(', ')}`);
+            }
+        }
+    } catch (e) {
+        console.error('[USER INFO] fetch failed:', e.message);
+    }
+    return lines.join('\n');
+}
+
 app.post('/api/site/apply', async (req, res) => {
     if (!req.session.siteUser) return res.status(401).json({ error: 'not_authenticated' });
 
@@ -397,25 +420,11 @@ app.post('/api/site/apply', async (req, res) => {
             .setTitle(team === 'community' ? 'Predage Community Staff Application' : 'PredCord Staff Application')
             .setTimestamp();
 
-        try {
-            const guild = client.guilds.cache.get(targetGuildId);
-            const member = guild ? await guild.members.fetch(user.id).catch(() => null) : null;
-            if (member) {
-                const createdTs = Math.floor(member.user.createdTimestamp / 1000);
-                const joinedTs = member.joinedTimestamp ? Math.floor(member.joinedTimestamp / 1000) : null;
-                const userInfoLines = [`**Account Created:** <t:${createdTs}:F> (<t:${createdTs}:R>)`];
-                if (joinedTs) {
-                    userInfoLines.push(`**Joined Server:** <t:${joinedTs}:F> (<t:${joinedTs}:R>)`);
-                }
-                embed.addFields({ name: 'User Info', value: userInfoLines.join('\n') });
-            }
-        } catch (e) {
-            console.error('[SITE APPLY] user info fetch failed:', e.message);
-        }
-
         for (const [question, answer] of Object.entries(answers)) {
             embed.addFields({ name: String(question).slice(0, 256), value: String(answer || 'N/A').slice(0, 1024) });
         }
+
+        embed.addFields({ name: 'User Info', value: await buildUserInfoField(client, targetGuildId, user.id) });
 
         await channel.send({ embeds: [embed] });
         await db.setCommandCooldownDB(user.id, targetGuildId, 'staff_application', SUBMISSION_COOLDOWN_SECONDS);
@@ -460,25 +469,11 @@ app.post('/api/site/appeal', async (req, res) => {
             .setTitle(team === 'community' ? 'Predage Community Ban Appeal' : 'PredCord Ban Appeal')
             .setTimestamp();
 
-        try {
-            const guild = client.guilds.cache.get(targetGuildId);
-            const member = guild ? await guild.members.fetch(user.id).catch(() => null) : null;
-            if (member) {
-                const createdTs = Math.floor(member.user.createdTimestamp / 1000);
-                const joinedTs = member.joinedTimestamp ? Math.floor(member.joinedTimestamp / 1000) : null;
-                const userInfoLines = [`**Account Created:** <t:${createdTs}:F> (<t:${createdTs}:R>)`];
-                if (joinedTs) {
-                    userInfoLines.push(`**Joined Server:** <t:${joinedTs}:F> (<t:${joinedTs}:R>)`);
-                }
-                embed.addFields({ name: 'User Info', value: userInfoLines.join('\n') });
-            }
-        } catch (e) {
-            console.error('[SITE APPEAL] user info fetch failed:', e.message);
-        }
-
         for (const [question, answer] of Object.entries(answers)) {
             embed.addFields({ name: String(question).slice(0, 256), value: String(answer || 'N/A').slice(0, 1024) });
         }
+
+        embed.addFields({ name: 'User Info', value: await buildUserInfoField(client, targetGuildId, user.id) });
 
         await channel.send({ embeds: [embed] });
         await db.setCommandCooldownDB(user.id, targetGuildId, 'ban_appeal', SUBMISSION_COOLDOWN_SECONDS);
