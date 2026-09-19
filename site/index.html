@@ -168,21 +168,11 @@ header span {
     object-fit: cover;
     display: block;
     opacity: 0;
-    transform: scale(0.9);
     transition: opacity 1.2s ease;
-    -webkit-mask-image: radial-gradient(ellipse 68% 68% at 50% 50%, #000 55%, transparent 100%);
-    mask-image: radial-gradient(ellipse 68% 68% at 50% 50%, #000 55%, transparent 100%);
 }
 
 .hero-photo img.active {
     opacity: 1;
-}
-
-.hero-photo::after {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background: radial-gradient(ellipse 68% 68% at 50% 50%, rgba(10,10,15,0) 45%, rgba(10,10,15,0.6) 80%, rgba(10,10,15,0.95) 100%);
 }
 
 .hero-right {
