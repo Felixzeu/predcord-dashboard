@@ -177,12 +177,12 @@ header span {
 .hero-right {
     display: flex;
     flex-direction: column;
-    gap: 22px;
+    gap: 80px;
     min-width: 0;
 }
 
 .section-heading {
-    font-size: 20px;
+    font-size: 25px;
     font-weight: 800;
     margin-bottom: 10px;
     text-align: center;
@@ -208,6 +208,7 @@ header span {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 10px 20px;
+    margin-top: 20px;
 }
 
 .result-item {
@@ -381,6 +382,87 @@ header span {
 
 .result-detail-value a:hover {
     text-decoration: underline;
+}
+
+.more-year-tabs {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 16px;
+}
+
+.more-year-btn {
+    flex: 1;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+    font-size: 13px;
+    font-weight: 800;
+    padding: 8px 0;
+    border-radius: 8px;
+    cursor: pointer;
+    font-family: inherit;
+    transition: border-color 0.2s ease, color 0.2s ease, background 0.2s ease;
+}
+
+.more-year-btn.active {
+    color: var(--text);
+    border-color: var(--primary);
+    background: rgba(230, 126, 34, 0.14);
+}
+
+.more-results-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.more-result-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 9px 14px;
+    font-size: 12.5px;
+    font-weight: 700;
+    color: var(--text);
+    text-decoration: none;
+    transition: border-color 0.2s ease;
+}
+
+.more-result-row:hover {
+    border-color: rgba(255, 255, 255, 0.25);
+}
+
+.more-result-row:hover .more-result-link-icon {
+    color: var(--primary);
+}
+
+.more-result-name {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.more-result-link-icon {
+    width: 13px;
+    height: 13px;
+    flex-shrink: 0;
+    color: var(--text-dim);
+}
+
+.more-result-prize {
+    color: var(--primary);
+    font-weight: 800;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+.modal-box-wide {
+    max-width: 640px;
+    max-height: 62vh;
 }
 
 .socials-marquee-wrap {
@@ -640,7 +722,6 @@ header span {
 
         <div class="results-block">
             <h2 class="section-heading">Predage <span class="highlight">Results</span></h2>
-            <p class="results-subheading">X6 FNCS Grands Finals</p>
             <div class="results-grid" id="resultsGrid"></div>
             <div class="results-more-wrap">
                 <button class="results-more-btn" id="resultsMoreBtn">More</button>
@@ -787,6 +868,8 @@ header span {
     function openResultModal(index) {
         var r = RESULTS[index];
         if (!r || !resultModal || !resultModalContent) return;
+        var modalBoxEl = document.querySelector('.modal-box');
+        if (modalBoxEl) modalBoxEl.classList.remove('modal-box-wide');
         var teammatesHtml = r.teammates.map(function(t) {
             return '<a href="' + t.link + '" target="_blank" rel="noopener">' + t.name + '</a>';
         }).join(', ');
@@ -813,11 +896,87 @@ header span {
         });
     }
 
+    var MORE_TOURNAMENTS = [
+        { name: 'FNCS Division 1 Practice', link: 'https://fortnitetracker.com/events/epicgames_S42_FNCSDivisionalCup_Division1_EU?window=S42_FNCSDivisionalCup_Division1_Week3Final_EU&page=0#33', prize: '100€', year: 2026 },
+        { name: 'FNCS Division 1 Practice', link: 'https://fortnitetracker.com/events/epicgames_S42_FNCSDivisionalCup_Division1_EU?window=S42_FNCSDivisionalCup_Division1_Week1Final_EU&page=0#33', prize: '100€', year: 2026 },
+        { name: 'FNCS Global Championship Last Chance Finals', link: 'https://fortnitetracker.com/events/epicgames_S41_FNCSLastChanceMajor_EU?window=S41_FNCSLastChanceMajor_Final_EU&page=0#40', prize: '300€', year: 2026 },
+        { name: 'Reload Elite Series Finals', link: 'https://fortnitetracker.com/events/epicgames_S41_ReloadEliteSeries4Final_EU?window=S41_ReloadEliteSeries4Final_EU&page=0#19', prize: '500€', year: 2026 },
+        { name: 'FNCS Division 1 (Finals)', link: 'https://fortnitetracker.com/events/epicgames_S41_FNCSDivisionalCup_Division1_EU?window=S41_FNCSDivisionalCup_Division1_Week1Final_EU&page=0#8', prize: '400€', year: 2026 },
+        { name: 'Reload Duos Victory Cup', link: 'https://fortnitetracker.com/events/epicgames_S40_DuosReloadVictoryCup_EU?window=S40_DuosReloadVictoryCup_Round2_day2_EU&page=0#28', prize: '100€', year: 2026 },
+        { name: 'FNCS Division 1 (Finals)', link: 'https://fortnitetracker.com/events/epicgames_S40_FNCSDivisionalCup_Division1_EU?window=S40_FNCSDivisionalCup_Division1_Week3Final_EU&page=0#26', prize: '200€', year: 2026 },
+        { name: 'FNCS Division 1 (Finals)', link: 'https://fortnitetracker.com/events/epicgames_S40_FNCSDivisionalCup_Division1_EU?window=S40_FNCSDivisionalCup_Division1_Week1Final_EU&page=0#17', prize: '300€', year: 2026 },
+        { name: 'Solo Victory Cup', link: 'https://fortnitetracker.com/events/epicgames_S40_SoloVictoryCup_EU?window=S40_SoloVictoryCup_Round2_Day1_EU&page=0#98', prize: '100€', year: 2026 },
+        { name: 'Reload Elite Series Finals', link: 'https://fortnitetracker.com/events/epicgames_S39_ReloadEliteSeries2Final_EU?window=S39_ReloadEliteSeries2Final_EU&page=0#12', prize: '1000€', year: 2026 },
+        { name: 'FNCS Division 1 (Finals)', link: 'https://fortnitetracker.com/events/epicgames_S39_FNCSDivisionalCup_Division1_EU?window=S39_FNCSDivisionalCup_Division1_Week4Final_EU&page=0#11', prize: '300€', year: 2026 },
+        { name: 'FNCS Division 1 (Finals)', link: 'https://fortnitetracker.com/events/epicgames_S39_FNCSDivisionalCup_Division1_EU?window=S39_FNCSDivisionalCup_Division1_Week3Final_EU&page=0#13', prize: '300€', year: 2026 },
+        { name: 'FNCS Division 1 (Finals)', link: 'https://fortnitetracker.com/events/epicgames_S39_FNCSDivisionalCup_Division1_EU?window=S39_FNCSDivisionalCup_Division1_Week2Final_EU&page=0#12', prize: '300€', year: 2026 },
+        { name: 'FNCS Division 1 (Finals)', link: 'https://fortnitetracker.com/events/epicgames_S39_FNCSDivisionalCup_Division1_EU?window=S39_FNCSDivisionalCup_Division1_Week1Final_EU&page=0#15', prize: '300€', year: 2026 },
+        { name: 'Reload Duos Victory Cup', link: 'https://fortnitetracker.com/events/epicgames_S39_ReloadCashVictoryCup_Dec_EU?window=S39_ReloadCashVictoryCup_Event3Round2_EU_makegood&page=0#24', prize: '100€', year: 2025 },
+        { name: 'Duos Victory Cup', link: 'https://fortnitetracker.com/events/epicgames_S39_DuosVictoryCup_EU?window=S39_DuosVictoryCup_Round2_Day1_January_EU&page=0#6', prize: '100€', year: 2026 },
+        { name: '$1 Million Unreal Cup', link: 'https://fortnitetracker.com/events/epicgames_S39_1MillionUnrealCup_EU?window=S39_1MillionUnrealCup_EU&page=4#445', prize: '100€', year: 2025 },
+        { name: 'Squads Victory Cash Cup', link: 'https://fortnitetracker.com/events/epicgames_S38_SquadsVictoryCup_EU?window=S38_SquadsVictoryCup_Round2_Day2_EU&page=0#15', prize: '100€', year: 2025 },
+        { name: 'Duos Division 1 (Finals)', link: 'https://fortnitetracker.com/events/epicgames_S37_DuosDivisionalCup_Division1_EU?window=S37_DuosDivisionalCup_Division1_Week5Final_EU&page=0#25', prize: '200€', year: 2025 },
+        { name: 'Duos Division 1 (Finals)', link: 'https://fortnitetracker.com/events/epicgames_S37_DuosDivisionalCup_Division1_EU?window=S37_DuosDivisionalCup_Division1_Week2Final_EU&page=0#22', prize: '200€', year: 2025 },
+        { name: 'Fortnite Performance Evaluation', link: 'https://fortnitetracker.com/events/epicgames_S37_PerformanceEvaluation_EU?window=S37_PerformanceEvaluation_Event2Round2_EU&page=0#4', prize: '400€', year: 2025 },
+        { name: 'FNCS Major 3 Finals', link: 'https://fortnitetracker.com/events/epicgames_S36_FNCSMajor3_Final_EU?window=S36_FNCSMajor3_Final_Day1_EU&sm=S36_FNCSMajor3_Final_CumulativeLeaderboardDef&page=0#20', prize: '2900€', year: 2025 },
+        { name: 'FNCS Division 1 (Finals)', link: 'https://fortnitetracker.com/events/epicgames_S36_FNCSDivisionalCup_Division1_EU?window=S36_FNCSDivisionalCup_Division1_Week1Final_EU&page=0#17', prize: '300€', year: 2025 },
+        { name: 'FNCS Showdown', link: 'https://fortnitetracker.com/events/epicgames_S35_FNSCShowdown_EU?window=S35_FNCSShowdown_Event3Round2_EU&page=0#24', prize: '150€', year: 2025 },
+        { name: 'Solo Cash Cup', link: 'https://fortnitetracker.com/events/epicgames_S34_SoloCashCup_EU?window=S34_SoloCashCup_Event5Round2_EU&page=0#16', prize: '320€', year: 2025 },
+        { name: 'FNCS Division 1 (Finals)', link: 'https://fortnitetracker.com/events/epicgames_S34_FNCSDivisionalCup_Division1_EU?window=S34_FNCSDivisionalCup_Division1_Week4Final_EU_mg&page=0#11', prize: '600€', year: 2025 },
+        { name: 'FNCS Division 1 (Finals)', link: 'https://fortnitetracker.com/events/epicgames_S34_FNCSDivisionalCup_Division1_EU?window=S34_FNCSDivisionalCup_Division1_Week3Final_EU&page=0#11', prize: '600€', year: 2025 },
+        { name: 'FNCS Division 1 (Finals)', link: 'https://fortnitetracker.com/events/epicgames_S34_FNCSDivisionalCup_Division1_EU?window=S34_FNCSDivisionalCup_Division1_Week1Final_EU&page=0#8', prize: '1200€', year: 2025 },
+        { name: 'FNCS Major 1 Finals', link: 'https://fortnitetracker.com/events/epicgames_S33_FNCSMajor1_Final_EU?window=S33_FNCSMajor1_Final_Day1_EU&sm=S33_FNCSMajor1_Final_CumulativeLeaderboardDef&page=0#18', prize: '2900€', year: 2025 },
+        { name: 'FNCS Division 1 (Finals)', link: 'https://fortnitetracker.com/events/epicgames_S33_FNCSDivisionalCup_Division1_EU?window=S33_FNCSDivisionalCup_Division1_Week5Final_EU&page=0#14', prize: '600€', year: 2025 },
+        { name: 'FNCS Division 1 (Finals)', link: 'https://fortnitetracker.com/events/epicgames_S33_FNCSDivisionalCup_Division1_EU?window=S33_FNCSDivisionalCup_Division1_Week4Final_EU&page=0#17', prize: '300€', year: 2025 },
+        { name: 'FNCS Division 1 (Finals)', link: 'https://fortnitetracker.com/events/epicgames_S33_FNCSDivisionalCup_Division1_EU?window=S33_FNCSDivisionalCup_Division1_Week3Final_EU&page=0#15', prize: '600€', year: 2025 },
+        { name: 'FNCS Division 1 (Finals)', link: 'https://fortnitetracker.com/events/epicgames_S33_FNCSDivisionalCup_Division1_EU?window=S33_FNCSDivisionalCup_Division1_Week1Final_EU&page=0#5', prize: '1650€', year: 2025 }
+    ];
+
+    var LINK_ICON_SVG = '<svg class="more-result-link-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3h7v7"></path><path d="M10 14 21 3"></path><path d="M19 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h6"></path></svg>';
+
+    function renderMoreList(year) {
+        var list = document.getElementById('moreResultsList');
+        if (!list) return;
+        var items = MORE_TOURNAMENTS.filter(function(t) { return t.year === year; });
+        items.sort(function(a, b) {
+            var pa = parseInt(a.prize.replace(/[^0-9]/g, ''), 10);
+            var pb = parseInt(b.prize.replace(/[^0-9]/g, ''), 10);
+            return pb - pa;
+        });
+        list.innerHTML = items.map(function(t) {
+            return '<a class="more-result-row" href="' + t.link + '" target="_blank" rel="noopener">' +
+                '<span class="more-result-name">' + t.name + LINK_ICON_SVG + '</span>' +
+                '<span class="more-result-prize">' + t.prize + '</span>' +
+            '</a>';
+        }).join('');
+    }
+
+    var resultModalBox = document.querySelector('.modal-box');
+
     var resultsMoreBtn = document.getElementById('resultsMoreBtn');
     if (resultsMoreBtn) {
         resultsMoreBtn.addEventListener('click', function() {
             if (!resultModal || !resultModalContent) return;
-            resultModalContent.innerHTML = '<h3 class="modal-title">More Results</h3><p style="color: var(--text-dim); font-size: 13px;">Working....</p>';
+            if (resultModalBox) resultModalBox.classList.add('modal-box-wide');
+            var years = [2026, 2025];
+            resultModalContent.innerHTML = '<h3 class="modal-title">More Results</h3>' +
+                '<div class="more-year-tabs" id="moreYearTabs">' +
+                years.map(function(y, i) {
+                    return '<button class="more-year-btn' + (i === 0 ? ' active' : '') + '" data-year="' + y + '">' + y + '</button>';
+                }).join('') +
+                '</div>' +
+                '<div class="more-results-list" id="moreResultsList"></div>';
+            renderMoreList(years[0]);
+            var tabs = document.getElementById('moreYearTabs');
+            if (tabs) {
+                tabs.addEventListener('click', function(e) {
+                    var btn = e.target.closest('.more-year-btn');
+                    if (!btn) return;
+                    tabs.querySelectorAll('.more-year-btn').forEach(function(b) { b.classList.remove('active'); });
+                    btn.classList.add('active');
+                    renderMoreList(parseInt(btn.getAttribute('data-year'), 10));
+                });
+            }
             resultModal.classList.add('open');
         });
     }
