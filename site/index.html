@@ -312,16 +312,24 @@ header span {
     position: absolute;
     top: 16px;
     right: 16px;
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     background: none;
-    border: none;
+    border: 1px solid #ef4444;
+    border-radius: 8px;
     color: var(--text-dim);
-    font-size: 22px;
+    font-size: 20px;
     line-height: 1;
     cursor: pointer;
 }
 
 .modal-close:hover {
     color: var(--text);
+    border-color: #ef4444;
+    background: rgba(239, 68, 68, 0.12);
 }
 
 .modal-title {
@@ -815,11 +823,6 @@ header span {
     }
 
     if (resultModalClose) resultModalClose.addEventListener('click', closeResultModal);
-    if (resultModal) {
-        resultModal.addEventListener('click', function(e) {
-            if (e.target === resultModal) closeResultModal();
-        });
-    }
     document.addEventListener('keydown', function(e) {
         if (e.key === 'Escape' && resultModal && resultModal.classList.contains('open')) closeResultModal();
     });
