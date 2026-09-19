@@ -90,6 +90,7 @@ const BLACK = 0x000000;
 const PROJECTED_ERROR = 0xED4245;
 const RED = 0xED4245;
 const GOLD = 0xFFD700;
+const GREEN = 0x57F287;
 
 const SOCIAL_LINKS = {
     twitch: "https://www.twitch.tv/predagefn",
@@ -2651,6 +2652,123 @@ client.on('interactionCreate', async (interaction) => {
                 }, 5000);
                 return;
             }
+
+        if (interaction.isButton() && interaction.customId.startsWith('appeal_accept_')) {
+            if (!(await isStaffSafe(interaction.member))) {
+                return interaction.reply({ content: 'You do not have permission to use this button.', flags: 64 });
+            }
+
+            const targetUserId = interaction.customId.replace('appeal_accept_', '');
+            await interaction.deferUpdate();
+
+            try {
+                const targetUser = await client.users.fetch(targetUserId);
+                const dmEmbed = new EmbedBuilder()
+                    .setDescription('Your appeal has been accept, join back now https://discord.gg/UW7SsywQp6')
+                    .setColor(GREEN);
+                await targetUser.send({ embeds: [dmEmbed] }).catch(() => {});
+            } catch {}
+
+            const updatedEmbed = EmbedBuilder.from(interaction.message.embeds[0])
+                .setColor(GREEN)
+                .setFooter({ text: `Accepted by @${interaction.user.username}` });
+
+            const oldRow = interaction.message.components[0];
+            const newRow = new ActionRowBuilder().addComponents(
+                oldRow.components.map(c => {
+                    const btn = ButtonBuilder.from(c);
+                    if (!c.customId.startsWith('appeal_modlogs_')) btn.setDisabled(true);
+                    return btn;
+                })
+            );
+
+            await interaction.message.edit({ embeds: [updatedEmbed], components: [newRow] });
+            return;
+        }
+
+        if (interaction.isButton() && interaction.customId.startsWith('appeal_deny_')) {
+            if (!(await isStaffSafe(interaction.member))) {
+                return interaction.reply({ content: 'You do not have permission to use this button.', flags: 64 });
+            }
+
+            const targetUserId = interaction.customId.replace('appeal_deny_', '');
+
+            const reasonInput = new TextInputBuilder()
+                .setCustomId('deny_reason')
+                .setStyle(TextInputStyle.Paragraph)
+                .setPlaceholder('Explain why this appeal is being rejected...')
+                .setRequired(true)
+                .setMaxLength(1000);
+
+            const modal = new ModalBuilder()
+                .setCustomId(`appeal_deny_modal_${targetUserId}`)
+                .setTitle('Deny Appeal');
+
+            modal.addLabelComponents(
+                new LabelBuilder()
+                    .setLabel('Reason')
+                    .setTextInputComponent(reasonInput)
+            );
+
+            await interaction.showModal(modal);
+            return;
+        }
+
+        if (interaction.isModalSubmit() && interaction.customId.startsWith('appeal_deny_modal_')) {
+            if (!(await isStaffSafe(interaction.member))) {
+                return interaction.reply({ content: 'You do not have permission to do this.', flags: 64 });
+            }
+
+            const targetUserId = interaction.customId.replace('appeal_deny_modal_', '');
+            const reason = interaction.fields.getTextInputValue('deny_reason');
+
+            await interaction.deferUpdate();
+
+            try {
+                const targetUser = await client.users.fetch(targetUserId);
+                const dmEmbed = new EmbedBuilder()
+                    .setDescription(`Your appeal has been rejected, for: **${reason}**`)
+                    .setColor(RED);
+                await targetUser.send({ embeds: [dmEmbed] }).catch(() => {});
+            } catch {}
+
+            const updatedEmbed = EmbedBuilder.from(interaction.message.embeds[0])
+                .setColor(RED)
+                .addFields({ name: 'Reason', value: reason.slice(0, 1024) })
+                .setFooter({ text: `Rejected by @${interaction.user.username}` });
+
+            const oldRow = interaction.message.components[0];
+            const newRow = new ActionRowBuilder().addComponents(
+                oldRow.components.map(c => {
+                    const btn = ButtonBuilder.from(c);
+                    if (!c.customId.startsWith('appeal_modlogs_')) btn.setDisabled(true);
+                    return btn;
+                })
+            );
+
+            await interaction.message.edit({ embeds: [updatedEmbed], components: [newRow] });
+            return;
+        }
+
+        if (interaction.isButton() && interaction.customId.startsWith('appeal_modlogs_')) {
+            if (!(await isStaffSafe(interaction.member))) {
+                return interaction.reply({ content: 'You do not have permission to use this button.', flags: 64 });
+            }
+
+            const targetUserId = interaction.customId.replace('appeal_modlogs_', '');
+            await interaction.deferReply({ flags: 64 });
+
+            let username = `Unknown (${targetUserId})`;
+            try {
+                const u = await client.users.fetch(targetUserId);
+                username = u.username;
+            } catch {}
+
+            const text = await formatModerationHistory(targetUserId, interaction.guild.id, username, 1);
+            const embed = new EmbedBuilder().setDescription(text).setColor(COLORS.INFO);
+            await interaction.editReply({ embeds: [embed] });
+            return;
+        }
     } catch (error) {
         logCrash('INTERACTION_HANDLER', error, { customId: interaction?.customId });
         try {
