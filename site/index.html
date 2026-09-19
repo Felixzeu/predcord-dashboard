@@ -152,7 +152,7 @@ header span {
     grid-template-columns: 1fr 1fr;
     gap: 32px;
     padding: 32px 40px;
-    align-items: start;
+    align-items: stretch;
 }
 
 .hero-photo {
@@ -185,6 +185,7 @@ header span {
     font-size: 20px;
     font-weight: 800;
     margin-bottom: 10px;
+    text-align: center;
 }
 
 .section-heading .highlight {
@@ -218,6 +219,73 @@ header span {
 
 .result-item:hover {
     text-decoration: underline;
+}
+
+.socials-marquee {
+    margin-top: 6px;
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    align-items: center;
+    overflow: hidden;
+    -webkit-mask-image: linear-gradient(to right, transparent, #000 8%, #000 92%, transparent);
+    mask-image: linear-gradient(to right, transparent, #000 8%, #000 92%, transparent);
+}
+
+.socials-marquee-track {
+    display: flex;
+    gap: 14px;
+    width: max-content;
+    animation: marqueeScroll 20s linear infinite;
+}
+
+.socials-marquee:hover .socials-marquee-track {
+    animation-play-state: paused;
+}
+
+@keyframes marqueeScroll {
+    from { transform: translateX(0); }
+    to { transform: translateX(-50%); }
+}
+
+.social-card {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 10px 16px;
+    flex-shrink: 0;
+    text-decoration: none;
+    transition: border-color 0.2s ease, transform 0.2s ease;
+}
+
+.social-card:hover {
+    border-color: rgba(255, 255, 255, 0.25);
+    transform: translateY(-2px);
+}
+
+.social-card .social-icon {
+    width: 34px;
+    height: 34px;
+}
+
+.social-card-text {
+    display: flex;
+    flex-direction: column;
+    white-space: nowrap;
+}
+
+.social-card-name {
+    font-size: 12.5px;
+    font-weight: 800;
+    color: var(--text);
+}
+
+.social-card-followers {
+    font-size: 11px;
+    color: var(--text-dim);
 }
 
 .servers-section {
@@ -313,51 +381,6 @@ header span {
     margin: 0 auto;
 }
 
-.socials-bar {
-    border-top: 1px solid var(--border);
-    background: var(--bg-bar);
-    padding: 18px 40px;
-    flex-shrink: 0;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-}
-
-.socials-label {
-    font-size: 13px;
-    font-weight: 700;
-    letter-spacing: 1px;
-    text-transform: uppercase;
-    color: var(--text-dim);
-    margin-bottom: 14px;
-    text-align: center;
-}
-
-.socials-row {
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: center;
-    gap: 18px;
-}
-
-.social-item {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    text-decoration: none;
-    color: inherit;
-    padding: 6px;
-    border-radius: 50%;
-    border: 1px solid transparent;
-    transition: border-color 0.15s ease, background 0.15s ease, transform 0.15s ease;
-}
-
-.social-item:hover {
-    border-color: rgba(255, 255, 255, 0.5);
-    background: rgba(255, 255, 255, 0.04);
-    transform: scale(1.15);
-}
-
 .social-icon {
     width: 40px;
     height: 40px;
@@ -426,6 +449,10 @@ header span {
                 <a class="result-item" href="https://liquipedia.net/fortnite/Chapter_5/Season_4/Duos_Cash_Cup/Week_2/Europe" target="_blank" rel="noopener">Duos Cash Cup (Top 2)</a>
             </div>
         </div>
+
+        <div class="socials-marquee" id="socialsMarquee">
+            <div class="socials-marquee-track" id="socialsMarqueeTrack"></div>
+        </div>
     </div>
 </section>
 
@@ -455,41 +482,6 @@ header span {
                 <p>PredCord was created to give Predage's community the best practice experience possible. It's run by the main moderators, and it's where the customs get hosted, Reload, Battle Royale, all built around the current competitive format. If you're looking to sharpen your gameplay and scrim with people who take it seriously, this is the place to be.</p>
             </div>
         </div>
-    </div>
-</section>
-
-<section class="socials-bar">
-    <div class="socials-label">Predage Socials</div>
-    <div class="socials-row">
-        <a class="social-item" href="https://www.twitch.tv/predagefn" target="_blank" rel="noopener" title="Twitch">
-            <span class="social-icon" style="background:#9146FF;">
-                <svg viewBox="0 0 24 24" fill="#fff"><path d="M4 2 2.5 6v14h5V22l3.5-2h4L21 14V2H4Zm15 11-3 3h-4l-3 2v-2H6V4h13v9Z"/><path d="M15.5 6.5h2V12h-2zM10.5 6.5h2V12h-2z"/></svg>
-            </span>
-        </a>
-
-        <a class="social-item" href="https://www.youtube.com/@predagefn" target="_blank" rel="noopener" title="YouTube">
-            <span class="social-icon" style="background:#FF0000;">
-                <svg viewBox="0 0 24 24" fill="#fff"><path d="M22 12s0-3.2-.4-4.7c-.2-.9-.9-1.6-1.8-1.8C18.2 5 12 5 12 5s-6.2 0-7.8.5c-.9.2-1.6.9-1.8 1.8C2 8.8 2 12 2 12s0 3.2.4 4.7c.2.9.9 1.6 1.8 1.8C5.8 19 12 19 12 19s6.2 0 7.8-.5c.9-.2 1.6-.9 1.8-1.8.4-1.5.4-4.7.4-4.7ZM10 15V9l5.2 3-5.2 3Z"/></svg>
-            </span>
-        </a>
-
-        <a class="social-item" href="https://www.tiktok.com/@predagefn" target="_blank" rel="noopener" title="TikTok">
-            <span class="social-icon" style="background:#000;">
-                <svg viewBox="0 0 24 24" fill="#fff"><path d="M16.6 5.8c-.9-.9-1.4-2.1-1.4-3.4h-3.1v13.7c0 1.5-1.2 2.7-2.7 2.7s-2.7-1.2-2.7-2.7 1.2-2.7 2.7-2.7c.3 0 .6 0 .8.1v-3.2c-.3 0-.5-.1-.8-.1-3.3 0-5.9 2.7-5.9 5.9s2.7 5.9 5.9 5.9 5.9-2.7 5.9-5.9V9.2c1.2.9 2.7 1.4 4.3 1.4V7.5c-1 0-1.9-.3-2.7-.9-.4-.3-.9-.5-1.3-.8Z"/></svg>
-            </span>
-        </a>
-
-        <a class="social-item" href="https://x.com/Predage1" target="_blank" rel="noopener" title="Twitter/X">
-            <span class="social-icon" style="background:#000;">
-                <svg viewBox="0 0 24 24" fill="#fff"><path d="M18.9 3H21l-6.6 7.5L22.2 21h-6.8l-5.3-6.9L4 21H1.8l7-8-7.6-10h7l4.8 6.3L18.9 3Zm-1.2 16.2h1.9L7.4 4.7H5.4l12.3 14.5Z"/></svg>
-            </span>
-        </a>
-
-        <a class="social-item" href="https://www.instagram.com/predagefn/" target="_blank" rel="noopener" title="Instagram">
-            <span class="social-icon" style="background:linear-gradient(135deg,#f58529,#dd2a7b,#8134af,#515bd4);">
-                <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.2" cy="6.8" r="1"/></svg>
-            </span>
-        </a>
     </div>
 </section>
 
@@ -526,6 +518,28 @@ header span {
             window.location.href = '/site-auth/discord?next=' + encodeURIComponent(window.location.pathname);
         }
     });
+
+    var SOCIALS = [
+        { name: 'Twitch', followers: '120K+ Followers', href: 'https://www.twitch.tv/predagefn', bg: '#9146FF', svg: '<svg viewBox="0 0 24 24" fill="#fff"><path d="M4 2 2.5 6v14h5V22l3.5-2h4L21 14V2H4Zm15 11-3 3h-4l-3 2v-2H6V4h13v9Z"/><path d="M15.5 6.5h2V12h-2zM10.5 6.5h2V12h-2z"/></svg>' },
+        { name: 'YouTube', followers: '50K+ Subscribers', href: 'https://www.youtube.com/@predagefn', bg: '#FF0000', svg: '<svg viewBox="0 0 24 24" fill="#fff"><path d="M22 12s0-3.2-.4-4.7c-.2-.9-.9-1.6-1.8-1.8C18.2 5 12 5 12 5s-6.2 0-7.8.5c-.9.2-1.6.9-1.8 1.8C2 8.8 2 12 2 12s0 3.2.4 4.7c.2.9.9 1.6 1.8 1.8C5.8 19 12 19 12 19s6.2 0 7.8-.5c.9-.2 1.6-.9 1.8-1.8.4-1.5.4-4.7.4-4.7ZM10 15V9l5.2 3-5.2 3Z"/></svg>' },
+        { name: 'TikTok', followers: '80K+ Followers', href: 'https://www.tiktok.com/@predagefn', bg: '#000', svg: '<svg viewBox="0 0 24 24" fill="#fff"><path d="M16.6 5.8c-.9-.9-1.4-2.1-1.4-3.4h-3.1v13.7c0 1.5-1.2 2.7-2.7 2.7s-2.7-1.2-2.7-2.7 1.2-2.7 2.7-2.7c.3 0 .6 0 .8.1v-3.2c-.3 0-.5-.1-.8-.1-3.3 0-5.9 2.7-5.9 5.9s2.7 5.9 5.9 5.9 5.9-2.7 5.9-5.9V9.2c1.2.9 2.7 1.4 4.3 1.4V7.5c-1 0-1.9-.3-2.7-.9-.4-.3-.9-.5-1.3-.8Z"/></svg>' },
+        { name: 'Twitter/X', followers: '30K+ Followers', href: 'https://x.com/Predage1', bg: '#000', svg: '<svg viewBox="0 0 24 24" fill="#fff"><path d="M18.9 3H21l-6.6 7.5L22.2 21h-6.8l-5.3-6.9L4 21H1.8l7-8-7.6-10h7l4.8 6.3L18.9 3Zm-1.2 16.2h1.9L7.4 4.7H5.4l12.3 14.5Z"/></svg>' },
+        { name: 'Instagram', followers: '40K+ Followers', href: 'https://www.instagram.com/predagefn/', bg: 'linear-gradient(135deg,#f58529,#dd2a7b,#8134af,#515bd4)', svg: '<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.2" cy="6.8" r="1"/></svg>' }
+    ];
+
+    var marqueeTrack = document.getElementById('socialsMarqueeTrack');
+    if (marqueeTrack) {
+        var cardsHtml = SOCIALS.map(function(s) {
+            return '<a class="social-card" href="' + s.href + '" target="_blank" rel="noopener">' +
+                '<span class="social-icon" style="background:' + s.bg + ';">' + s.svg + '</span>' +
+                '<span class="social-card-text">' +
+                    '<span class="social-card-name">' + s.name + '</span>' +
+                    '<span class="social-card-followers">' + s.followers + '</span>' +
+                '</span>' +
+            '</a>';
+        }).join('');
+        marqueeTrack.innerHTML = cardsHtml + cardsHtml;
+    }
 
     var slides = document.querySelectorAll('.hero-photo img');
     if (slides.length >= 2) {
