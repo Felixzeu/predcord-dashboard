@@ -5,7 +5,7 @@ const bcrypt = require('bcryptjs');
 const passport = require('passport');
 const DiscordStrategy = require('passport-discord').Strategy;
 const path = require('path');
-const { ChannelType, EmbedBuilder } = require('discord.js');
+const { ChannelType, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
 require('dotenv').config();
 
 require('./index.js');
@@ -417,8 +417,7 @@ app.post('/api/site/apply', async (req, res) => {
         const embed = new EmbedBuilder()
             .setColor(team === 'community' ? 0xE67E22 : 0x38BDF8)
             .setAuthor({ name: `${user.username} (${user.id})`, iconURL: avatarUrl })
-            .setTitle(team === 'community' ? 'Predage Community Staff Application' : 'PredCord Staff Application')
-            .setTimestamp();
+            .setTitle(team === 'community' ? 'Predage Community Staff Application' : 'PredCord Staff Application');
 
         for (const [question, answer] of Object.entries(answers)) {
             embed.addFields({ name: String(question).slice(0, 256), value: String(answer || 'N/A').slice(0, 1024) });
@@ -466,8 +465,7 @@ app.post('/api/site/appeal', async (req, res) => {
         const embed = new EmbedBuilder()
             .setColor(team === 'community' ? 0xE67E22 : 0x38BDF8)
             .setAuthor({ name: `${user.username} (${user.id})`, iconURL: avatarUrl })
-            .setTitle(team === 'community' ? 'Predage Community Ban Appeal' : 'PredCord Ban Appeal')
-            .setTimestamp();
+            .setTitle(team === 'community' ? 'Predage Community Ban Appeal' : 'PredCord Ban Appeal');
 
         for (const [question, answer] of Object.entries(answers)) {
             embed.addFields({ name: String(question).slice(0, 256), value: String(answer || 'N/A').slice(0, 1024) });
@@ -475,7 +473,13 @@ app.post('/api/site/appeal', async (req, res) => {
 
         embed.addFields({ name: 'User Info', value: await buildUserInfoField(client, targetGuildId, user.id) });
 
-        await channel.send({ embeds: [embed] });
+        const actionRow = new ActionRowBuilder().addComponents(
+            new ButtonBuilder().setCustomId(`appeal_accept_${user.id}`).setLabel('Accept').setStyle(ButtonStyle.Success),
+            new ButtonBuilder().setCustomId(`appeal_deny_${user.id}`).setLabel('Deny').setStyle(ButtonStyle.Danger),
+            new ButtonBuilder().setCustomId(`appeal_modlogs_${user.id}`).setLabel('Modlogs').setStyle(ButtonStyle.Secondary)
+        );
+
+        await channel.send({ embeds: [embed], components: [actionRow] });
         await db.setCommandCooldownDB(user.id, targetGuildId, 'ban_appeal', SUBMISSION_COOLDOWN_SECONDS);
         res.json({ success: true });
     } catch (e) {
