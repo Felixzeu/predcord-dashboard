@@ -104,11 +104,43 @@ header span {
     display: none;
 }
 
-.page {
+.page-with-sponsors {
+    display: flex;
     flex: 1;
+    justify-content: center;
+    align-items: flex-start;
+    gap: 24px;
+    width: 100%;
+    flex-wrap: wrap;
+}
+
+.sponsor-banner {
+    flex-shrink: 0;
+    display: block;
+    width: 180px;
+    margin-top: 56px;
+    border-radius: 12px;
+    overflow: hidden;
+    border: 1px solid var(--border);
+    transition: transform 0.2s ease, border-color 0.2s ease;
+}
+
+.sponsor-banner:hover {
+    transform: translateY(-3px);
+    border-color: rgba(255, 255, 255, 0.25);
+}
+
+.sponsor-banner img {
+    display: block;
+    width: 100%;
+    height: auto;
+}
+
+.page {
+    flex: 1 1 auto;
     max-width: 960px;
     width: 100%;
-    margin: 0 auto;
+    margin: 0;
     padding: 56px 40px 80px;
 }
 
@@ -414,6 +446,10 @@ header span {
     .header-nav { justify-content: center; gap: 22px; flex-wrap: wrap; }
 }
 
+@media (max-width: 1180px) {
+    .sponsor-banner { display: none; }
+}
+
 .socials-bar {
     border-top: 1px solid var(--border);
     background: var(--bg-bar);
@@ -492,7 +528,12 @@ header span {
     </div>
 </header>
 
-<div class="page">
+<div class="page-with-sponsors">
+    <a class="sponsor-banner" href="https://www.prozis.com/it/en/?ot=AFFIT1608" target="_blank" rel="noopener sponsored">
+        <img src="/images/prozis-banner.jpg" alt="Prozis - 10% off with code PREDAGE">
+    </a>
+
+    <div class="page">
     <h1 class="page-title">Appeal Your <span class="highlight">Bans</span></h1>
 
     <div class="team-list">
@@ -517,6 +558,11 @@ header span {
         <p>Explain your situation in detail: tell us what happened, why you think you deserve a second chance, and what you plan to do differently going forward so it doesn't happen again. Your request will be reviewed by the staff team, who'll take everything you share into account along with the full context.</p>
         <p>Be honest, respectful, and as detailed as you can — a well-explained request makes it a lot easier for staff to understand your side and make a fair call.</p>
     </div>
+    </div>
+
+    <a class="sponsor-banner" href="https://www.prozis.com/it/en/?ot=AFFIT1608" target="_blank" rel="noopener sponsored">
+        <img src="/images/prozis-banner.jpg" alt="Prozis - 10% off with code PREDAGE">
+    </a>
 </div>
 
 <section class="socials-bar">
