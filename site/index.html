@@ -291,51 +291,6 @@ header span {
     color: var(--text-dim);
 }
 
-.socials-bar {
-    border-top: 1px solid var(--border);
-    background: var(--bg-bar);
-    padding: 18px 40px;
-    flex-shrink: 0;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-}
-
-.socials-label {
-    font-size: 13px;
-    font-weight: 700;
-    letter-spacing: 1px;
-    text-transform: uppercase;
-    color: var(--text-dim);
-    margin-bottom: 14px;
-    text-align: center;
-}
-
-.socials-row {
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: center;
-    gap: 18px;
-}
-
-.social-item {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    text-decoration: none;
-    color: inherit;
-    padding: 6px;
-    border-radius: 50%;
-    border: 1px solid transparent;
-    transition: border-color 0.15s ease, background 0.15s ease, transform 0.15s ease;
-}
-
-.social-item:hover {
-    border-color: rgba(255, 255, 255, 0.5);
-    background: rgba(255, 255, 255, 0.04);
-    transform: scale(1.15);
-}
-
 .servers-section {
     padding: 16px 40px 48px;
     border-top: 1px solid var(--border);
@@ -533,41 +488,6 @@ header span {
     </div>
 </section>
 
-<section class="socials-bar">
-    <div class="socials-label">Predage Socials</div>
-    <div class="socials-row">
-        <a class="social-item" href="https://www.twitch.tv/predagefn" target="_blank" rel="noopener" title="Twitch">
-            <span class="social-icon" style="background:#9146FF;">
-                <svg viewBox="0 0 24 24" fill="#fff"><path d="M4 2 2.5 6v14h5V22l3.5-2h4L21 14V2H4Zm15 11-3 3h-4l-3 2v-2H6V4h13v9Z"/><path d="M15.5 6.5h2V12h-2zM10.5 6.5h2V12h-2z"/></svg>
-            </span>
-        </a>
-
-        <a class="social-item" href="https://www.youtube.com/@predagefn" target="_blank" rel="noopener" title="YouTube">
-            <span class="social-icon" style="background:#FF0000;">
-                <svg viewBox="0 0 24 24" fill="#fff"><path d="M22 12s0-3.2-.4-4.7c-.2-.9-.9-1.6-1.8-1.8C18.2 5 12 5 12 5s-6.2 0-7.8.5c-.9.2-1.6.9-1.8 1.8C2 8.8 2 12 2 12s0 3.2.4 4.7c.2.9.9 1.6 1.8 1.8C5.8 19 12 19 12 19s6.2 0 7.8-.5c.9-.2 1.6-.9 1.8-1.8.4-1.5.4-4.7.4-4.7ZM10 15V9l5.2 3-5.2 3Z"/></svg>
-            </span>
-        </a>
-
-        <a class="social-item" href="https://www.tiktok.com/@predagefn" target="_blank" rel="noopener" title="TikTok">
-            <span class="social-icon" style="background:#000;">
-                <svg viewBox="0 0 24 24" fill="#fff"><path d="M16.6 5.8c-.9-.9-1.4-2.1-1.4-3.4h-3.1v13.7c0 1.5-1.2 2.7-2.7 2.7s-2.7-1.2-2.7-2.7 1.2-2.7 2.7-2.7c.3 0 .6 0 .8.1v-3.2c-.3 0-.5-.1-.8-.1-3.3 0-5.9 2.7-5.9 5.9s2.7 5.9 5.9 5.9 5.9-2.7 5.9-5.9V9.2c1.2.9 2.7 1.4 4.3 1.4V7.5c-1 0-1.9-.3-2.7-.9-.4-.3-.9-.5-1.3-.8Z"/></svg>
-            </span>
-        </a>
-
-        <a class="social-item" href="https://x.com/Predage1" target="_blank" rel="noopener" title="Twitter/X">
-            <span class="social-icon" style="background:#000;">
-                <svg viewBox="0 0 24 24" fill="#fff"><path d="M18.9 3H21l-6.6 7.5L22.2 21h-6.8l-5.3-6.9L4 21H1.8l7-8-7.6-10h7l4.8 6.3L18.9 3Zm-1.2 16.2h1.9L7.4 4.7H5.4l12.3 14.5Z"/></svg>
-            </span>
-        </a>
-
-        <a class="social-item" href="https://www.instagram.com/predagefn/" target="_blank" rel="noopener" title="Instagram">
-            <span class="social-icon" style="background:linear-gradient(135deg,#f58529,#dd2a7b,#8134af,#515bd4);">
-                <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.2" cy="6.8" r="1"/></svg>
-            </span>
-        </a>
-    </div>
-</section>
-
 <script>
 (function() {
     var currentUser = null;
@@ -603,11 +523,11 @@ header span {
     });
 
     var SOCIALS = [
-        { name: 'Twitch', followers: '120K+ Followers', href: 'https://www.twitch.tv/predagefn', bg: '#9146FF', svg: '<svg viewBox="0 0 24 24" fill="#fff"><path d="M4 2 2.5 6v14h5V22l3.5-2h4L21 14V2H4Zm15 11-3 3h-4l-3 2v-2H6V4h13v9Z"/><path d="M15.5 6.5h2V12h-2zM10.5 6.5h2V12h-2z"/></svg>' },
-        { name: 'YouTube', followers: '50K+ Subscribers', href: 'https://www.youtube.com/@predagefn', bg: '#FF0000', svg: '<svg viewBox="0 0 24 24" fill="#fff"><path d="M22 12s0-3.2-.4-4.7c-.2-.9-.9-1.6-1.8-1.8C18.2 5 12 5 12 5s-6.2 0-7.8.5c-.9.2-1.6.9-1.8 1.8C2 8.8 2 12 2 12s0 3.2.4 4.7c.2.9.9 1.6 1.8 1.8C5.8 19 12 19 12 19s6.2 0 7.8-.5c.9-.2 1.6-.9 1.8-1.8.4-1.5.4-4.7.4-4.7ZM10 15V9l5.2 3-5.2 3Z"/></svg>' },
-        { name: 'TikTok', followers: '80K+ Followers', href: 'https://www.tiktok.com/@predagefn', bg: '#000', svg: '<svg viewBox="0 0 24 24" fill="#fff"><path d="M16.6 5.8c-.9-.9-1.4-2.1-1.4-3.4h-3.1v13.7c0 1.5-1.2 2.7-2.7 2.7s-2.7-1.2-2.7-2.7 1.2-2.7 2.7-2.7c.3 0 .6 0 .8.1v-3.2c-.3 0-.5-.1-.8-.1-3.3 0-5.9 2.7-5.9 5.9s2.7 5.9 5.9 5.9 5.9-2.7 5.9-5.9V9.2c1.2.9 2.7 1.4 4.3 1.4V7.5c-1 0-1.9-.3-2.7-.9-.4-.3-.9-.5-1.3-.8Z"/></svg>' },
-        { name: 'Twitter/X', followers: '30K+ Followers', href: 'https://x.com/Predage1', bg: '#000', svg: '<svg viewBox="0 0 24 24" fill="#fff"><path d="M18.9 3H21l-6.6 7.5L22.2 21h-6.8l-5.3-6.9L4 21H1.8l7-8-7.6-10h7l4.8 6.3L18.9 3Zm-1.2 16.2h1.9L7.4 4.7H5.4l12.3 14.5Z"/></svg>' },
-        { name: 'Instagram', followers: '40K+ Followers', href: 'https://www.instagram.com/predagefn/', bg: 'linear-gradient(135deg,#f58529,#dd2a7b,#8134af,#515bd4)', svg: '<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.2" cy="6.8" r="1"/></svg>' }
+        { name: 'Twitch', followers: '130K+ Followers', href: 'https://www.twitch.tv/predagefn', bg: '#9146FF', svg: '<svg viewBox="0 0 24 24" fill="#fff"><path d="M4 2 2.5 6v14h5V22l3.5-2h4L21 14V2H4Zm15 11-3 3h-4l-3 2v-2H6V4h13v9Z"/><path d="M15.5 6.5h2V12h-2zM10.5 6.5h2V12h-2z"/></svg>' },
+        { name: 'YouTube', followers: '15K+ Subscribers', href: 'https://www.youtube.com/@predagefn', bg: '#FF0000', svg: '<svg viewBox="0 0 24 24" fill="#fff"><path d="M22 12s0-3.2-.4-4.7c-.2-.9-.9-1.6-1.8-1.8C18.2 5 12 5 12 5s-6.2 0-7.8.5c-.9.2-1.6.9-1.8 1.8C2 8.8 2 12 2 12s0 3.2.4 4.7c.2.9.9 1.6 1.8 1.8C5.8 19 12 19 12 19s6.2 0 7.8-.5c.9-.2 1.6-.9 1.8-1.8.4-1.5.4-4.7.4-4.7ZM10 15V9l5.2 3-5.2 3Z"/></svg>' },
+        { name: 'TikTok', followers: '55K+ Followers', href: 'https://www.tiktok.com/@predagefn', bg: '#000', svg: '<svg viewBox="0 0 24 24" fill="#fff"><path d="M16.6 5.8c-.9-.9-1.4-2.1-1.4-3.4h-3.1v13.7c0 1.5-1.2 2.7-2.7 2.7s-2.7-1.2-2.7-2.7 1.2-2.7 2.7-2.7c.3 0 .6 0 .8.1v-3.2c-.3 0-.5-.1-.8-.1-3.3 0-5.9 2.7-5.9 5.9s2.7 5.9 5.9 5.9 5.9-2.7 5.9-5.9V9.2c1.2.9 2.7 1.4 4.3 1.4V7.5c-1 0-1.9-.3-2.7-.9-.4-.3-.9-.5-1.3-.8Z"/></svg>' },
+        { name: 'Twitter/X', followers: '25K+ Followers', href: 'https://x.com/Predage1', bg: '#000', svg: '<svg viewBox="0 0 24 24" fill="#fff"><path d="M18.9 3H21l-6.6 7.5L22.2 21h-6.8l-5.3-6.9L4 21H1.8l7-8-7.6-10h7l4.8 6.3L18.9 3Zm-1.2 16.2h1.9L7.4 4.7H5.4l12.3 14.5Z"/></svg>' },
+        { name: 'Instagram', followers: '20K+ Followers', href: 'https://www.instagram.com/predagefn/', bg: 'linear-gradient(135deg,#f58529,#dd2a7b,#8134af,#515bd4)', svg: '<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.2" cy="6.8" r="1"/></svg>' }
     ];
 
     var marqueeTrack = document.getElementById('socialsMarqueeTrack');
