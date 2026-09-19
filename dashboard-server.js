@@ -38,6 +38,7 @@ const MAIN_GUILD_ID = process.env.MAIN_GUILD_ID;
 const COMMUNITY_GUILD_ID = process.env.COMMUNITY_GUILD_ID;
 
 const MAX_BASE_COMMANDS = 10;
+const SUBMISSION_COOLDOWN_SECONDS = 36 * 60 * 60;
 
 const app = express();
 const PORT = process.env.PORT || 10000;
@@ -374,14 +375,18 @@ app.post('/api/site/apply', async (req, res) => {
         const targetGuildId = team === 'community' ? COMMUNITY_GUILD_ID : MAIN_GUILD_ID;
         if (!targetGuildId) return res.status(503).json({ error: 'guild_not_configured' });
 
+        const user = req.session.siteUser;
+        const cooldown = await db.getCommandCooldownDB(user.id, targetGuildId, 'staff_application');
+        if (cooldown) {
+            return res.status(429).json({ error: 'cooldown', retryAt: cooldown.expiresAt });
+        }
+
         const guildConfig = await db.getGuildConfigDB(targetGuildId);
         const channelId = guildConfig.staffApplicationChannelId;
         if (!channelId) return res.status(503).json({ error: 'channel_not_configured' });
 
         const channel = await client.channels.fetch(channelId);
         if (!channel) return res.status(503).json({ error: 'channel_not_found' });
-
-        const user = req.session.siteUser;
         const avatarUrl = user.avatar
             ? `https://cdn.discordapp.com/avatars/${user.id}/${user.avatar}.png?size=128`
             : `https://cdn.discordapp.com/embed/avatars/${(parseInt(user.discriminator, 10) || 0) % 5}.png`;
@@ -413,6 +418,70 @@ app.post('/api/site/apply', async (req, res) => {
         }
 
         await channel.send({ embeds: [embed] });
+        await db.setCommandCooldownDB(user.id, targetGuildId, 'staff_application', SUBMISSION_COOLDOWN_SECONDS);
+        res.json({ success: true });
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
+app.post('/api/site/appeal', async (req, res) => {
+    if (!req.session.siteUser) return res.status(401).json({ error: 'not_authenticated' });
+
+    const { team, answers } = req.body;
+    if (!['community', 'predcord'].includes(team)) return res.status(400).json({ error: 'invalid_team' });
+    if (!answers || typeof answers !== 'object') return res.status(400).json({ error: 'invalid_answers' });
+
+    try {
+        const { client, db } = global.PredCord;
+        const targetGuildId = team === 'community' ? COMMUNITY_GUILD_ID : MAIN_GUILD_ID;
+        if (!targetGuildId) return res.status(503).json({ error: 'guild_not_configured' });
+
+        const user = req.session.siteUser;
+        const cooldown = await db.getCommandCooldownDB(user.id, targetGuildId, 'ban_appeal');
+        if (cooldown) {
+            return res.status(429).json({ error: 'cooldown', retryAt: cooldown.expiresAt });
+        }
+
+        const guildConfig = await db.getGuildConfigDB(targetGuildId);
+        const channelId = guildConfig.banAppealChannelId;
+        if (!channelId) return res.status(503).json({ error: 'channel_not_configured' });
+
+        const channel = await client.channels.fetch(channelId);
+        if (!channel) return res.status(503).json({ error: 'channel_not_found' });
+
+        const avatarUrl = user.avatar
+            ? `https://cdn.discordapp.com/avatars/${user.id}/${user.avatar}.png?size=128`
+            : `https://cdn.discordapp.com/embed/avatars/${(parseInt(user.discriminator, 10) || 0) % 5}.png`;
+
+        const embed = new EmbedBuilder()
+            .setColor(team === 'community' ? 0xE67E22 : 0x38BDF8)
+            .setAuthor({ name: `${user.username} (${user.id})`, iconURL: avatarUrl })
+            .setTitle(team === 'community' ? 'Predage Community Ban Appeal' : 'PredCord Ban Appeal')
+            .setTimestamp();
+
+        try {
+            const guild = client.guilds.cache.get(targetGuildId);
+            const member = guild ? await guild.members.fetch(user.id).catch(() => null) : null;
+            if (member) {
+                const createdTs = Math.floor(member.user.createdTimestamp / 1000);
+                const joinedTs = member.joinedTimestamp ? Math.floor(member.joinedTimestamp / 1000) : null;
+                const userInfoLines = [`**Account Created:** <t:${createdTs}:F> (<t:${createdTs}:R>)`];
+                if (joinedTs) {
+                    userInfoLines.push(`**Joined Server:** <t:${joinedTs}:F> (<t:${joinedTs}:R>)`);
+                }
+                embed.addFields({ name: 'User Info', value: userInfoLines.join('\n') });
+            }
+        } catch (e) {
+            console.error('[SITE APPEAL] user info fetch failed:', e.message);
+        }
+
+        for (const [question, answer] of Object.entries(answers)) {
+            embed.addFields({ name: String(question).slice(0, 256), value: String(answer || 'N/A').slice(0, 1024) });
+        }
+
+        await channel.send({ embeds: [embed] });
+        await db.setCommandCooldownDB(user.id, targetGuildId, 'ban_appeal', SUBMISSION_COOLDOWN_SECONDS);
         res.json({ success: true });
     } catch (e) {
         res.status(500).json({ error: e.message });
@@ -729,6 +798,78 @@ app.post('/api/staff-app-config', requireAuth, async (req, res) => {
         }
         if (MAIN_GUILD_ID && predcordChannelId !== undefined) {
             await db.saveGuildConfigDB(MAIN_GUILD_ID, 'staffApplicationChannelId', predcordChannelId || null);
+        }
+
+        res.json({ success: true });
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
+app.get('/api/ban-appeal-config', requireAuth, async (req, res) => {
+    try {
+        if (!isOwner(req) && !isDashboardAdmin(req)) {
+            return res.status(403).json({ error: 'Access Denied' });
+        }
+
+        const { client, db } = global.PredCord;
+
+        async function guildData(guildId) {
+            if (!guildId) return { channels: [], selected: null, guildFound: false };
+            const guild = client.guilds.cache.get(guildId);
+            let channels = [];
+            if (guild) {
+                const all = guild.channels.cache
+                    .filter(c => c.type === ChannelType.GuildText || c.type === ChannelType.GuildCategory)
+                    .map(c => ({
+                        id: c.id,
+                        name: c.name,
+                        type: c.type === ChannelType.GuildCategory ? 'category' : 'text',
+                        parentId: c.parentId || null,
+                        position: c.position
+                    }));
+
+                const topLevel = all.filter(c => !c.parentId).sort((a, b) => a.position - b.position);
+                for (const entry of topLevel) {
+                    if (entry.type === 'text') {
+                        channels.push({ id: entry.id, name: entry.name });
+                    } else if (entry.type === 'category') {
+                        const children = all
+                            .filter(c => c.parentId === entry.id && c.type === 'text')
+                            .sort((a, b) => a.position - b.position);
+                        channels.push(...children.map(c => ({ id: c.id, name: c.name })));
+                    }
+                }
+            }
+            const config = await db.getGuildConfigDB(guildId);
+            return { channels, selected: config.banAppealChannelId || null, guildFound: !!guild };
+        }
+
+        const [community, predcord] = await Promise.all([
+            guildData(COMMUNITY_GUILD_ID),
+            guildData(MAIN_GUILD_ID)
+        ]);
+
+        res.json({ community, predcord });
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
+app.post('/api/ban-appeal-config', requireAuth, async (req, res) => {
+    try {
+        if (!isOwner(req) && !isDashboardAdmin(req)) {
+            return res.status(403).json({ error: 'Access Denied' });
+        }
+
+        const { db } = global.PredCord;
+        const { communityChannelId, predcordChannelId } = req.body;
+
+        if (COMMUNITY_GUILD_ID && communityChannelId !== undefined) {
+            await db.saveGuildConfigDB(COMMUNITY_GUILD_ID, 'banAppealChannelId', communityChannelId || null);
+        }
+        if (MAIN_GUILD_ID && predcordChannelId !== undefined) {
+            await db.saveGuildConfigDB(MAIN_GUILD_ID, 'banAppealChannelId', predcordChannelId || null);
         }
 
         res.json({ success: true });
@@ -1279,6 +1420,11 @@ app.get('/', (req, res) => {
 app.get('/staff-application', (req, res) => {
     res.set('Cache-Control', 'no-store');
     res.sendFile(path.join(SITE_DIR, 'staff-application.html'));
+});
+
+app.get('/appeals', (req, res) => {
+    res.set('Cache-Control', 'no-store');
+    res.sendFile(path.join(SITE_DIR, 'appeals.html'));
 });
 
 app.get('/dashboard', requireAuth, (req, res) => {
