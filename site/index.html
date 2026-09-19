@@ -151,16 +151,13 @@ header span {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 32px;
-    padding: 24px 40px;
-    align-items: stretch;
-    flex: 1;
-    min-height: 0;
+    padding: 32px 40px;
+    align-items: start;
 }
 
 .hero-photo {
     position: relative;
-    min-height: 0;
-    height: 100%;
+    height: 460px;
 }
 
 .hero-photo img {
@@ -191,8 +188,91 @@ header span {
 .hero-right {
     display: flex;
     flex-direction: column;
-    justify-content: center;
-    gap: 18px;
+    gap: 22px;
+}
+
+.section-heading {
+    font-size: 20px;
+    font-weight: 800;
+    margin-bottom: 10px;
+}
+
+.section-heading .highlight {
+    color: var(--primary);
+}
+
+.info-text {
+    color: var(--text-dim);
+    font-size: 13px;
+    line-height: 1.75;
+}
+
+.results-subheading {
+    font-weight: 700;
+    font-size: 13.5px;
+    margin-bottom: 12px;
+}
+
+.results-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px 20px;
+}
+
+.result-item {
+    color: var(--accent);
+    text-decoration: none;
+    font-size: 12.5px;
+    line-height: 1.55;
+}
+
+.result-item:hover {
+    text-decoration: underline;
+}
+
+.view-servers-btn {
+    align-self: flex-start;
+    background: transparent;
+    border: 1px solid rgba(56, 189, 248, 0.4);
+    color: var(--accent);
+    font-family: inherit;
+    font-weight: 700;
+    font-size: 12.5px;
+    padding: 9px 20px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background 0.2s ease, color 0.2s ease, transform 0.2s ease, border-color 0.2s ease;
+}
+
+.view-servers-btn:hover {
+    background: var(--accent);
+    color: #fff;
+    border-color: var(--accent);
+    transform: translateY(-2px);
+}
+
+.servers-section {
+    padding: 48px 40px;
+    border-top: 1px solid var(--border);
+}
+
+.servers-title {
+    font-size: 26px;
+    font-weight: 900;
+    text-align: center;
+    margin-bottom: 32px;
+}
+
+.servers-title .highlight {
+    color: var(--primary);
+}
+
+.servers-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 32px;
+    max-width: 900px;
+    margin: 0 auto;
 }
 
 .server-block {
@@ -321,17 +401,15 @@ header span {
 
 .social-icon svg { width: 20px; height: 20px; }
 
-@media (min-width: 861px) {
-    html, body { overflow: hidden; }
-}
-
 @media (max-width: 860px) {
     html, body { height: auto; }
     body { display: block; }
     header { grid-template-columns: 1fr; row-gap: 12px; padding: 14px 20px; }
     .header-nav { justify-content: center; gap: 22px; flex-wrap: wrap; }
-    .hero { grid-template-columns: 1fr; flex: none; }
-    .hero-photo { min-height: 280px; height: 280px; }
+    .hero { grid-template-columns: 1fr; }
+    .hero-photo { height: 260px; }
+    .results-grid { grid-template-columns: 1fr; }
+    .servers-grid { grid-template-columns: 1fr; }
 }
 </style>
 </head>
@@ -365,6 +443,29 @@ header span {
     </div>
 
     <div class="hero-right">
+        <div class="info-block">
+            <h2 class="section-heading">Predage <span class="highlight">Info</span></h2>
+            <p class="info-text">Predage is a professional Italian Fortnite player, active in the European competitive scene. He started his competitive journey in 2020, building up experience over the years through numerous competitions and working with several organizations, including Morning Stars, Regal Esports, and Northern Star Gaming. In 2026, he joined KoS Esports, continuing his path in competitive Fortnite. Besides competing, Predage is also very active in streaming, where he shares Fortnite content and stays closely connected with his community.</p>
+        </div>
+
+        <div class="results-block">
+            <h2 class="section-heading">Predage <span class="highlight">Results</span></h2>
+            <p class="results-subheading">X6 FNCS Grands Finals</p>
+            <div class="results-grid">
+                <a class="result-item" href="https://liquipedia.net/fortnite/Reddysh_Rumble/Love_%26_Legends/Europe" target="_blank" rel="noopener">Reddysh Rumble: Love &amp; Legends (Top 1)</a>
+                <a class="result-item" href="https://liquipedia.net/fortnite/Twitch_Rivals/Cracked_Cup/TwitchCon_Europe" target="_blank" rel="noopener">Twitch Rivals: Cracked Cup 2025 (Top 1)</a>
+                <a class="result-item" href="https://liquipedia.net/fortnite/Piz_Tournament_ZB" target="_blank" rel="noopener">Piz Tournament ZB (Top 1)</a>
+                <a class="result-item" href="https://liquipedia.net/fortnite/Chapter_5/Season_4/Duos_Cash_Cup/Week_2/Europe" target="_blank" rel="noopener">Duos Cash Cup (Top 2)</a>
+            </div>
+        </div>
+
+        <button class="view-servers-btn" id="viewServersBtn">View Predage Servers</button>
+    </div>
+</section>
+
+<section class="servers-section" id="servers">
+    <h2 class="servers-title">Our <span class="highlight">Servers</span></h2>
+    <div class="servers-grid">
         <div class="server-block">
             <div class="community-card">
                 <img class="community-avatar" src="/images/dragon-pfp.webp" alt="Predage Community">
@@ -459,6 +560,14 @@ header span {
             window.location.href = '/site-auth/discord?next=' + encodeURIComponent(window.location.pathname);
         }
     });
+
+    var viewServersBtn = document.getElementById('viewServersBtn');
+    if (viewServersBtn) {
+        viewServersBtn.addEventListener('click', function() {
+            var target = document.getElementById('servers');
+            if (target) target.scrollIntoView({ behavior: 'smooth' });
+        });
+    }
 
     var slides = document.querySelectorAll('.hero-photo img');
     if (slides.length >= 2) {
