@@ -419,18 +419,6 @@ app.post('/api/site/apply', async (req, res) => {
     }
 });
 
-app.post('/api/login', async (req, res) => {
-    const { username, password } = req.body;
-    if (username !== ADMIN_USERNAME) return res.status(401).json({ error: 'Invalid credentials' });
-    const ok = await bcrypt.compare(password, ADMIN_PASSWORD_HASH);
-    if (!ok) return res.status(401).json({ error: 'Invalid credentials' });
-    req.session.user = { username, isDiscord: false, role: 'owner' };
-    req.session.save((err) => {
-        if (err) return res.status(500).json({ error: 'Session error' });
-        res.json({ success: true, isAdmin: true });
-    });
-});
-
 app.post('/api/logout', (req, res) => {
     req.logout(() => {
         req.session.destroy(() => res.json({ success: true }));
@@ -688,12 +676,30 @@ app.get('/api/staff-app-config', requireAuth, async (req, res) => {
         async function guildData(guildId) {
             if (!guildId) return { channels: [], selected: null, guildFound: false };
             const guild = client.guilds.cache.get(guildId);
-            const channels = guild
-                ? guild.channels.cache
-                    .filter(c => c.type === ChannelType.GuildText)
-                    .sort((a, b) => a.position - b.position)
-                    .map(c => ({ id: c.id, name: c.name }))
-                : [];
+            let channels = [];
+            if (guild) {
+                const all = guild.channels.cache
+                    .filter(c => c.type === ChannelType.GuildText || c.type === ChannelType.GuildCategory)
+                    .map(c => ({
+                        id: c.id,
+                        name: c.name,
+                        type: c.type === ChannelType.GuildCategory ? 'category' : 'text',
+                        parentId: c.parentId || null,
+                        position: c.position
+                    }));
+
+                const topLevel = all.filter(c => !c.parentId).sort((a, b) => a.position - b.position);
+                for (const entry of topLevel) {
+                    if (entry.type === 'text') {
+                        channels.push({ id: entry.id, name: entry.name });
+                    } else if (entry.type === 'category') {
+                        const children = all
+                            .filter(c => c.parentId === entry.id && c.type === 'text')
+                            .sort((a, b) => a.position - b.position);
+                        channels.push(...children.map(c => ({ id: c.id, name: c.name })));
+                    }
+                }
+            }
             const config = await db.getGuildConfigDB(guildId);
             return { channels, selected: config.staffApplicationChannelId || null, guildFound: !!guild };
         }
