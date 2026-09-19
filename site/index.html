@@ -230,29 +230,8 @@ header span {
     text-decoration: underline;
 }
 
-.view-servers-btn {
-    align-self: flex-start;
-    background: transparent;
-    border: 1px solid rgba(56, 189, 248, 0.4);
-    color: var(--accent);
-    font-family: inherit;
-    font-weight: 700;
-    font-size: 12.5px;
-    padding: 9px 20px;
-    border-radius: 8px;
-    cursor: pointer;
-    transition: background 0.2s ease, color 0.2s ease, transform 0.2s ease, border-color 0.2s ease;
-}
-
-.view-servers-btn:hover {
-    background: var(--accent);
-    color: #fff;
-    border-color: var(--accent);
-    transform: translateY(-2px);
-}
-
 .servers-section {
-    padding: 48px 40px;
+    padding: 16px 40px 48px;
     border-top: 1px solid var(--border);
 }
 
@@ -458,13 +437,11 @@ header span {
                 <a class="result-item" href="https://liquipedia.net/fortnite/Chapter_5/Season_4/Duos_Cash_Cup/Week_2/Europe" target="_blank" rel="noopener">Duos Cash Cup (Top 2)</a>
             </div>
         </div>
-
-        <button class="view-servers-btn" id="viewServersBtn">View Predage Servers</button>
     </div>
 </section>
 
 <section class="servers-section" id="servers">
-    <h2 class="servers-title">Our <span class="highlight">Servers</span></h2>
+    <h2 class="servers-title">Predage <span class="highlight">Servers</span></h2>
     <div class="servers-grid">
         <div class="server-block">
             <div class="community-card">
@@ -560,14 +537,6 @@ header span {
             window.location.href = '/site-auth/discord?next=' + encodeURIComponent(window.location.pathname);
         }
     });
-
-    var viewServersBtn = document.getElementById('viewServersBtn');
-    if (viewServersBtn) {
-        viewServersBtn.addEventListener('click', function() {
-            var target = document.getElementById('servers');
-            if (target) target.scrollIntoView({ behavior: 'smooth' });
-        });
-    }
 
     var slides = document.querySelectorAll('.hero-photo img');
     if (slides.length >= 2) {
