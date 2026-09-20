@@ -1,6 +1,5 @@
 let currentGuild = null;
 let knownGuilds = { predcord: null, community: null };
-let currentBanGuild = 'predcord';
 let currentCommands = {};
 let editingName = null;
 let currentMembers = [];
@@ -413,11 +412,6 @@ async function selectServer(server) {
     currentGuild = server === 'community' ? knownGuilds.community : knownGuilds.predcord;
 
     loadUserRolesForGuild(currentGuild);
-
-    currentBanGuild = server;
-    document.querySelectorAll('.ban-server-btn').forEach(b => {
-        b.classList.toggle('active', b.getAttribute('data-ban-server') === server);
-    });
 
     rolesLoaded = false;
     configLoaded = false;
@@ -1312,18 +1306,15 @@ async function ensureKnownGuilds() {
 }
 
 async function loadBans() {
-    await ensureKnownGuilds();
-
-    const targetGuildId = currentBanGuild === 'community' ? knownGuilds.community : knownGuilds.predcord;
     const list = document.getElementById('bansList');
-    if (!targetGuildId) {
+    if (!currentGuild) {
         list.innerHTML = '<div class="empty-state"><h3>Not configured</h3><p>Missing guild ID for this server</p></div>';
         return;
     }
 
     list.innerHTML = '<div class="loading">Loading</div>';
     try {
-        const res = await fetch(`/api/bans/${targetGuildId}`);
+        const res = await fetch(`/api/bans/${currentGuild}`);
         if (!res.ok) throw new Error('Failed to load');
         const bans = await res.json();
         renderBans(bans);
@@ -1904,17 +1895,6 @@ function setupEvents() {
 
     const changeServerBtn = document.getElementById('changeServerBtn');
     if (changeServerBtn) changeServerBtn.onclick = showServerSelectScreen;
-
-    document.querySelectorAll('.ban-server-btn').forEach(btn => {
-        btn.onclick = () => {
-            const server = btn.getAttribute('data-ban-server');
-            if (server === currentBanGuild) return;
-            currentBanGuild = server;
-            document.querySelectorAll('.ban-server-btn').forEach(b => b.classList.remove('active'));
-            btn.classList.add('active');
-            loadBans();
-        };
-    });
 
     const newCmdBtn = document.getElementById('newCmdBtn');
     if (newCmdBtn) newCmdBtn.onclick = () => openModal();
