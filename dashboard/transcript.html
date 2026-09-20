@@ -40,6 +40,17 @@ function escapeHtml(str) {
         .replace(/'/g, '&#39;');
 }
 
+function sanitizeUrl(url, fallback) {
+    if (typeof url !== 'string') return fallback || '';
+    try {
+        const parsed = new URL(url, window.location.origin);
+        if (parsed.protocol === 'http:' || parsed.protocol === 'https:') {
+            return escapeHtml(parsed.href);
+        }
+    } catch (e) {}
+    return fallback || '';
+}
+
 function formatDiscordText(text) {
     if (!text) return '';
     let t = escapeHtml(text);
@@ -133,16 +144,17 @@ async function loadTranscript() {
         messagesEl.innerHTML = transcript.messages.map(msg => {
             const time = formatDiscordTime(msg.timestamp);
             const authorName = msg.authorTag || msg.authorUsername || 'Unknown';
-            const avatar = msg.authorAvatar || 'https://cdn.discordapp.com/embed/avatars/0.png';
+            const avatar = sanitizeUrl(msg.authorAvatar, 'https://cdn.discordapp.com/embed/avatars/0.png');
             const botTag = msg.bot ? '<span class="discord-bot-tag">BOT</span>' : '';
 
             let attachmentsHtml = '';
             if (msg.attachments && msg.attachments.length > 0) {
                 attachmentsHtml = '<div class="discord-attachments">' + msg.attachments.map(a => {
+                    const safeUrl = sanitizeUrl(a.url, '#');
                     if (a.contentType && a.contentType.startsWith('image/')) {
-                        return `<img class="discord-attachment-img" src="${a.url}" alt="${escapeHtml(a.name)}">`;
+                        return `<img class="discord-attachment-img" src="${safeUrl}" alt="${escapeHtml(a.name)}">`;
                     }
-                    return `<a class="discord-attachment-file" href="${a.url}" target="_blank">📎 ${escapeHtml(a.name)}</a>`;
+                    return `<a class="discord-attachment-file" href="${safeUrl}" target="_blank" rel="noopener">📎 ${escapeHtml(a.name)}</a>`;
                 }).join('') + '</div>';
             }
 
@@ -161,7 +173,7 @@ async function loadTranscript() {
                         ${e.title ? `<div class="discord-embed-title">${escapeHtml(e.title)}</div>` : ''}
                         ${e.description ? `<div class="discord-embed-desc">${formatDiscordText(e.description)}</div>` : ''}
                         ${fieldsHtml}
-                        ${e.image ? `<img class="discord-embed-img" src="${e.image}">` : ''}
+                        ${e.image ? `<img class="discord-embed-img" src="${sanitizeUrl(e.image, '')}">` : ''}
                     </div>`;
                 }).join('');
             }
