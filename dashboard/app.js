@@ -381,6 +381,11 @@ async function selectServer(server) {
     await ensureKnownGuilds();
     currentGuild = server === 'community' ? knownGuilds.community : knownGuilds.predcord;
 
+    currentBanGuild = server;
+    document.querySelectorAll('.ban-server-btn').forEach(b => {
+        b.classList.toggle('active', b.getAttribute('data-ban-server') === server);
+    });
+
     rolesLoaded = false;
     configLoaded = false;
 
@@ -1864,6 +1869,17 @@ function setupEvents() {
     const changeServerBtn = document.getElementById('changeServerBtn');
     if (changeServerBtn) changeServerBtn.onclick = showServerSelectScreen;
 
+    document.querySelectorAll('.ban-server-btn').forEach(btn => {
+        btn.onclick = () => {
+            const server = btn.getAttribute('data-ban-server');
+            if (server === currentBanGuild) return;
+            currentBanGuild = server;
+            document.querySelectorAll('.ban-server-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            loadBans();
+        };
+    });
+
     const newCmdBtn = document.getElementById('newCmdBtn');
     if (newCmdBtn) newCmdBtn.onclick = () => openModal();
 
@@ -1922,16 +1938,6 @@ function setupEvents() {
 
     const saveTicketsBtn = document.getElementById('saveTicketsBtn');
     if (saveTicketsBtn) saveTicketsBtn.onclick = saveTicketsConfig;
-
-    document.querySelectorAll('.ban-server-btn').forEach(btn => {
-        btn.addEventListener('click', () => {
-            if (btn.classList.contains('active')) return;
-            document.querySelectorAll('.ban-server-btn').forEach(b => b.classList.remove('active'));
-            btn.classList.add('active');
-            currentBanGuild = btn.getAttribute('data-guild');
-            loadBans();
-        });
-    });
 
     const adminUserAdd = document.getElementById('adminUserAdd');
     if (adminUserAdd) adminUserAdd.onclick = () => addSpecialUser('admin');
