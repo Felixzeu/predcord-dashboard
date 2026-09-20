@@ -49,8 +49,29 @@
     </div>
 </header>
 
-<main>
+<div id="serverSelectScreen" class="server-select-screen">
+    <h1 class="server-select-title">Admins <span class="highlight">Panels</span></h1>
+    <p class="server-select-subtitle">Select a server to manage</p>
+    <div class="server-select-grid">
+        <button type="button" class="server-select-card" data-server="community">
+            <img src="/images/dragon-pfp.webp" alt="Predage Community">
+            <span class="server-select-name">Predage <span class="highlight">Community</span></span>
+        </button>
+        <button type="button" class="server-select-card" data-server="predcord">
+            <img src="/images/predcord-pfp.webp" alt="PredCord">
+            <span class="server-select-name">PredCord</span>
+        </button>
+    </div>
+</div>
+
+<main id="dashboardMain" class="hidden">
     <aside>
+        <div class="current-server-badge" id="currentServerBadge">
+            <img src="" alt="" id="currentServerBadgeImg">
+            <span id="currentServerBadgeName">—</span>
+        </div>
+        <button type="button" class="change-server-btn" id="changeServerBtn">Change Server</button>
+
         <h3>Sections</h3>
         <nav class="nav-tabs">
             <button class="nav-tab active" data-tab="commands">Custom Commands</button>
