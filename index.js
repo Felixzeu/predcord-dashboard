@@ -675,8 +675,17 @@ async function sendSocialEmbed(channel) {
 
 async function generateTicketTranscript(channel, closer, ticketMeta = {}) {
     try {
-        const messages = await channel.messages.fetch({ limit: 100 });
-        const sorted = Array.from(messages.values()).reverse();
+        const MAX_TRANSCRIPT_MESSAGES = 1000;
+        const allMessages = [];
+        let beforeId = null;
+        while (allMessages.length < MAX_TRANSCRIPT_MESSAGES) {
+            const batch = await channel.messages.fetch({ limit: 100, ...(beforeId ? { before: beforeId } : {}) });
+            if (batch.size === 0) break;
+            allMessages.push(...batch.values());
+            beforeId = batch.last().id;
+            if (batch.size < 100) break;
+        }
+        const sorted = allMessages.slice(0, MAX_TRANSCRIPT_MESSAGES).reverse();
 
         const messagesData = sorted.map(msg => ({
             authorId: msg.author.id,
@@ -897,6 +906,10 @@ client.on('guildMemberRemove', async (member) => {
     }
 });
 
+client.on('channelDelete', (channel) => {
+    ticketClaims.delete(channel.id);
+});
+
 client.on('messageCreate', async (message) => {
     try {
         if (message.author.bot) return;
@@ -944,12 +957,6 @@ client.on('messageCreate', async (message) => {
                     await handleCustomCommand(message, command, args, cmdData);
                     return;
                 } else {
-                    const embed = new EmbedBuilder()
-                        .setDescription('You don\'t have permission to use this command.')
-                        .setColor(COLORS.ERROR);
-                    const msg = await message.channel.send({ embeds: [embed] });
-                    setTimeout(() => msg.delete().catch(() => {}), 4000);
-                    await message.delete().catch(() => {});
                     return;
                 }
             }
@@ -2791,11 +2798,11 @@ setInterval(async () => {
             try {
                 const guild = client.guilds.cache.get(ban.guildId);
                 if (!guild) {
-                    await db.removePendingBan(ban.guildId, ban.userId);
+                    await db.removePendingBan(ban.guildId, ban.userId).catch(() => {});
                     continue;
                 }
                 await guild.members.unban(ban.userId, 'Temporary ban expired');
-                await db.removePendingBan(ban.guildId, ban.userId);
+                await db.removePendingBan(ban.guildId, ban.userId).catch(() => {});
                 await saveModLog(guild, 'User unbanned (auto)', { id: ban.userId, tag: ban.userTag }, client.user, 'Temporary ban expired');
 
                 try {
@@ -2819,7 +2826,9 @@ setInterval(async () => {
                 console.log(`[AUTO-UNBAN] Unbanned ${ban.userTag} (${ban.userId}) from ${guild.name}`);
             } catch (err) {
                 console.error(`[AUTO-UNBAN] Error on ${ban.userId}:`, err.message);
-                await db.removePendingBan(ban.guildId, ban.userId);
+                if (err.code === 10026 || err.code === 10013) {
+                    await db.removePendingBan(ban.guildId, ban.userId).catch(() => {});
+                }
             }
         }
     } catch (error) {
