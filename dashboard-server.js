@@ -10,6 +10,7 @@ require('dotenv').config();
 
 require('./index.js');
 
+
 function waitForBot(timeout = 300000) {
     return new Promise((resolve, reject) => {
         const start = Date.now();
