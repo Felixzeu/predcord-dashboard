@@ -181,7 +181,23 @@ header span {
     font-size: 15px;
     color: var(--text-dim);
     transition: border-color 0.2s ease, color 0.2s ease, background 0.2s ease;
+    position: relative;
+    overflow: hidden;
 }
+
+.team-item::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -75%;
+    width: 45%;
+    height: 100%;
+    background: linear-gradient(120deg, transparent, rgba(255, 255, 255, 0.35), transparent);
+    transform: skewX(-20deg);
+    transition: left 0.6s ease;
+}
+
+.team-item:hover::before { left: 125%; }
 
 .team-item-label {
     display: flex;
@@ -203,18 +219,11 @@ header span {
 }
 
 .team-item:hover {
-    border-color: rgba(255, 255, 255, 0.2);
+    border-color: var(--primary);
 }
 
 .team-item.active {
     color: var(--text);
-    border-color: var(--primary);
-    background: rgba(230, 126, 34, 0.08);
-}
-
-.team-item.active .chevron {
-    color: var(--primary);
-    transform: translateX(3px);
 }
 
 .staff-description p {
