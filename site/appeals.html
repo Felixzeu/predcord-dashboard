@@ -236,6 +236,8 @@ header span {
 }
 
 .auth-btn {
+    position: relative;
+    overflow: hidden;
     background: var(--primary);
     color: #fff;
     border: none;
@@ -359,6 +361,7 @@ header span {
     position: absolute;
     top: 14px;
     right: 16px;
+    overflow: hidden;
     background: none;
     border: none;
     color: var(--text-dim);
@@ -414,6 +417,8 @@ header span {
 }
 
 .submit-btn {
+    position: relative;
+    overflow: hidden;
     width: 100%;
     background: var(--primary);
     color: #fff;
@@ -435,6 +440,26 @@ header span {
 .submit-btn:disabled {
     opacity: 0.6;
     cursor: default;
+}
+
+.auth-btn::before,
+.modal-close::before,
+.submit-btn::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -75%;
+    width: 45%;
+    height: 100%;
+    background: linear-gradient(120deg, transparent, rgba(255, 255, 255, 0.35), transparent);
+    transform: skewX(-20deg);
+    transition: left 0.6s ease;
+}
+
+.auth-btn:hover::before,
+.modal-close:hover::before,
+.submit-btn:hover::before {
+    left: 125%;
 }
 
 .form-status {
