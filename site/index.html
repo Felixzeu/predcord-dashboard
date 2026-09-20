@@ -962,7 +962,7 @@ header span {
             <div class="results-grid" id="resultsGrid"></div>
             <div class="results-more-wrap">
                 <button class="results-more-btn" id="resultsMoreBtn">More</button>
-                <span class="results-total">Official Total: <span class="results-total-amount">$41.865</span></span>
+                <span class="results-total">Official Total: <span class="results-total-amount">$32,655</span></span>
             </div>
         </div>
     </div>
@@ -1254,10 +1254,7 @@ header span {
         { name: 'Duos Cash Cup', link: 'https://fortnitetracker.com/events/epicgames_S24_DuosCashCup_EU?window=S24_DuosCashCup_EU_Event1_Round2&page=0#25', prize: '100€', year: 2023 },
         { name: 'Solo Victory Cash Cup', link: 'https://fortnitetracker.com/events/epicgames_S23_SoloCashCup_EU?window=S23_SoloCashCup_Event9_Round2_EU&page=1#163', prize: '100€', year: 2023 },
         { name: 'Solo Victory Cash Cup', link: 'https://fortnitetracker.com/events/epicgames_S23_SoloCashCup_EU?window=S23_SoloCashCup_Event5_Round2_EU&page=1#111', prize: '100€', year: 2023 },
-        { name: 'Elite Cup Weekly Finals', link: 'https://fortnitetracker.com/events/epicgames_S23_DivisionalCups_Elite_Finals_EU?window=S23_DivisionalCups_Elite_Finals_EU_Week2_makegood&page=0#38', prize: '300€', year: 2023 },
-        { name: 'Frosty Frenzy', link: 'https://fortnitetracker.com/events/epicgames_S15_FrostyFrenzy_EU?window=S15_FrostyFrenzy_EU_Day2_Event2_Round2&page=1#174', prize: '400€', year: 2020 },
-        { name: 'Champion Cash Cup', link: 'https://fortnitetracker.com/events/epicgames_S13_CC_Champions_EU?window=S13_CC_Champions_EU_Event1&page=0#48', prize: '200€', year: 2019 },
-        { name: 'Winter Royale', link: 'https://fortnitetracker.com/events/epicgames_S11_WinterRoyale_PC_EU?window=S11_WinterRoyale_PC_EU_Event1&page=4#447', prize: '300€', year: 2018 }
+        { name: 'Elite Cup Weekly Finals', link: 'https://fortnitetracker.com/events/epicgames_S23_DivisionalCups_Elite_Finals_EU?window=S23_DivisionalCups_Elite_Finals_EU_Week2_makegood&page=0#38', prize: '300€', year: 2023 }
     ];
 
     var LINK_ICON_SVG = '<svg class="more-result-link-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3h7v7"></path><path d="M10 14 21 3"></path><path d="M19 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h6"></path></svg>';
@@ -1286,7 +1283,7 @@ header span {
         resultsMoreBtn.addEventListener('click', function() {
             if (!resultModal || !resultModalContent) return;
             if (resultModalBox) resultModalBox.classList.add('modal-box-wide');
-            var years = [2026, 2025, 2024, 2023, 2020, 2019, 2018];
+            var years = [2026, 2025, 2024, 2023];
             resultModalContent.innerHTML = '<h3 class="modal-title">More Results</h3>' +
                 '<div class="more-year-tabs" id="moreYearTabs">' +
                 years.map(function(y, i) {
