@@ -1224,6 +1224,11 @@ app.post('/api/commands/:guildId', requireAuth, writeLimiter, async (req, res) =
             return res.status(400).json({ error: 'Invalid command name' });
         }
 
+        const RESERVED_COMMAND_NAMES = ['page', 'md', 'modlogs', 'help', 'av', 'w', 'server', 'social', 'warnings', 'clearwarns', 'tickets', 'ban', 'unban', 'kick', 'mute', 'unmute', 'warn', 'purge'];
+        if (RESERVED_COMMAND_NAMES.includes(name.toLowerCase())) {
+            return res.status(400).json({ error: 'This name is reserved for a built-in command' });
+        }
+
         const restrictedTypes = ['ban', 'kick', 'mute', 'warn'];
         if (restrictedTypes.includes(data.type) && !isOwner(req, guildId)) {
             return res.status(403).json({ error: 'Only the Owner can create or edit moderation commands' });
