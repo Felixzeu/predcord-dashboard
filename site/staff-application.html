@@ -557,10 +557,46 @@ header span {
     cursor: default;
 }
 
+.signin-modal { text-align: center; }
+
+.signin-modal .modal-title { text-align: center; }
+
+.signin-modal .modal-text {
+    text-align: center;
+    font-size: 15.5px;
+    margin-bottom: 24px;
+}
+
+.discord-signin-btn {
+    position: relative;
+    overflow: hidden;
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    background: #5865F2;
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    padding: 12px 0;
+    font-family: inherit;
+    font-weight: 800;
+    font-size: 14.5px;
+    cursor: pointer;
+    margin-top: 6px;
+    transition: background 0.2s ease;
+}
+
+.discord-signin-btn:hover { background: #4752c4; }
+
+.discord-signin-btn svg { width: 20px; height: 20px; flex-shrink: 0; }
+
 .auth-btn::before,
 .modal-close::before,
 .yesno-btn::before,
-.submit-btn::before {
+.submit-btn::before,
+.discord-signin-btn::before {
     content: '';
     position: absolute;
     top: 0;
@@ -575,7 +611,8 @@ header span {
 .auth-btn:hover::before,
 .modal-close:hover::before,
 .yesno-btn:hover::before,
-.submit-btn:hover::before {
+.submit-btn:hover::before,
+.discord-signin-btn:hover::before {
     left: 125%;
 }
 
@@ -984,9 +1021,14 @@ header span {
     function openModal(team) {
         currentTeam = team;
         if (!currentUser) {
-            modalContent.innerHTML = '<h3 class="modal-title">Sign In Required</h3>' +
+            modalContent.innerHTML = '<div class="signin-modal">' +
+                '<h3 class="modal-title">Sign In Required</h3>' +
                 '<p class="modal-text">You need to sign in with Discord before applying.</p>' +
-                '<button class="submit-btn" id="modalSignIn">Sign In with Discord</button>';
+                '<button class="discord-signin-btn" id="modalSignIn">' +
+                '<svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor" aria-hidden="true"><path d="M20.317 4.3698a19.7913 19.7913 0 00-4.8851-1.5152.0741.0741 0 00-.0785.0371c-.211.3753-.4447.8648-.6083 1.2495-1.8447-.2762-3.68-.2762-5.4868 0-.1636-.3933-.4058-.8742-.6177-1.2495a.077.077 0 00-.0785-.037 19.7363 19.7363 0 00-4.8852 1.515.0699.0699 0 00-.0321.0277C.5334 9.0458-.319 13.5799.0992 18.0578a.0824.0824 0 00.0312.0561c2.0528 1.5076 4.0413 2.4228 5.9929 3.0294a.0777.0777 0 00.0842-.0276c.4616-.6304.8731-1.2952 1.226-1.9942a.076.076 0 00-.0416-.1057c-.6528-.2476-1.2743-.5495-1.8722-.8923a.077.077 0 01-.0076-.1277c.1258-.0943.2517-.1923.3718-.2914a.0743.0743 0 01.0776-.0105c3.9278 1.7933 8.18 1.7933 12.0614 0a.0739.0739 0 01.0785.0095c.1202.099.246.1981.3728.2924a.077.077 0 01-.0066.1276 12.2986 12.2986 0 01-1.873.8914.0766.0766 0 00-.0407.1067c.3604.698.7719 1.3628 1.225 1.9932a.076.076 0 00.0842.0286c1.961-.6067 3.9495-1.5219 6.0023-3.0294a.077.077 0 00.0313-.0552c.5004-5.177-.8382-9.6739-3.5485-13.6604a.061.061 0 00-.0312-.0286zM8.02 15.3312c-1.1825 0-2.1569-1.0857-2.1569-2.419 0-1.3332.9555-2.4189 2.157-2.4189 1.2108 0 2.1757 1.0952 2.1568 2.419 0 1.3332-.9555 2.4189-2.1569 2.4189zm7.9748 0c-1.1825 0-2.1569-1.0857-2.1569-2.419 0-1.3332.9554-2.4189 2.1569-2.4189 1.2108 0 2.1757 1.0952 2.1568 2.419 0 1.3332-.946 2.4189-2.1568 2.4189z"/></svg>' +
+                'Sign In Now' +
+                '</button>' +
+                '</div>';
             modal.classList.add('open');
             document.getElementById('modalSignIn').addEventListener('click', function() {
                 window.location.href = '/site-auth/discord?next=' + encodeURIComponent(window.location.pathname);
