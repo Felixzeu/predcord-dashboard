@@ -533,6 +533,84 @@ header span {
 }
 
 .social-icon svg { width: 20px; height: 20px; }
+
+.site-footer {
+    background: var(--bg-bar);
+    border-top: 1px solid var(--border);
+    flex-shrink: 0;
+}
+
+.footer-inner {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 48px 40px 40px;
+    display: flex;
+    justify-content: space-between;
+    gap: 60px;
+}
+
+.footer-brand { max-width: 360px; }
+
+.footer-brand-top {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 14px;
+}
+
+.footer-brand-top img {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    object-fit: cover;
+}
+
+.footer-brand-top span {
+    font-size: 18px;
+    font-weight: 800;
+}
+
+.footer-brand p {
+    color: var(--text-dim);
+    font-size: 13.5px;
+    line-height: 1.6;
+}
+
+.footer-cols {
+    display: flex;
+    gap: 60px;
+}
+
+.footer-col h4 {
+    font-size: 13.5px;
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 16px;
+}
+
+.footer-col a {
+    display: block;
+    color: var(--text-dim);
+    text-decoration: none;
+    font-size: 13.5px;
+    margin-bottom: 12px;
+    transition: color 0.2s ease;
+}
+
+.footer-col a:hover { color: var(--text); }
+
+.footer-bottom {
+    border-top: 1px solid var(--border);
+    padding: 18px 40px;
+    text-align: center;
+    color: var(--text-dim);
+    font-size: 12px;
+}
+
+@media (max-width: 720px) {
+    .footer-inner { flex-direction: column; gap: 32px; }
+    .footer-cols { flex-wrap: wrap; gap: 32px; }
+}
 </style>
 </head>
 <body>
@@ -626,6 +704,43 @@ header span {
         </a>
     </div>
 </section>
+
+<footer class="site-footer" id="siteFooter">
+    <div class="footer-inner">
+        <div class="footer-brand">
+            <div class="footer-brand-top">
+                <img src="/images/dragon-logo.png" alt="Predage">
+                <span>Predage</span>
+            </div>
+            <p>Predage's official hub for the community and PredCord. From casual chats to competitive scrims, this is where the Predage world stays connected on and off stream.</p>
+        </div>
+
+        <div class="footer-cols">
+            <div class="footer-col">
+                <h4>Informations</h4>
+                <a href="/">Community</a>
+                <a href="/staff-application">Applications</a>
+                <a href="/appeals">Ban Appeals</a>
+            </div>
+
+            <div class="footer-col">
+                <h4>Socials</h4>
+                <a href="https://x.com/Predage1" target="_blank" rel="noopener">Twitter</a>
+                <a href="https://www.youtube.com/@predagefn" target="_blank" rel="noopener">YouTube</a>
+                <a href="https://www.twitch.tv/predagefn" target="_blank" rel="noopener">Twitch</a>
+                <a href="https://www.instagram.com/predagefn/" target="_blank" rel="noopener">Instagram</a>
+            </div>
+
+            <div class="footer-col">
+                <h4>Legal</h4>
+                <a href="/terms">Terms of Service</a>
+                <a href="/privacy">Privacy Policy</a>
+            </div>
+        </div>
+    </div>
+
+    <div class="footer-bottom">Predage © 2026. All rights reserved.</div>
+</footer>
 
 <div class="modal-overlay" id="appModal">
     <div class="modal-box">
