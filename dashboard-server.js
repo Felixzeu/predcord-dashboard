@@ -1571,6 +1571,16 @@ app.get('/appeals', (req, res) => {
     res.sendFile(path.join(SITE_DIR, 'appeals.html'));
 });
 
+app.get('/terms', (req, res) => {
+    res.set('Cache-Control', 'no-store');
+    res.sendFile(path.join(SITE_DIR, 'terms.html'));
+});
+
+app.get('/privacy', (req, res) => {
+    res.set('Cache-Control', 'no-store');
+    res.sendFile(path.join(SITE_DIR, 'privacy.html'));
+});
+
 app.get('/dashboard', requireAuth, (req, res) => {
     res.set('Cache-Control', 'no-store');
     res.sendFile(path.join(DASHBOARD_DIR, 'index.html'));
