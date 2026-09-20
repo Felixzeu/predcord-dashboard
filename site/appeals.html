@@ -386,6 +386,43 @@ header span {
     font-weight: 700;
 }
 
+.copy-toast {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 14px 20px;
+    background: linear-gradient(180deg, #1a1a22 0%, #14141a 100%);
+    border: 1px solid rgba(46, 204, 113, 0.4);
+    border-radius: 14px;
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6), 0 0 30px rgba(46, 204, 113, 0.15);
+    color: var(--text);
+    font-size: 14px;
+    font-weight: 700;
+    z-index: 2000;
+    opacity: 0;
+    transform: translateY(16px);
+    transition: opacity 0.25s ease, transform 0.25s ease;
+    pointer-events: none;
+}
+
+.copy-toast.hidden { display: none; }
+
+.copy-toast.show {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.copy-toast-icon {
+    font-size: 14px;
+    color: #2ecc71;
+    font-weight: 700;
+}
+
+#creatorCodeBanner { cursor: pointer; }
+
 .modal-close {
     position: absolute;
     top: 14px;
@@ -541,7 +578,7 @@ header span {
 }
 
 @media (max-width: 1500px) {
-    .sponsor-banner { display: none; }
+    .sponsor-banner:not(#creatorCodeBanner) { display: none; }
 }
 
 .socials-bar {
@@ -700,7 +737,7 @@ header span {
 </header>
 
 <div class="page-with-sponsors">
-    <div class="sponsor-banner">
+    <div class="sponsor-banner" id="creatorCodeBanner">
         <img src="/images/creator-code-banner.png" alt="Codice Creatore PREDAGEFN nello shop">
     </div>
 
@@ -818,6 +855,11 @@ header span {
 <div id="formToast" class="form-toast hidden">
     <span class="form-toast-icon">✕</span>
     <span class="form-toast-text">Fill all fields</span>
+</div>
+
+<div id="copyToast" class="copy-toast hidden">
+    <span class="copy-toast-icon">✓</span>
+    <span class="copy-toast-text">Creator Code Copied</span>
 </div>
 
 <script>
@@ -1017,6 +1059,45 @@ header span {
     window.addEventListener('pageshow', function() {
         document.body.classList.remove('page-fade-out');
     });
+
+    function fallbackCopyText(text) {
+        var el = document.createElement('textarea');
+        el.value = text;
+        el.style.position = 'fixed';
+        el.style.opacity = '0';
+        document.body.appendChild(el);
+        el.select();
+        try { document.execCommand('copy'); } catch (e) {}
+        document.body.removeChild(el);
+    }
+
+    function showCopyToast() {
+        var toast = document.getElementById('copyToast');
+        if (!toast) return;
+        toast.classList.remove('hidden');
+        toast.classList.add('show');
+        if (window._copyToastTimeout) clearTimeout(window._copyToastTimeout);
+        window._copyToastTimeout = setTimeout(function() {
+            toast.classList.remove('show');
+            setTimeout(function() { toast.classList.add('hidden'); }, 300);
+        }, 3000);
+    }
+
+    var creatorCodeBanner = document.getElementById('creatorCodeBanner');
+    if (creatorCodeBanner) {
+        creatorCodeBanner.addEventListener('click', function() {
+            var code = 'PredageFN';
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(code).then(showCopyToast).catch(function() {
+                    fallbackCopyText(code);
+                    showCopyToast();
+                });
+            } else {
+                fallbackCopyText(code);
+                showCopyToast();
+            }
+        });
+    }
 })();
 </script>
 
