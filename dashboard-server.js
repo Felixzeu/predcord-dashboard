@@ -245,7 +245,7 @@ function getUserRole(req) {
     return null;
 }
 
-async function userHasPermission(req, permKey) {
+async function userHasPermission(req, permKey, guildId) {
     const role = getUserRole(req);
 
     if (role === 'owner' || role === 'admin') {
@@ -253,7 +253,8 @@ async function userHasPermission(req, permKey) {
     }
 
     if (role === 'user') {
-        const permissions = await global.PredCord.db.getDashboardPermissionsDB(MAIN_GUILD_ID);
+        const targetGuildId = guildId || MAIN_GUILD_ID;
+        const permissions = await global.PredCord.db.getDashboardPermissionsDB(targetGuildId);
         const allowed = permissions[permKey] || [];
         if (allowed.length === 0) return false;
         const userRoles = req.user ? (req.user.roles || []) : [];
@@ -612,6 +613,7 @@ app.get('/api/me/guild-info', requireAuth, async (req, res) => {
 app.get('/api/my-permissions', requireAuth, async (req, res) => {
     try {
         const role = getUserRole(req);
+        const targetGuildId = req.query.guildId || MAIN_GUILD_ID;
 
         if (role === 'owner' || role === 'admin') {
             return res.json({
@@ -625,7 +627,7 @@ app.get('/api/my-permissions', requireAuth, async (req, res) => {
         }
 
         if (role === 'user') {
-            const permissions = await global.PredCord.db.getDashboardPermissionsDB(MAIN_GUILD_ID);
+            const permissions = await global.PredCord.db.getDashboardPermissionsDB(targetGuildId);
             const userRoles = req.user ? (req.user.roles || []) : [];
 
             const check = (permKey) => {
@@ -664,8 +666,10 @@ app.get('/api/known-guilds', requireAuth, (req, res) => {
 app.get('/api/guilds', requireAuth, (req, res) => {
     try {
         const { client } = global.PredCord;
-        const guilds = client.guilds.cache
-            .filter(g => g.id === MAIN_GUILD_ID)
+        const ids = [MAIN_GUILD_ID, COMMUNITY_GUILD_ID].filter(Boolean);
+        const guilds = ids
+            .map(id => client.guilds.cache.get(id))
+            .filter(Boolean)
             .map(g => ({
                 id: g.id,
                 name: g.name,
@@ -1022,7 +1026,7 @@ app.post('/api/commands/:guildId', requireAuth, async (req, res) => {
         const isEdit = !!req.body.isEdit;
         const permKey = isEdit ? 'editRoles' : 'createRoles';
 
-        const hasPerm = await userHasPermission(req, permKey);
+        const hasPerm = await userHasPermission(req, permKey, req.params.guildId);
         if (!hasPerm) {
             return res.status(403).json({ error: 'Access Denied' });
         }
@@ -1133,7 +1137,7 @@ app.delete('/api/commands/:guildId/:name', requireAuth, async (req, res) => {
     try {
         const { db } = global.PredCord;
 
-        const hasPerm = await userHasPermission(req, 'deleteRoles');
+        const hasPerm = await userHasPermission(req, 'deleteRoles', req.params.guildId);
         if (!hasPerm) {
             return res.status(403).json({ error: 'Access Denied' });
         }
@@ -1196,7 +1200,7 @@ app.get('/api/members/:guildId', requireAuth, async (req, res) => {
 
 app.get('/api/modlogs/:guildId', requireAuth, async (req, res) => {
     try {
-        const hasPerm = await userHasPermission(req, 'viewLogsRoles');
+        const hasPerm = await userHasPermission(req, 'viewLogsRoles', req.params.guildId);
         if (!hasPerm) {
             return res.status(403).json({ error: 'Access Denied' });
         }
@@ -1221,7 +1225,7 @@ app.get('/api/modlogs/:guildId/:userId', requireAuth, async (req, res) => {
 
 app.get('/api/bans/:guildId', requireAuth, async (req, res) => {
     try {
-        const hasPerm = await userHasPermission(req, 'viewLogsRoles');
+        const hasPerm = await userHasPermission(req, 'viewLogsRoles', req.params.guildId);
         if (!hasPerm) {
             return res.status(403).json({ error: 'Access Denied' });
         }
@@ -1280,7 +1284,7 @@ app.get('/api/bans/:guildId', requireAuth, async (req, res) => {
 
 app.get('/api/dashboard-logs/:guildId', requireAuth, async (req, res) => {
     try {
-        const hasPerm = await userHasPermission(req, 'viewLogsRoles');
+        const hasPerm = await userHasPermission(req, 'viewLogsRoles', req.params.guildId);
         if (!hasPerm) {
             return res.status(403).json({ error: 'Access Denied' });
         }
@@ -1382,7 +1386,7 @@ app.post('/api/moderation/:guildId', requireAuth, async (req, res) => {
 
 app.get('/api/transcripts/:guildId', requireAuth, async (req, res) => {
     try {
-        const hasPerm = await userHasPermission(req, 'viewLogsRoles');
+        const hasPerm = await userHasPermission(req, 'viewLogsRoles', req.params.guildId);
         if (!hasPerm) {
             return res.status(403).json({ error: 'Access Denied' });
         }
