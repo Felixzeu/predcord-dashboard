@@ -297,6 +297,10 @@ function requireAuth(req, res, next) {
     trySiteUserAsAdmin(req).then((ok) => {
         if (!ok) {
             if (req.path.startsWith('/api/')) return res.status(401).json({ error: 'Not authenticated' });
+            if (req.session.siteUser) {
+                res.set('Cache-Control', 'no-store');
+                return res.status(403).sendFile(path.join(DASHBOARD_DIR, 'access-denied.html'));
+            }
             return res.redirect('/login');
         }
         req.session.save((err) => {
