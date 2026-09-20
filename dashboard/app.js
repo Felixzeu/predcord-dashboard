@@ -276,9 +276,8 @@ async function loadUserMenu() {
             }
         }
 
-        if (ddRoles) {
-            ddRoles.innerHTML = '<span class="loading-text">Loading...</span>';
-        }
+        const rolesSection = document.getElementById('userDropdownRolesSection');
+        if (rolesSection) rolesSection.classList.add('hidden');
 
         try {
             const fullRes = await fetch('/api/me/full', { credentials: 'same-origin' });
@@ -301,35 +300,47 @@ async function loadUserMenu() {
                     displayName = full.displayName;
                     if (ddDisplayName) ddDisplayName.textContent = displayName;
                 }
-
-                if (ddRoles) {
-                    const roles = Array.isArray(full.roles) ? full.roles : [];
-                    if (roles.length === 0) {
-                        ddRoles.innerHTML = '<span class="loading-text">No roles</span>';
-                    } else {
-                        ddRoles.innerHTML = roles.map(r => {
-                            const rawColor = r.color;
-                            const hasColor = typeof rawColor === 'string' && rawColor !== '#000000' && rawColor !== '#000';
-                            const bright = hasColor ? brightenColor(rawColor, 50) : null;
-                            const style = bright
-                                ? `style="color:${bright}; border-color:${bright}66; background:${bright}22; box-shadow:0 0 8px ${bright}55, inset 0 0 8px ${bright}22;"`
-                                : '';
-                            return `<span class="user-role-badge" ${style}>${escapeHtml(r.name)}</span>`;
-                        }).join('');
-                    }
-                }
-            } else if (ddRoles) {
-                ddRoles.innerHTML = '<span class="loading-text">No roles</span>';
             }
         } catch (err) {
             console.error('[ME-FULL]', err);
-            if (ddRoles) ddRoles.innerHTML = '<span class="loading-text">Error</span>';
         }
     } catch (e) {
         console.error('[USER-MENU] Error:', e);
         if (ddDisplayName) ddDisplayName.textContent = 'User';
         if (ddUsername) ddUsername.textContent = '—';
-        if (ddRoles) ddRoles.innerHTML = '<span class="loading-text">Error</span>';
+    }
+}
+
+async function loadUserRolesForGuild(guildId) {
+    const rolesSection = document.getElementById('userDropdownRolesSection');
+    const ddRoles = document.getElementById('userDropdownRoles');
+    if (!guildId || !rolesSection || !ddRoles) return;
+
+    ddRoles.innerHTML = '<span class="loading-text">Loading...</span>';
+    rolesSection.classList.remove('hidden');
+
+    try {
+        const fullRes = await fetch(`/api/me/full?guildId=${guildId}`, { credentials: 'same-origin' });
+        if (!fullRes.ok) throw new Error('Failed to load roles');
+        const full = await fullRes.json();
+        const roles = Array.isArray(full.roles) ? full.roles : [];
+
+        if (roles.length === 0) {
+            ddRoles.innerHTML = '<span class="loading-text">No roles</span>';
+        } else {
+            ddRoles.innerHTML = roles.map(r => {
+                const rawColor = r.color;
+                const hasColor = typeof rawColor === 'string' && rawColor !== '#000000' && rawColor !== '#000';
+                const bright = hasColor ? brightenColor(rawColor, 50) : null;
+                const style = bright
+                    ? `style="color:${bright}; border-color:${bright}66; background:${bright}22; box-shadow:0 0 8px ${bright}55, inset 0 0 8px ${bright}22;"`
+                    : '';
+                return `<span class="user-role-badge" ${style}>${escapeHtml(r.name)}</span>`;
+            }).join('');
+        }
+    } catch (err) {
+        console.error('[ME-FULL]', err);
+        ddRoles.innerHTML = '<span class="loading-text">Error</span>';
     }
 }
 
@@ -401,6 +412,8 @@ async function selectServer(server) {
     await ensureKnownGuilds();
     currentGuild = server === 'community' ? knownGuilds.community : knownGuilds.predcord;
 
+    loadUserRolesForGuild(currentGuild);
+
     currentBanGuild = server;
     document.querySelectorAll('.ban-server-btn').forEach(b => {
         b.classList.toggle('active', b.getAttribute('data-ban-server') === server);
@@ -423,6 +436,9 @@ function showServerSelectScreen() {
     const dashboardMain = document.getElementById('dashboardMain');
     if (selectScreen) selectScreen.classList.remove('hidden');
     if (dashboardMain) dashboardMain.classList.add('hidden');
+
+    const rolesSection = document.getElementById('userDropdownRolesSection');
+    if (rolesSection) rolesSection.classList.add('hidden');
 }
 
 async function loadGuilds() {
