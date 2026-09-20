@@ -37,6 +37,9 @@ const DISCORD_SITE_REDIRECT_URI = process.env.DISCORD_SITE_REDIRECT_URI || 'http
 const MAIN_GUILD_ID = process.env.MAIN_GUILD_ID;
 const COMMUNITY_GUILD_ID = process.env.COMMUNITY_GUILD_ID;
 
+const COMMUNITY_ACCESS_ROLE_IDS = ['1341039063641358388', '1494738070405124096', '1465472561172451646', '1548720844434571284'];
+const PREDCORD_ACCESS_ROLE_IDS = ['1498132188552761545', '1549525442493685900', '1497945553013571674'];
+
 const MAX_BASE_COMMANDS = 10;
 const SUBMISSION_COOLDOWN_SECONDS = 36 * 60 * 60;
 
@@ -69,6 +72,84 @@ app.use(session({
 passport.serializeUser((user, done) => done(null, user));
 passport.deserializeUser((user, done) => done(null, user));
 
+async function resolveGuildAccess(discordUserId) {
+    const { client, db } = global.PredCord;
+    const result = {
+        predcord: { access: false, role: null, roles: [] },
+        community: { access: false, role: null, roles: [] }
+    };
+
+    if (MAIN_GUILD_ID) {
+        const guild = client.guilds.cache.get(MAIN_GUILD_ID);
+        if (guild) {
+            const member = await guild.members.fetch(discordUserId).catch(() => null);
+            if (member) {
+                const userRoles = member.roles.cache.map(r => r.id);
+                result.predcord.roles = userRoles;
+
+                const specialUsers = await db.getDashboardSpecialUsersDB(MAIN_GUILD_ID);
+                if (specialUsers.ownerUsers.includes(discordUserId)) {
+                    result.predcord.access = true;
+                    result.predcord.role = 'owner';
+                } else if (specialUsers.adminUsers.includes(discordUserId)) {
+                    result.predcord.access = true;
+                    result.predcord.role = 'admin';
+                } else {
+                    const permissions = await db.getDashboardPermissionsDB(MAIN_GUILD_ID);
+                    const allAllowed = [
+                        ...(permissions.createRoles || []),
+                        ...(permissions.editRoles || []),
+                        ...(permissions.deleteRoles || []),
+                        ...(permissions.viewLogsRoles || [])
+                    ];
+                    const hasConfiguredRole = allAllowed.some(roleId => userRoles.includes(roleId));
+                    const hasFixedRole = PREDCORD_ACCESS_ROLE_IDS.some(roleId => userRoles.includes(roleId));
+                    if (hasConfiguredRole || hasFixedRole) {
+                        result.predcord.access = true;
+                        result.predcord.role = 'user';
+                    }
+                }
+            }
+        }
+    }
+
+    if (COMMUNITY_GUILD_ID) {
+        const guild = client.guilds.cache.get(COMMUNITY_GUILD_ID);
+        if (guild) {
+            const member = await guild.members.fetch(discordUserId).catch(() => null);
+            if (member) {
+                const userRoles = member.roles.cache.map(r => r.id);
+                result.community.roles = userRoles;
+
+                const specialUsers = await db.getDashboardSpecialUsersDB(COMMUNITY_GUILD_ID);
+                if (specialUsers.ownerUsers.includes(discordUserId)) {
+                    result.community.access = true;
+                    result.community.role = 'owner';
+                } else if (specialUsers.adminUsers.includes(discordUserId)) {
+                    result.community.access = true;
+                    result.community.role = 'admin';
+                } else {
+                    const permissions = await db.getDashboardPermissionsDB(COMMUNITY_GUILD_ID);
+                    const allAllowed = [
+                        ...(permissions.createRoles || []),
+                        ...(permissions.editRoles || []),
+                        ...(permissions.deleteRoles || []),
+                        ...(permissions.viewLogsRoles || [])
+                    ];
+                    const hasConfiguredRole = allAllowed.some(roleId => userRoles.includes(roleId));
+                    const hasFixedRole = COMMUNITY_ACCESS_ROLE_IDS.some(roleId => userRoles.includes(roleId));
+                    if (hasConfiguredRole || hasFixedRole) {
+                        result.community.access = true;
+                        result.community.role = 'user';
+                    }
+                }
+            }
+        }
+    }
+
+    return result;
+}
+
 passport.use(new DiscordStrategy({
     clientID: DISCORD_CLIENT_ID,
     clientSecret: DISCORD_CLIENT_SECRET,
@@ -76,71 +157,31 @@ passport.use(new DiscordStrategy({
     scope: ['identify', 'guilds']
 }, async (accessToken, refreshToken, profile, done) => {
     try {
-        if (!MAIN_GUILD_ID) {
-            return done(null, false, { message: 'MAIN_GUILD_ID not configured' });
+        const access = await resolveGuildAccess(profile.id);
+
+        if (!access.predcord.access && !access.community.access) {
+            return done(null, false, { message: 'You do not have the authorized roles on any server' });
         }
 
-        const guild = global.PredCord.client.guilds.cache.get(MAIN_GUILD_ID);
-        if (!guild) {
-            return done(null, false, { message: 'The bot is not in the main server' });
-        }
-
-        let member;
-        try {
-            member = await guild.members.fetch(profile.id);
-        } catch {
-            return done(null, false, { message: 'You are not a member of the main server' });
-        }
-
-        const specialUsers = await global.PredCord.db.getDashboardSpecialUsersDB(MAIN_GUILD_ID);
-
-        let role = null;
-        if (specialUsers.ownerUsers.includes(profile.id)) {
-            role = 'owner';
-        } else if (specialUsers.adminUsers.includes(profile.id)) {
-            role = 'admin';
-        }
-
-        if (role) {
-            return done(null, {
-                id: profile.id,
-                username: profile.username,
-                discriminator: profile.discriminator,
-                avatar: profile.avatar,
-                guildId: MAIN_GUILD_ID,
-                role: role,
-                isDiscord: true
-            });
-        }
-
-        const permissions = await global.PredCord.db.getDashboardPermissionsDB(MAIN_GUILD_ID);
-
-        const userRoles = member.roles.cache.map(r => r.id);
-        const allAllowed = [
-            ...(permissions.createRoles || []),
-            ...(permissions.editRoles || []),
-            ...(permissions.deleteRoles || []),
-            ...(permissions.viewLogsRoles || [])
-        ];
-
-        if (allAllowed.length === 0) {
-            return done(null, false, { message: 'No authorized roles configured' });
-        }
-
-        const hasAnyRole = allAllowed.some(roleId => userRoles.includes(roleId));
-        if (!hasAnyRole) {
-            return done(null, false, { message: 'You do not have the authorized roles' });
-        }
+        const globalRole = access.predcord.role === 'owner' ? 'owner'
+            : access.predcord.role === 'admin' ? 'admin'
+            : null;
 
         return done(null, {
             id: profile.id,
             username: profile.username,
             discriminator: profile.discriminator,
             avatar: profile.avatar,
-            guildId: MAIN_GUILD_ID,
-            roles: userRoles,
-            role: 'user',
-            isDiscord: true
+            isDiscord: true,
+            role: globalRole,
+            roles: access.predcord.roles,
+            predcordAccess: access.predcord.access,
+            predcordRole: access.predcord.role,
+            community: {
+                access: access.community.access,
+                role: access.community.role,
+                roles: access.community.roles
+            }
         });
     } catch (err) {
         return done(err, null);
@@ -252,8 +293,20 @@ async function userHasPermission(req, permKey, guildId) {
         return true;
     }
 
+    const targetGuildId = guildId || MAIN_GUILD_ID;
+
+    if (targetGuildId === COMMUNITY_GUILD_ID) {
+        const communityRole = req.user && req.user.community ? req.user.community.role : null;
+        if (communityRole === 'owner' || communityRole === 'admin') return true;
+
+        const permissions = await global.PredCord.db.getDashboardPermissionsDB(targetGuildId);
+        const allowed = permissions[permKey] || [];
+        if (allowed.length === 0) return false;
+        const userRoles = (req.user && req.user.community && req.user.community.roles) || [];
+        return userRoles.some(roleId => allowed.includes(roleId));
+    }
+
     if (role === 'user') {
-        const targetGuildId = guildId || MAIN_GUILD_ID;
         const permissions = await global.PredCord.db.getDashboardPermissionsDB(targetGuildId);
         const allowed = permissions[permKey] || [];
         if (allowed.length === 0) return false;
@@ -264,14 +317,24 @@ async function userHasPermission(req, permKey, guildId) {
     return false;
 }
 
-function canManagePermissions(req) {
-    const role = getUserRole(req);
-    return role === 'owner';
+function canManagePermissions(req, guildId) {
+    return isOwner(req, guildId);
 }
 
-function isOwner(req) {
+function isOwner(req, guildId) {
     const role = getUserRole(req);
-    return role === 'owner';
+    if (role === 'owner') return true;
+    if (guildId === COMMUNITY_GUILD_ID && req.user && req.user.community && req.user.community.role === 'owner') return true;
+    return false;
+}
+
+function canAccessGuild(req, guildId) {
+    const role = getUserRole(req);
+    if (role === 'owner' || role === 'admin') return true;
+    if (!guildId) return false;
+    if (guildId === MAIN_GUILD_ID) return !!(req.user && req.user.predcordAccess);
+    if (guildId === COMMUNITY_GUILD_ID) return !!(req.user && req.user.community && req.user.community.access);
+    return false;
 }
 
 app.get('/login', (req, res) => {
@@ -498,13 +561,22 @@ app.get('/api/me', requireAuth, (req, res) => {
     const role = getUserRole(req);
     const isDiscordUser = req.session.user && req.session.user.isDiscord;
 
+    let access = { predcord: true, community: true };
+    if (isDiscordUser && role !== 'owner' && role !== 'admin') {
+        access = {
+            predcord: !!(req.user && req.user.predcordAccess),
+            community: !!(req.user && req.user.community && req.user.community.access)
+        };
+    }
+
     res.json({
         user: req.session.user,
         isAdmin: role === 'owner' || role === 'admin',
         isDiscord: !!isDiscordUser,
         role: role || 'none',
         isOwner: role === 'owner',
-        canManagePermissions: canManagePermissions(req)
+        canManagePermissions: canManagePermissions(req),
+        access: access
     });
 });
 
@@ -626,6 +698,39 @@ app.get('/api/my-permissions', requireAuth, async (req, res) => {
             });
         }
 
+        if (targetGuildId === COMMUNITY_GUILD_ID) {
+            const communityRole = req.user && req.user.community ? req.user.community.role : null;
+
+            if (communityRole === 'owner' || communityRole === 'admin') {
+                return res.json({
+                    createRoles: true,
+                    editRoles: true,
+                    deleteRoles: true,
+                    viewLogsRoles: true,
+                    managePermissions: communityRole === 'owner',
+                    isOwner: communityRole === 'owner'
+                });
+            }
+
+            const permissions = await global.PredCord.db.getDashboardPermissionsDB(targetGuildId);
+            const userRoles = (req.user && req.user.community && req.user.community.roles) || [];
+
+            const check = (permKey) => {
+                const allowed = permissions[permKey] || [];
+                if (allowed.length === 0) return false;
+                return userRoles.some(roleId => allowed.includes(roleId));
+            };
+
+            return res.json({
+                createRoles: check('createRoles'),
+                editRoles: check('editRoles'),
+                deleteRoles: check('deleteRoles'),
+                viewLogsRoles: check('viewLogsRoles'),
+                managePermissions: false,
+                isOwner: false
+            });
+        }
+
         if (role === 'user') {
             const permissions = await global.PredCord.db.getDashboardPermissionsDB(targetGuildId);
             const userRoles = req.user ? (req.user.roles || []) : [];
@@ -684,6 +789,10 @@ app.get('/api/guilds', requireAuth, (req, res) => {
 
 app.get('/api/roles/:guildId', requireAuth, (req, res) => {
     try {
+        if (!canAccessGuild(req, req.params.guildId) && !isDashboardAdmin(req)) {
+            return res.status(403).json({ error: 'Access Denied' });
+        }
+
         const { client } = global.PredCord;
         const guild = client.guilds.cache.get(req.params.guildId);
         if (!guild) return res.status(404).json({ error: 'Server not found' });
@@ -707,6 +816,10 @@ app.get('/api/roles/:guildId', requireAuth, (req, res) => {
 
 app.get('/api/channels/:guildId', requireAuth, (req, res) => {
     try {
+        if (!canAccessGuild(req, req.params.guildId) && !isDashboardAdmin(req)) {
+            return res.status(403).json({ error: 'Access Denied' });
+        }
+
         const { client } = global.PredCord;
         const guild = client.guilds.cache.get(req.params.guildId);
         if (!guild) return res.status(404).json({ error: 'Server not found' });
@@ -883,6 +996,10 @@ app.post('/api/ban-appeal-config', requireAuth, async (req, res) => {
 
 app.get('/api/guildconfig/:guildId', requireAuth, async (req, res) => {
     try {
+        if (!canAccessGuild(req, req.params.guildId) && !isDashboardAdmin(req)) {
+            return res.status(403).json({ error: 'Access Denied' });
+        }
+
         const { db } = global.PredCord;
         const config = await db.getGuildConfigDB(req.params.guildId);
         res.json(config);
@@ -893,7 +1010,7 @@ app.get('/api/guildconfig/:guildId', requireAuth, async (req, res) => {
 
 app.post('/api/guildconfig/:guildId', requireAuth, async (req, res) => {
     try {
-        if (!isOwner(req) && !isDashboardAdmin(req)) {
+        if (!isOwner(req, req.params.guildId) && !isDashboardAdmin(req)) {
             return res.status(403).json({ error: 'Access Denied' });
         }
 
@@ -928,6 +1045,10 @@ app.post('/api/guildconfig/:guildId', requireAuth, async (req, res) => {
 
 app.get('/api/permissions/:guildId', requireAuth, async (req, res) => {
     try {
+        if (!canAccessGuild(req, req.params.guildId) && !isDashboardAdmin(req)) {
+            return res.status(403).json({ error: 'Access Denied' });
+        }
+
         const { db } = global.PredCord;
         const perms = await db.getDashboardPermissionsDB(req.params.guildId);
         const specialUsers = await db.getDashboardSpecialUsersDB(req.params.guildId);
@@ -946,7 +1067,7 @@ app.get('/api/permissions/:guildId', requireAuth, async (req, res) => {
 app.post('/api/permissions/:guildId', requireAuth, async (req, res) => {
     try {
         const { db } = global.PredCord;
-        if (!canManagePermissions(req)) {
+        if (!canManagePermissions(req, req.params.guildId)) {
             return res.status(403).json({ error: 'Access Denied' });
         }
 
@@ -1011,6 +1132,10 @@ app.get('/api/user-info/:userId', requireAuth, async (req, res) => {
 
 app.get('/api/commands/:guildId', requireAuth, async (req, res) => {
     try {
+        if (!canAccessGuild(req, req.params.guildId) && !isDashboardAdmin(req)) {
+            return res.status(403).json({ error: 'Access Denied' });
+        }
+
         const { db } = global.PredCord;
         const cmds = await db.loadCustomCommandsDB(req.params.guildId);
         res.json(cmds || {});
@@ -1044,7 +1169,7 @@ app.post('/api/commands/:guildId', requireAuth, async (req, res) => {
         const lowerName = name.toLowerCase();
         const existing = await db.CustomCommand.findOne({ guildId, name: lowerName }).lean();
 
-        if (existing && existing.isBase && !isOwner(req)) {
+        if (existing && existing.isBase && !isOwner(req, guildId)) {
             return res.status(403).json({ error: 'This command is Base and cannot be modified' });
         }
 
@@ -1107,7 +1232,7 @@ app.post('/api/commands/:guildId/:name/setbase', requireAuth, async (req, res) =
     try {
         const { db } = global.PredCord;
 
-        if (!isOwner(req)) {
+        if (!isOwner(req, req.params.guildId)) {
             return res.status(403).json({ error: 'Only the Owner can manage Base commands' });
         }
 
