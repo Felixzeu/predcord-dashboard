@@ -762,6 +762,142 @@ header span {
     .results-grid { grid-template-columns: 1fr; }
     .servers-grid { grid-template-columns: 1fr; }
     .sponsor-banner { width: 260px; }
+    .footer-inner { flex-direction: column; gap: 32px; }
+    .footer-cols { flex-wrap: wrap; gap: 32px; }
+}
+
+.footer-expand-wrap {
+    display: flex;
+    justify-content: center;
+    padding: 22px 0;
+    flex-shrink: 0;
+}
+
+.footer-expand-btn {
+    width: 42px;
+    height: 42px;
+    border-radius: 50%;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: border-color 0.2s ease, transform 0.3s ease, color 0.2s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.footer-expand-btn:hover {
+    border-color: rgba(255, 255, 255, 0.25);
+    color: var(--text);
+}
+
+.footer-expand-btn svg {
+    width: 18px;
+    height: 18px;
+    transition: transform 0.3s ease;
+}
+
+.footer-expand-btn.open svg {
+    transform: rotate(180deg);
+}
+
+.footer-expand-btn::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -75%;
+    width: 45%;
+    height: 100%;
+    background: linear-gradient(120deg, transparent, rgba(255, 255, 255, 0.35), transparent);
+    transform: skewX(-20deg);
+    transition: left 0.6s ease;
+}
+
+.footer-expand-btn:hover::before { left: 125%; }
+
+.site-footer {
+    max-height: 0;
+    opacity: 0;
+    overflow: hidden;
+    background: var(--bg-bar);
+    border-top: 1px solid var(--border);
+    transition: max-height 0.5s ease, opacity 0.4s ease;
+    flex-shrink: 0;
+}
+
+.site-footer.open {
+    max-height: 480px;
+    opacity: 1;
+}
+
+.footer-inner {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 48px 40px 40px;
+    display: flex;
+    justify-content: space-between;
+    gap: 60px;
+}
+
+.footer-brand { max-width: 360px; }
+
+.footer-brand-top {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 14px;
+}
+
+.footer-brand-top img {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    object-fit: cover;
+}
+
+.footer-brand-top span {
+    font-size: 18px;
+    font-weight: 800;
+}
+
+.footer-brand p {
+    color: var(--text-dim);
+    font-size: 13.5px;
+    line-height: 1.6;
+}
+
+.footer-cols {
+    display: flex;
+    gap: 60px;
+}
+
+.footer-col h4 {
+    font-size: 13.5px;
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 16px;
+}
+
+.footer-col a {
+    display: block;
+    color: var(--text-dim);
+    text-decoration: none;
+    font-size: 13.5px;
+    margin-bottom: 12px;
+    transition: color 0.2s ease;
+}
+
+.footer-col a:hover { color: var(--text); }
+
+.footer-bottom {
+    border-top: 1px solid var(--border);
+    padding: 18px 40px;
+    text-align: center;
+    color: var(--text-dim);
+    font-size: 12px;
 }
 </style>
 </head>
@@ -856,6 +992,49 @@ header span {
         </a>
     </div>
 </section>
+
+<div class="footer-expand-wrap">
+    <button class="footer-expand-btn" id="footerExpandBtn" aria-label="Show more">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+    </button>
+</div>
+
+<footer class="site-footer" id="siteFooter">
+    <div class="footer-inner">
+        <div class="footer-brand">
+            <div class="footer-brand-top">
+                <img src="/images/dragon-logo.png" alt="Predage">
+                <span>Predage</span>
+            </div>
+            <p>Predage's official hub for the community and PredCord. From casual chats to competitive scrims, this is where the Predage world stays connected on and off stream.</p>
+        </div>
+
+        <div class="footer-cols">
+            <div class="footer-col">
+                <h4>Informations</h4>
+                <a href="/">Community</a>
+                <a href="/staff-application">Applications</a>
+                <a href="/appeals">Ban Appeals</a>
+            </div>
+
+            <div class="footer-col">
+                <h4>Socials</h4>
+                <a href="https://x.com/Predage1" target="_blank" rel="noopener">Twitter</a>
+                <a href="https://www.youtube.com/@predagefn" target="_blank" rel="noopener">YouTube</a>
+                <a href="https://www.twitch.tv/predagefn" target="_blank" rel="noopener">Twitch</a>
+                <a href="https://www.instagram.com/predagefn/" target="_blank" rel="noopener">Instagram</a>
+            </div>
+
+            <div class="footer-col">
+                <h4>Legal</h4>
+                <a href="/terms">Terms of Service</a>
+                <a href="/privacy">Privacy Policy</a>
+            </div>
+        </div>
+    </div>
+
+    <div class="footer-bottom">Predage © 2026. All rights reserved.</div>
+</footer>
 
 <div class="modal-overlay" id="resultModal">
     <div class="modal-box">
@@ -1067,6 +1246,21 @@ header span {
     document.addEventListener('keydown', function(e) {
         if (e.key === 'Escape' && resultModal && resultModal.classList.contains('open')) closeResultModal();
     });
+
+    var footerExpandBtn = document.getElementById('footerExpandBtn');
+    var siteFooter = document.getElementById('siteFooter');
+    if (footerExpandBtn && siteFooter) {
+        footerExpandBtn.addEventListener('click', function() {
+            var opening = !siteFooter.classList.contains('open');
+            footerExpandBtn.classList.toggle('open', opening);
+            siteFooter.classList.toggle('open', opening);
+            if (opening) {
+                setTimeout(function() {
+                    siteFooter.scrollIntoView({ behavior: 'smooth', block: 'end' });
+                }, 150);
+            }
+        });
+    }
 
     var SOCIALS = [
         { name: 'Twitch', followers: '130K+ Followers', href: 'https://www.twitch.tv/predagefn', bg: '#9146FF', svg: '<svg viewBox="0 0 24 24" fill="#fff"><path d="M4 2 2.5 6v14h5V22l3.5-2h4L21 14V2H4Zm15 11-3 3h-4l-3 2v-2H6V4h13v9Z"/><path d="M15.5 6.5h2V12h-2zM10.5 6.5h2V12h-2z"/></svg>' },
