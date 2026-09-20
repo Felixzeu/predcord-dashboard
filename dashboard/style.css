@@ -701,45 +701,6 @@ header {
     color: var(--text);
 }
 
-.ban-server-tabs {
-    display: flex;
-    gap: 10px;
-    margin-bottom: 16px;
-}
-
-.ban-server-btn {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    background: rgba(255, 255, 255, 0.03);
-    border: 1px solid rgba(255, 255, 255, 0.05);
-    color: var(--text-dim);
-    padding: 8px 16px;
-    border-radius: 10px;
-    cursor: pointer;
-    font-family: inherit;
-    font-size: 13px;
-    font-weight: 700;
-    transition: all 0.2s ease;
-}
-
-.ban-server-btn img {
-    width: 22px;
-    height: 22px;
-    border-radius: 50%;
-    object-fit: cover;
-}
-
-.ban-server-btn:hover {
-    border-color: var(--border-hover);
-}
-
-.ban-server-btn.active {
-    border-color: var(--primary);
-    background: rgba(230, 126, 34, 0.14);
-    color: var(--text);
-}
-
 main {
     display: grid;
     grid-template-columns: 300px 1fr;
