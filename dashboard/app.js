@@ -22,6 +22,7 @@ let isAdmin = false;
 let isDiscord = false;
 let myRole = 'none';
 let selectedServer = null;
+let serverAccess = { predcord: true, community: true };
 let myPermissions = {
     createRoles: false,
     editRoles: false,
@@ -168,6 +169,7 @@ async function init() {
         isAdmin = !!meData.isAdmin;
         isDiscord = !!meData.isDiscord;
         myRole = meData.role || 'none';
+        serverAccess = meData.access || { predcord: true, community: true };
 
         await loadMyPermissions();
         await loadGuilds();
@@ -176,8 +178,25 @@ async function init() {
         await loadUserMenu();
         updatePreview();
         updatePermissionsTabVisibility();
+        applyServerAccessRestrictions();
     } catch (e) {
         console.error('[INIT] Error:', e);
+    }
+}
+
+function applyServerAccessRestrictions() {
+    const communityCard = document.querySelector('.server-select-card[data-server="community"]');
+    const predcordCard = document.querySelector('.server-select-card[data-server="predcord"]');
+    if (communityCard) communityCard.classList.toggle('hidden', !serverAccess.community);
+    if (predcordCard) predcordCard.classList.toggle('hidden', !serverAccess.predcord);
+
+    const allowed = Object.keys(serverAccess).filter(k => serverAccess[k]);
+
+    const changeServerBtn = document.getElementById('changeServerBtn');
+    if (changeServerBtn) changeServerBtn.classList.toggle('hidden', allowed.length <= 1);
+
+    if (allowed.length === 1) {
+        selectServer(allowed[0]);
     }
 }
 
@@ -364,6 +383,7 @@ const SERVER_INFO = {
 
 async function selectServer(server) {
     if (!SERVER_INFO[server]) return;
+    if (serverAccess && serverAccess[server] === false) return;
     selectedServer = server;
 
     const badge = document.getElementById('currentServerBadge');
