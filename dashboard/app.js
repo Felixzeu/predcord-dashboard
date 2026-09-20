@@ -21,6 +21,7 @@ let dashboardPermissions = {
 let isAdmin = false;
 let isDiscord = false;
 let myRole = 'none';
+let selectedServer = null;
 let myPermissions = {
     createRoles: false,
     editRoles: false,
@@ -315,7 +316,8 @@ async function loadUserMenu() {
 
 async function loadMyPermissions() {
     try {
-        const res = await fetch('/api/my-permissions');
+        const url = currentGuild ? `/api/my-permissions?guildId=${currentGuild}` : '/api/my-permissions';
+        const res = await fetch(url);
         if (!res.ok) throw new Error('Failed to load user permissions');
         myPermissions = await res.json();
     } catch (e) {
@@ -334,15 +336,68 @@ function updatePermissionsTabVisibility() {
         else permTab.classList.add('hidden');
     }
 
+    const isCommunity = selectedServer === 'community';
+
     if (configTab) {
-        if (isOwner()) configTab.classList.remove('hidden');
+        if (!isCommunity && isOwner()) configTab.classList.remove('hidden');
         else configTab.classList.add('hidden');
     }
 
     if (ticketsTab) {
-        if (isOwner()) ticketsTab.classList.remove('hidden');
+        if (!isCommunity && isOwner()) ticketsTab.classList.remove('hidden');
         else ticketsTab.classList.add('hidden');
     }
+
+    if (isCommunity) {
+        const activeTab = document.querySelector('.nav-tab.active');
+        if (activeTab && (activeTab.dataset.tab === 'config' || activeTab.dataset.tab === 'tickets')) {
+            const commandsTab = document.querySelector('.nav-tab[data-tab="commands"]');
+            if (commandsTab) commandsTab.click();
+        }
+    }
+}
+
+const SERVER_INFO = {
+    community: { name: 'Predage Community', img: '/images/dragon-pfp.webp' },
+    predcord: { name: 'PredCord', img: '/images/predcord-pfp.webp' }
+};
+
+async function selectServer(server) {
+    if (!SERVER_INFO[server]) return;
+    selectedServer = server;
+
+    const badge = document.getElementById('currentServerBadge');
+    const badgeImg = document.getElementById('currentServerBadgeImg');
+    const badgeName = document.getElementById('currentServerBadgeName');
+    if (badgeImg) badgeImg.src = SERVER_INFO[server].img;
+    if (badgeName) badgeName.textContent = SERVER_INFO[server].name;
+    if (badge) badge.classList.remove('hidden');
+
+    const selectScreen = document.getElementById('serverSelectScreen');
+    const dashboardMain = document.getElementById('dashboardMain');
+    if (selectScreen) selectScreen.classList.add('hidden');
+    if (dashboardMain) dashboardMain.classList.remove('hidden');
+
+    await ensureKnownGuilds();
+    currentGuild = server === 'community' ? knownGuilds.community : knownGuilds.predcord;
+
+    rolesLoaded = false;
+    configLoaded = false;
+
+    await loadMyPermissions();
+    updatePermissionsTabVisibility();
+
+    const commandsTab = document.querySelector('.nav-tab[data-tab="commands"]');
+    if (commandsTab) commandsTab.click();
+
+    loadPermissions();
+}
+
+function showServerSelectScreen() {
+    const selectScreen = document.getElementById('serverSelectScreen');
+    const dashboardMain = document.getElementById('dashboardMain');
+    if (selectScreen) selectScreen.classList.remove('hidden');
+    if (dashboardMain) dashboardMain.classList.add('hidden');
 }
 
 async function loadGuilds() {
@@ -1802,6 +1857,13 @@ async function saveTicketsConfig() {
 }
 
 function setupEvents() {
+    document.querySelectorAll('.server-select-card').forEach(card => {
+        card.onclick = () => selectServer(card.getAttribute('data-server'));
+    });
+
+    const changeServerBtn = document.getElementById('changeServerBtn');
+    if (changeServerBtn) changeServerBtn.onclick = showServerSelectScreen;
+
     const newCmdBtn = document.getElementById('newCmdBtn');
     if (newCmdBtn) newCmdBtn.onclick = () => openModal();
 
