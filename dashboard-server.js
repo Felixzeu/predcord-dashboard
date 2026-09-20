@@ -1,4 +1,5 @@
 const express = require('express');
+const rateLimit = require('express-rate-limit');
 const session = require('express-session');
 const MongoStore = require('connect-mongo');
 const bcrypt = require('bcryptjs');
@@ -68,6 +69,42 @@ app.use(session({
         sameSite: 'lax'
     }
 }));
+
+const authLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 20,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { error: 'Too many attempts, please try again later.' }
+});
+
+const apiLimiter = rateLimit({
+    windowMs: 60 * 1000,
+    max: 120,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { error: 'Too many requests, please try again later.' }
+});
+
+const writeLimiter = rateLimit({
+    windowMs: 60 * 1000,
+    max: 30,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { error: 'Too many requests, please slow down.' }
+});
+
+const siteFormLimiter = rateLimit({
+    windowMs: 60 * 60 * 1000,
+    max: 10,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { error: 'Too many submissions, please try again later.' }
+});
+
+app.use('/api/', apiLimiter);
+app.use(['/login', '/auth/discord', '/site-auth/discord'], authLimiter);
+app.use(['/api/site/apply', '/api/site/appeal'], siteFormLimiter);
 
 passport.serializeUser((user, done) => done(null, user));
 passport.deserializeUser((user, done) => done(null, user));
@@ -916,7 +953,7 @@ app.get('/api/staff-app-config', requireAuth, async (req, res) => {
     }
 });
 
-app.post('/api/staff-app-config', requireAuth, async (req, res) => {
+app.post('/api/staff-app-config', requireAuth, writeLimiter, async (req, res) => {
     try {
         if (!isOwner(req) && !isDashboardAdmin(req)) {
             return res.status(403).json({ error: 'Access Denied' });
@@ -988,7 +1025,7 @@ app.get('/api/ban-appeal-config', requireAuth, async (req, res) => {
     }
 });
 
-app.post('/api/ban-appeal-config', requireAuth, async (req, res) => {
+app.post('/api/ban-appeal-config', requireAuth, writeLimiter, async (req, res) => {
     try {
         if (!isOwner(req) && !isDashboardAdmin(req)) {
             return res.status(403).json({ error: 'Access Denied' });
@@ -1024,7 +1061,7 @@ app.get('/api/guildconfig/:guildId', requireAuth, async (req, res) => {
     }
 });
 
-app.post('/api/guildconfig/:guildId', requireAuth, async (req, res) => {
+app.post('/api/guildconfig/:guildId', requireAuth, writeLimiter, async (req, res) => {
     try {
         if (!isOwner(req, req.params.guildId) && !isDashboardAdmin(req)) {
             return res.status(403).json({ error: 'Access Denied' });
@@ -1080,7 +1117,7 @@ app.get('/api/permissions/:guildId', requireAuth, async (req, res) => {
     }
 });
 
-app.post('/api/permissions/:guildId', requireAuth, async (req, res) => {
+app.post('/api/permissions/:guildId', requireAuth, writeLimiter, async (req, res) => {
     try {
         const { db } = global.PredCord;
         if (!canManagePermissions(req, req.params.guildId)) {
@@ -1114,6 +1151,10 @@ app.post('/api/permissions/:guildId', requireAuth, async (req, res) => {
 
 app.get('/api/user-info/:userId', requireAuth, async (req, res) => {
     try {
+        if (!canAccessGuild(req, MAIN_GUILD_ID) && !canAccessGuild(req, COMMUNITY_GUILD_ID) && !isDashboardAdmin(req)) {
+            return res.status(403).json({ error: 'Access Denied' });
+        }
+
         const { client } = global.PredCord;
         const guild = client.guilds.cache.get(MAIN_GUILD_ID);
         if (!guild) return res.status(404).json({ error: 'Server not found' });
@@ -1160,7 +1201,7 @@ app.get('/api/commands/:guildId', requireAuth, async (req, res) => {
     }
 });
 
-app.post('/api/commands/:guildId', requireAuth, async (req, res) => {
+app.post('/api/commands/:guildId', requireAuth, writeLimiter, async (req, res) => {
     try {
         const { db } = global.PredCord;
 
@@ -1175,12 +1216,17 @@ app.post('/api/commands/:guildId', requireAuth, async (req, res) => {
         const { guildId } = req.params;
         const { name, data } = req.body;
 
-        if (!name || !/^[a-z0-9_-]{1,32}$/i.test(name)) {
+        if (!name || !/^[a-z0-9]{1,32}$/i.test(name)) {
             return res.status(400).json({ error: 'Invalid command name' });
         }
 
+        const restrictedTypes = ['ban', 'kick', 'mute', 'warn'];
+        if (restrictedTypes.includes(data.type) && !isOwner(req, guildId)) {
+            return res.status(403).json({ error: 'Only the Owner can create or edit moderation commands' });
+        }
+
         let prefix = typeof data.prefix === 'string' ? data.prefix.trim() : '*';
-        if (prefix.length !== 1) prefix = '*';
+        if (prefix.length !== 1 || !/[^a-zA-Z0-9\s]/.test(prefix)) prefix = '*';
 
         const lowerName = name.toLowerCase();
         const existing = await db.CustomCommand.findOne({ guildId, name: lowerName }).lean();
@@ -1244,7 +1290,7 @@ app.post('/api/commands/:guildId', requireAuth, async (req, res) => {
     }
 });
 
-app.post('/api/commands/:guildId/:name/setbase', requireAuth, async (req, res) => {
+app.post('/api/commands/:guildId/:name/setbase', requireAuth, writeLimiter, async (req, res) => {
     try {
         const { db } = global.PredCord;
 
@@ -1274,7 +1320,7 @@ app.post('/api/commands/:guildId/:name/setbase', requireAuth, async (req, res) =
     }
 });
 
-app.delete('/api/commands/:guildId/:name', requireAuth, async (req, res) => {
+app.delete('/api/commands/:guildId/:name', requireAuth, writeLimiter, async (req, res) => {
     try {
         const { db } = global.PredCord;
 
@@ -1306,6 +1352,10 @@ app.delete('/api/commands/:guildId/:name', requireAuth, async (req, res) => {
 
 app.get('/api/members/:guildId', requireAuth, async (req, res) => {
     try {
+        if (!canAccessGuild(req, req.params.guildId) && !isDashboardAdmin(req)) {
+            return res.status(403).json({ error: 'Access Denied' });
+        }
+
         const { client } = global.PredCord;
         const guild = client.guilds.cache.get(req.params.guildId);
         if (!guild) return res.status(404).json({ error: 'Server not found' });
@@ -1356,6 +1406,11 @@ app.get('/api/modlogs/:guildId', requireAuth, async (req, res) => {
 
 app.get('/api/modlogs/:guildId/:userId', requireAuth, async (req, res) => {
     try {
+        const hasPerm = await userHasPermission(req, 'viewLogsRoles', req.params.guildId);
+        if (!hasPerm) {
+            return res.status(403).json({ error: 'Access Denied' });
+        }
+
         const { db } = global.PredCord;
         const logs = await db.getModLogsByTarget(req.params.guildId, req.params.userId, 50);
         res.json(logs);
@@ -1440,6 +1495,11 @@ app.get('/api/dashboard-logs/:guildId', requireAuth, async (req, res) => {
 
 app.get('/api/warnings/:guildId/:userId', requireAuth, async (req, res) => {
     try {
+        const hasPerm = await userHasPermission(req, 'viewLogsRoles', req.params.guildId);
+        if (!hasPerm) {
+            return res.status(403).json({ error: 'Access Denied' });
+        }
+
         const { db } = global.PredCord;
         const userWarnings = await db.getUserWarningsDB(req.params.guildId, req.params.userId);
         res.json(userWarnings);
@@ -1448,8 +1508,12 @@ app.get('/api/warnings/:guildId/:userId', requireAuth, async (req, res) => {
     }
 });
 
-app.post('/api/moderation/:guildId', requireAuth, async (req, res) => {
+app.post('/api/moderation/:guildId', requireAuth, writeLimiter, async (req, res) => {
     try {
+        if (!isOwner(req, req.params.guildId)) {
+            return res.status(403).json({ error: 'Access Denied' });
+        }
+
         const { client, saveModLog, addWarning, db } = global.PredCord;
         const guild = client.guilds.cache.get(req.params.guildId);
         if (!guild) return res.status(404).json({ error: 'Server not found' });
