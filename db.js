@@ -201,6 +201,39 @@ const TranscriptSchema = new mongoose.Schema({
 
 TranscriptSchema.index({ guildId: 1, closedAt: -1 });
 
+const CounterSchema = new mongoose.Schema({
+    key: { type: String, required: true, unique: true },
+    seq: { type: Number, default: 0 }
+});
+
+const Counter = mongoose.model('Counter', CounterSchema);
+
+async function getNextSeq(key, seedFn) {
+    const incremented = await Counter.findOneAndUpdate(
+        { key },
+        { $inc: { seq: 1 } },
+        { new: true }
+    );
+    if (incremented) return incremented.seq;
+
+    let seed = 0;
+    if (seedFn) {
+        try { seed = await seedFn(); } catch { seed = 0; }
+    }
+
+    try {
+        const created = await Counter.create({ key, seq: seed + 1 });
+        return created.seq;
+    } catch {
+        const retried = await Counter.findOneAndUpdate(
+            { key },
+            { $inc: { seq: 1 } },
+            { upsert: true, new: true }
+        );
+        return retried.seq;
+    }
+}
+
 const ModLog = mongoose.model('ModLog', ModLogSchema);
 const Warning = mongoose.model('Warning', WarningSchema);
 const GuildConfig = mongoose.model('GuildConfig', GuildConfigSchema);
@@ -210,13 +243,11 @@ const CommandCooldown = mongoose.model('CommandCooldown', CommandCooldownSchema)
 const DashboardLog = mongoose.model('DashboardLog', DashboardLogSchema);
 const Transcript = mongoose.model('Transcript', TranscriptSchema);
 
-async function getNextCaseId(guildId) {
-    const last = await ModLog.findOne({ guildId }).sort({ caseId: -1 }).lean();
-    return last ? last.caseId + 1 : 1;
-}
-
 async function createModLog(data) {
-    const caseId = await getNextCaseId(data.guildId);
+    const caseId = await getNextSeq(`modlog_${data.guildId}`, async () => {
+        const last = await ModLog.findOne({ guildId: data.guildId }).sort({ caseId: -1 }).lean();
+        return last ? last.caseId : 0;
+    });
     const doc = await ModLog.create({ ...data, caseId });
     return doc.toObject();
 }
@@ -234,8 +265,10 @@ async function getModLogsByModerator(guildId, moderatorId, limit = 50) {
 }
 
 async function addWarningDB(data) {
-    const last = await Warning.findOne({ guildId: data.guildId, userId: data.userId }).sort({ warningId: -1 }).lean();
-    const warningId = last ? last.warningId + 1 : 1;
+    const warningId = await getNextSeq(`warning_${data.guildId}_${data.userId}`, async () => {
+        const last = await Warning.findOne({ guildId: data.guildId, userId: data.userId }).sort({ warningId: -1 }).lean();
+        return last ? last.warningId : 0;
+    });
     const doc = await Warning.create({ ...data, warningId });
     return doc.toObject();
 }
@@ -255,10 +288,11 @@ async function clearWarningsDB(guildId, userId) {
 }
 
 async function getGuildConfigDB(guildId) {
-    let config = await GuildConfig.findOne({ guildId }).lean();
-    if (!config) {
-        config = (await GuildConfig.create({ guildId })).toObject();
-    }
+    const config = await GuildConfig.findOneAndUpdate(
+        { guildId },
+        { $setOnInsert: { guildId } },
+        { upsert: true, new: true, setDefaultsOnInsert: true }
+    ).lean();
     return config;
 }
 
