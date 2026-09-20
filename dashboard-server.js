@@ -1012,7 +1012,7 @@ app.post('/api/ban-appeal-config', requireAuth, async (req, res) => {
 
 app.get('/api/guildconfig/:guildId', requireAuth, async (req, res) => {
     try {
-        if (!canAccessGuild(req, req.params.guildId) && !isDashboardAdmin(req)) {
+        if (!isOwner(req, req.params.guildId) && !isDashboardAdmin(req)) {
             return res.status(403).json({ error: 'Access Denied' });
         }
 
