@@ -1093,7 +1093,7 @@ async function saveCommand(e) {
 
     let invalid = false;
 
-    if (!name || !/^[a-z0-9_-]{1,32}$/i.test(name)) {
+    if (!name || !/^[a-z0-9]{1,32}$/i.test(name)) {
         markFieldInvalid(nameInput);
         invalid = true;
     }
@@ -1908,12 +1908,20 @@ function setupEvents() {
     const cmdType = document.getElementById('cmdType');
     if (cmdType) cmdType.onchange = updateTypeUI;
 
+    const cmdNameInput = document.getElementById('cmdName');
+    if (cmdNameInput) cmdNameInput.oninput = () => {
+        cmdNameInput.value = cmdNameInput.value.replace(/[^a-zA-Z0-9]/g, '').slice(0, 32);
+    };
+
     const cmdPrefix = document.getElementById('cmdPrefix');
     if (cmdPrefix) cmdPrefix.oninput = () => {
-        if (cmdPrefix.value.length > 1) {
-            cmdPrefix.value = cmdPrefix.value.slice(0, 1);
-        }
+        cmdPrefix.value = cmdPrefix.value.replace(/[a-zA-Z0-9\s]/g, '').slice(0, 1);
         updateTypeUI();
+    };
+
+    const cmdDuration = document.getElementById('cmdDuration');
+    if (cmdDuration) cmdDuration.oninput = () => {
+        cmdDuration.value = cmdDuration.value.replace(/[^0-9]/g, '');
     };
 
     const cmdResponse = document.getElementById('cmdResponse');
