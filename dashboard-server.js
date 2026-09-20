@@ -596,8 +596,24 @@ app.get('/api/me/full', requireAuth, async (req, res) => {
             });
         }
 
-        const guild = client.guilds.cache.get(MAIN_GUILD_ID);
-        if (!guild) return res.status(404).json({ error: 'Server not found' });
+        const targetGuildId = req.query.guildId || MAIN_GUILD_ID;
+
+        if (req.query.guildId && !canAccessGuild(req, targetGuildId) && !isDashboardAdmin(req)) {
+            return res.status(403).json({ error: 'Access Denied' });
+        }
+
+        const guild = client.guilds.cache.get(targetGuildId);
+        if (!guild) {
+            return res.json({
+                id: req.session.user.id,
+                username: req.session.user.username,
+                displayName: req.session.user.username,
+                discriminator: req.session.user.discriminator || '0000',
+                tag: req.session.user.username,
+                avatar: req.session.user.avatar,
+                roles: []
+            });
+        }
 
         let member;
         try {
