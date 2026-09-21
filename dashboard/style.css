@@ -2313,3 +2313,96 @@ aside h3 {
 .btn-danger:active {
     transform: translateY(0);
 }
+
+@media (max-width: 700px) {
+    header {
+        display: flex;
+        flex-wrap: wrap;
+        padding: 14px 16px;
+        gap: 10px;
+    }
+
+    .header-right {
+        margin-left: auto;
+    }
+
+    .dash-header-nav {
+        order: 3;
+        width: 100%;
+        gap: 16px;
+        flex-wrap: wrap;
+        justify-content: center;
+    }
+
+    .server-select-screen {
+        padding: 32px 16px;
+    }
+
+    .server-select-title {
+        font-size: 26px;
+    }
+
+    main {
+        grid-template-columns: 1fr;
+        padding: 16px;
+        gap: 16px;
+    }
+
+    aside {
+        position: static;
+        top: auto;
+    }
+
+    .content {
+        padding: 20px;
+        min-height: 0;
+    }
+
+    .permissions-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .search-input {
+        width: 100%;
+    }
+
+    .modal-content,
+    #modal .modal-content {
+        width: 100%;
+        padding: 26px 20px;
+    }
+
+    .confirm-modal-content {
+        width: 100%;
+        padding: 32px 20px 24px;
+    }
+
+    .permissions-box {
+        left: 50%;
+        transform: translate(-50%, -50%);
+        width: calc(100vw - 32px);
+        max-width: 380px;
+    }
+
+    #modal.open-with-permissions .modal-content {
+        transform: none;
+    }
+}
+
+@media (max-width: 420px) {
+    .logo-sub {
+        display: none;
+    }
+
+    .dash-header-nav {
+        gap: 12px;
+    }
+
+    .dash-header-nav a {
+        font-size: 13px;
+    }
+
+    .panel-header h2 {
+        font-size: 18px;
+    }
+}
