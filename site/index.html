@@ -179,6 +179,8 @@ header span {
 .hero-photo {
     position: relative;
     height: 460px;
+    border-radius: 20px;
+    overflow: hidden;
 }
 
 .hero-photo img {
@@ -538,7 +540,7 @@ header span {
 }
 
 .socials-marquee-wrap {
-    padding: 0 40px 28px;
+    padding: 32px 40px 28px;
 }
 
 .socials-marquee {
@@ -855,10 +857,11 @@ header span {
     width: 18px;
     height: 18px;
     transition: transform 0.3s ease;
+    transform: rotate(180deg);
 }
 
 .footer-expand-btn.open svg {
-    transform: rotate(180deg);
+    transform: rotate(0deg);
 }
 
 .footer-expand-btn::before {
